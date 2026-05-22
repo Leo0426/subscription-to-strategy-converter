@@ -1,0 +1,623 @@
+# OpenClash 覆写模块 - smart.yaml
+# 生成日期：2026-04-09
+# 源文件：https://raw.githubusercontent.com/HenryChiao/MIHOMO_YAMLS/main/THEYAMLS/Smart_Mode/qichiyuhub/smart.yaml
+# 格式：新版 OpenClash [YAML] 块覆写
+#
+# 本文件仅包含 [YAML] 块覆写内容，不含任何 [General] 插件设置。
+# 所有内容默认注释，不影响现有配置；取消注释对应段落即可启用该覆写。
+# ==========================================================
+# [YAML] 是新版 OpenClash 覆写模块的识别标记
+# 此行本身不可注释，内容写在此标记之后
+# 注释状态不生效；取消注释后重载覆写模块即可生效
+# ==========================================================
+[YAML]
+
+# ==========================================================
+# 操作符速查
+# ----------------------------------------------------------
+#  key       默认合并：Hash 递归合并，其他类型直接覆盖原值
+#  key!      强制覆盖：整个值全部替换，不做任何合并
+#  key+      数组后置追加：在数组末尾加入新元素
+#  +key      数组前置插入：在数组开头插入（规则越靠前越优先匹配）
+#  key-      数组差集删除：从数组移除指定元素；非数组则删除该键
+#  key*      批量条件更新：配合 where/set，按条件匹配后批量修改
+# ==========================================================
+
+# ==========================================================
+# 示例：追加自定义 rule-provider 并在规则末尾加入对应规则
+# 取消注释后，Steam 流量将走 Proxy 策略组
+# ----------------------------------------------------------
+# +rule-providers:
+#   Steam:
+#     type: http
+#     behavior: domain
+#     format: mrs
+#     url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/steam.mrs"
+#     interval: 86400
+# +rules:
+#   - RULE-SET,Steam,Proxy
+# ==========================================================
+
+# ==========================================================
+# 示例：在规则列表最前面插入高优先级规则（最先匹配）
+# ----------------------------------------------------------
+# +rules:
+#   - DOMAIN-SUFFIX,example.com,DIRECT
+#   - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+# ==========================================================
+
+# ==========================================================
+# 示例：强制替换整个 rules 数组（原有规则全部丢弃）
+# ----------------------------------------------------------
+# rules!:
+#   - DOMAIN-SUFFIX,example.com,DIRECT
+#   - MATCH,PROXY
+# ==========================================================
+
+# ==========================================================
+# 示例：修改 dns 配置中的部分字段，其余字段保持不变
+# ----------------------------------------------------------
+# dns:
+#   enable: true
+#   cache-algorithm: lru
+# ==========================================================
+
+# ==========================================================
+# 示例：给所有 url-test 类型的策略组在 proxies 末尾追加节点
+# ----------------------------------------------------------
+# proxy-groups*:
+#   where:
+#     type: url-test
+#   set:
+#     proxies+:
+#       - '节点名称'
+# ==========================================================
+
+# ==========================================================
+# proxy-providers（从源文件直接提取）
+# ----------------------------------------------------------
+# 以下内容原样复制自源 YAML 的 proxy-providers 块。
+# 使用方法：
+#   1. 将需要替换的 provider 的 url: 改为你自己的订阅链接
+#   2. 删除这整块前面的 # 号，保存后重载覆写模块即可
+# ==========================================================
+#
+# proxy-providers:
+#   Airport1:
+#     health-check:
+#       enable: true
+#       interval: 300
+#       url: https://www.gstatic.com/generate_204
+#     interval: 86400
+#     proxy: 直连
+#     type: http
+#     url: 机场订阅1
+
+# ==========================================================
+# proxy-groups（从源文件直接提取）
+# ----------------------------------------------------------
+# 原始策略组配置，默认注释不启用。
+# 如需覆写策略组，可取消注释后修改，或参考上方示例使用 proxy-groups* 条件更新。
+# 直接取消注释将强制替换整个 proxy-groups（等同于 proxy-groups! 操作）。
+# ==========================================================
+#
+# proxy-groups:
+# - name: 🚀 默认代理
+#   proxies:
+#   - 🔯 香港故转
+#   - 🔯 日本故转
+#   - 🔯 狮城故转
+#   - 🔯 美国故转
+#   - ♻️ 香港智能
+#   - ♻️ 日本智能
+#   - ♻️ 狮城智能
+#   - ♻️ 美国智能
+#   - ♻️ 自动选择
+#   - 🇭🇰 香港节点
+#   - 🇯🇵 日本节点
+#   - 🇸🇬 狮城节点
+#   - 🇺🇲 美国节点
+#   - 🌐 全部节点
+#   - 直连
+#   type: select
+# - name: 📹 YouTube
+#   proxies:
+#   - 🔯 美国故转
+#   - 🔯 香港故转
+#   - 🔯 日本故转
+#   - 🔯 狮城故转
+#   - ♻️ 美国智能
+#   - ♻️ 香港智能
+#   - ♻️ 日本智能
+#   - ♻️ 狮城智能
+#   - ♻️ 自动选择
+#   - 🇭🇰 香港节点
+#   - 🇯🇵 日本节点
+#   - 🇸🇬 狮城节点
+#   - 🇺🇲 美国节点
+#   - 🌐 全部节点
+#   - 直连
+#   type: select
+# - name: 🍀 Google
+#   proxies:
+#   - 🔯 香港故转
+#   - 🔯 日本故转
+#   - 🔯 狮城故转
+#   - 🔯 美国故转
+#   - ♻️ 香港智能
+#   - ♻️ 日本智能
+#   - ♻️ 狮城智能
+#   - ♻️ 美国智能
+#   - ♻️ 自动选择
+#   - 🇭🇰 香港节点
+#   - 🇯🇵 日本节点
+#   - 🇸🇬 狮城节点
+#   - 🇺🇲 美国节点
+#   - 🌐 全部节点
+#   - 直连
+#   type: select
+# - name: 🤖 ChatGPT
+#   proxies:
+#   - 🔯 日本故转
+#   - 🔯 狮城故转
+#   - 🔯 美国故转
+#   - ♻️ 香港智能
+#   - ♻️ 日本智能
+#   - ♻️ 狮城智能
+#   - ♻️ 美国智能
+#   - ♻️ 自动选择
+#   - 🇭🇰 香港节点
+#   - 🇯🇵 日本节点
+#   - 🇸🇬 狮城节点
+#   - 🇺🇲 美国节点
+#   - 🌐 全部节点
+#   - 直连
+#   type: select
+# - name: 👨🏿‍💻 GitHub
+#   proxies:
+#   - 🔯 香港故转
+#   - 🔯 日本故转
+#   - 🔯 狮城故转
+#   - 🔯 美国故转
+#   - ♻️ 香港智能
+#   - ♻️ 日本智能
+#   - ♻️ 狮城智能
+#   - ♻️ 美国智能
+#   - ♻️ 自动选择
+#   - 🇭🇰 香港节点
+#   - 🇯🇵 日本节点
+#   - 🇸🇬 狮城节点
+#   - 🇺🇲 美国节点
+#   - 🌐 全部节点
+#   - 直连
+#   type: select
+# - name: 🐬 OneDrive
+#   proxies:
+#   - 🔯 日本故转
+#   - 🔯 狮城故转
+#   - 🔯 美国故转
+#   - ♻️ 香港智能
+#   - ♻️ 日本智能
+#   - ♻️ 狮城智能
+#   - ♻️ 美国智能
+#   - ♻️ 自动选择
+#   - 🇭🇰 香港节点
+#   - 🇯🇵 日本节点
+#   - 🇸🇬 狮城节点
+#   - 🇺🇲 美国节点
+#   - 🌐 全部节点
+#   - 直连
+#   type: select
+# - name: 🪟 Microsoft
+#   proxies:
+#   - 🔯 日本故转
+#   - 🔯 狮城故转
+#   - 🔯 美国故转
+#   - ♻️ 香港智能
+#   - ♻️ 日本智能
+#   - ♻️ 狮城智能
+#   - ♻️ 美国智能
+#   - ♻️ 自动选择
+#   - 🇭🇰 香港节点
+#   - 🇯🇵 日本节点
+#   - 🇸🇬 狮城节点
+#   - 🇺🇲 美国节点
+#   - 🌐 全部节点
+#   - 直连
+#   type: select
+# - name: 🎵 TikTok
+#   proxies:
+#   - 🔯 日本故转
+#   - 🔯 狮城故转
+#   - 🔯 美国故转
+#   - ♻️ 香港智能
+#   - ♻️ 日本智能
+#   - ♻️ 狮城智能
+#   - ♻️ 美国智能
+#   - ♻️ 自动选择
+#   - 🇭🇰 香港节点
+#   - 🇯🇵 日本节点
+#   - 🇸🇬 狮城节点
+#   - 🇺🇲 美国节点
+#   - 🌐 全部节点
+#   - 直连
+#   type: select
+# - name: 📲 Telegram
+#   proxies:
+#   - 🔯 香港故转
+#   - 🔯 日本故转
+#   - 🔯 狮城故转
+#   - 🔯 美国故转
+#   - ♻️ 香港智能
+#   - ♻️ 日本智能
+#   - ♻️ 狮城智能
+#   - ♻️ 美国智能
+#   - ♻️ 自动选择
+#   - 🇭🇰 香港节点
+#   - 🇯🇵 日本节点
+#   - 🇸🇬 狮城节点
+#   - 🇺🇲 美国节点
+#   - 🌐 全部节点
+#   - 直连
+#   type: select
+# - name: 🎥 NETFLIX
+#   proxies:
+#   - 🔯 狮城故转
+#   - 🔯 香港故转
+#   - 🔯 日本故转
+#   - 🔯 美国故转
+#   - ♻️ 香港智能
+#   - ♻️ 日本智能
+#   - ♻️ 狮城智能
+#   - ♻️ 美国智能
+#   - ♻️ 自动选择
+#   - 🇭🇰 香港节点
+#   - 🇯🇵 日本节点
+#   - 🇸🇬 狮城节点
+#   - 🇺🇲 美国节点
+#   - 🌐 全部节点
+#   - 直连
+#   type: select
+# - name: ✈️ Speedtest
+#   proxies:
+#   - 🔯 香港故转
+#   - 🔯 日本故转
+#   - 🔯 狮城故转
+#   - 🔯 美国故转
+#   - ♻️ 香港智能
+#   - ♻️ 日本智能
+#   - ♻️ 狮城智能
+#   - ♻️ 美国智能
+#   - ♻️ 自动选择
+#   - 🇭🇰 香港节点
+#   - 🇯🇵 日本节点
+#   - 🇸🇬 狮城节点
+#   - 🇺🇲 美国节点
+#   - 🌐 全部节点
+#   - 直连
+#   type: select
+# - name: 💶 PayPal
+#   proxies:
+#   - 🔯 日本故转
+#   - 🔯 香港故转
+#   - 🔯 狮城故转
+#   - 🔯 美国故转
+#   - ♻️ 香港智能
+#   - ♻️ 日本智能
+#   - ♻️ 狮城智能
+#   - ♻️ 美国智能
+#   - ♻️ 自动选择
+#   - 🇭🇰 香港节点
+#   - 🇯🇵 日本节点
+#   - 🇸🇬 狮城节点
+#   - 🇺🇲 美国节点
+#   - 🌐 全部节点
+#   - 直连
+#   type: select
+# - name: 🍎 Apple
+#   proxies:
+#   - 直连
+#   - 🚀 默认代理
+#   type: select
+# - name: 🐟 漏网之鱼
+#   proxies:
+#   - 🔯 香港故转
+#   - 🔯 日本故转
+#   - 🔯 狮城故转
+#   - 🔯 美国故转
+#   - ♻️ 香港智能
+#   - ♻️ 日本智能
+#   - ♻️ 狮城智能
+#   - ♻️ 美国智能
+#   - ♻️ 自动选择
+#   - 🇭🇰 香港节点
+#   - 🇯🇵 日本节点
+#   - 🇸🇬 狮城节点
+#   - 🇺🇲 美国节点
+#   - 🌐 全部节点
+#   - 直连
+#   type: select
+# - filter: (?=.*(港|HK|(?i)Hong))^((?!(台|日|韩|新|深|美)).)*$
+#   include-all: true
+#   name: 🇭🇰 香港节点
+#   type: select
+# - filter: (?=.*(日|JP|(?i)Japan))^((?!(港|台|韩|新|美)).)*$
+#   include-all: true
+#   name: 🇯🇵 日本节点
+#   type: select
+# - filter: (?=.*(新加坡|坡|狮城|SG|Singapore))^((?!(台|日|韩|深|美)).)*$
+#   include-all: true
+#   name: 🇸🇬 狮城节点
+#   type: select
+# - filter: (?=.*(美|US|(?i)States|America))^((?!(港|台|韩|新|日)).)*$
+#   include-all: true
+#   name: 🇺🇲 美国节点
+#   type: select
+# - filter: (?=.*(港|HK|(?i)Hong))^((?!(台|日|韩|新|深|美)).)*$
+#   include-all: true
+#   interval: 300
+#   name: 🔯 香港故转
+#   type: fallback
+# - filter: (?=.*(日|JP|(?i)Japan))^((?!(港|台|韩|新|美)).)*$
+#   include-all: true
+#   interval: 300
+#   name: 🔯 日本故转
+#   type: fallback
+# - filter: (?=.*(新加坡|坡|狮城|SG|Singapore))^((?!(台|日|韩|深|美)).)*$
+#   include-all: true
+#   interval: 300
+#   name: 🔯 狮城故转
+#   type: fallback
+# - filter: (?=.*(美|US|(?i)States|America))^((?!(港|台|韩|新|日)).)*$
+#   include-all: true
+#   interval: 300
+#   name: 🔯 美国故转
+#   type: fallback
+# - collectdata: false
+#   filter: (?=.*(港|HK|(?i)Hong))^((?!(台|日|韩|新|深|美)).)*$
+#   include-all: true
+#   interval: 300
+#   name: ♻️ 香港智能
+#   type: smart
+#   uselightgbm: false
+# - collectdata: false
+#   filter: (?=.*(日|JP|(?i)Japan))^((?!(港|台|韩|新|美)).)*$
+#   include-all: true
+#   interval: 300
+#   name: ♻️ 日本智能
+#   type: smart
+#   uselightgbm: false
+# - collectdata: false
+#   filter: (?=.*(新加坡|坡|狮城|SG|Singapore))^((?!(港|台|韩|日|美)).)*$
+#   include-all: true
+#   interval: 300
+#   name: ♻️ 狮城智能
+#   type: smart
+#   uselightgbm: false
+# - collectdata: false
+#   filter: (?=.*(美|US|(?i)States|America))^((?!(港|台|日|韩|新)).)*$
+#   include-all: true
+#   interval: 300
+#   name: ♻️ 美国智能
+#   type: smart
+#   uselightgbm: false
+# - filter: ^((?!(直连)).)*$
+#   include-all: true
+#   interval: 300
+#   name: ♻️ 自动选择
+#   tolerance: 20
+#   type: url-test
+# - include-all: true
+#   name: 🌐 全部节点
+#   type: select
+
+# ==========================================================
+# rule-providers（从源文件直接提取）
+# ----------------------------------------------------------
+# 原始规则集配置，默认注释不启用。
+# 如需追加新的 rule-provider，参考上方示例一使用 +rule-providers: 操作符。
+# ==========================================================
+#
+# rule-providers:
+#   ai:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ai-!cn.mrs
+#   apple_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple.mrs
+#   apple_ip:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo-lite/geoip/apple.mrs
+#   cn_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs
+#   cn_ip:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs
+#   fakeipfilter_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/wwqgtxx/clash-rules/release/fakeip-filter.mrs
+#   geolocation-!cn:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-!cn.mrs
+#   github_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github.mrs
+#   google_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google.mrs
+#   google_ip:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/google.mrs
+#   microsoft_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.mrs
+#   netflix_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netflix.mrs
+#   netflix_ip:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/netflix.mrs
+#   onedrive_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/onedrive.mrs
+#   paypal_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/paypal.mrs
+#   private_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.mrs
+#   private_ip:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.mrs
+#   proxylite:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/qichiyuhub/rule/refs/heads/main/proxy.list
+#   speedtest_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ookla-speedtest.mrs
+#   telegram_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/telegram.mrs
+#   telegram_ip:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/telegram.mrs
+#   tiktok_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tiktok.mrs
+#   youtube_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs
+
+# ==========================================================
+# rules（从源文件直接提取）
+# ----------------------------------------------------------
+# 原始规则列表，默认注释不启用。
+# 常用操作：
+#   +rules: [...]   在规则列表开头插入（优先匹配）
+#   rules+: [...]   在规则列表末尾追加
+#   rules!: [...]   强制替换整个规则列表（丢弃原有规则）
+# 参考上方示例，通常不需要取消注释整个 rules，而是用 +rules/rules+ 追加即可。
+# ==========================================================
+#
+# rules:
+# - RULE-SET,private_ip,直连,no-resolve
+# - RULE-SET,private_domain,直连
+# - DOMAIN-SUFFIX,qichiyu.com,🚀 默认代理
+# - RULE-SET,proxylite,🚀 默认代理
+# - RULE-SET,ai,🤖 ChatGPT
+# - RULE-SET,github_domain,👨🏿‍💻 GitHub
+# - RULE-SET,youtube_domain,📹 YouTube
+# - RULE-SET,google_domain,🍀 Google
+# - RULE-SET,onedrive_domain,🐬 OneDrive
+# - RULE-SET,microsoft_domain,🪟 Microsoft
+# - RULE-SET,apple_domain,直连
+# - RULE-SET,tiktok_domain,🎵 TikTok
+# - RULE-SET,telegram_domain,📲 Telegram
+# - RULE-SET,netflix_domain,🎥 NETFLIX
+# - RULE-SET,paypal_domain,💶 PayPal
+# - RULE-SET,apple_ip,直连
+# - RULE-SET,google_ip,🍀 Google
+# - RULE-SET,netflix_ip,🎥 NETFLIX
+# - RULE-SET,telegram_ip,📲 Telegram
+# - RULE-SET,geolocation-!cn,🚀 默认代理
+# - RULE-SET,cn_domain,直连
+# - RULE-SET,cn_ip,直连
+# - MATCH,🐟 漏网之鱼
+
+# ==========================================================
+# dns（从源文件直接提取）
+# ----------------------------------------------------------
+# 原始 DNS 配置，默认注释不启用。
+# 如只需修改部分字段，直接写需要修改的键值即可（默认合并，不影响其他字段）。
+# 如需完整替换 DNS 配置，使用 dns!: 操作符。
+# ==========================================================
+#
+# dns:
+#   cache-algorithm: arc
+#   default-nameserver:
+#   - https://223.5.5.5/dns-query
+#   enable: true
+#   enhanced-mode: fake-ip
+#   fake-ip-filter:
+#   - rule-set:fakeipfilter_domain
+#   fake-ip-filter-mode: blacklist
+#   fake-ip-range: 28.0.0.1/8
+#   ipv6: false
+#   listen: 0.0.0.0:1053
+#   nameserver:
+#   - https://dns.alidns.com/dns-query
+#   - https://doh.pub/dns-query
+#   proxy-server-nameserver:
+#   - https://dns.alidns.com/dns-query
+#   - https://doh.pub/dns-query
+#   respect-rules: true

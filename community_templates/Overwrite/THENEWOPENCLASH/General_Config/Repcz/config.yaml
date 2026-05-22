@@ -1,0 +1,436 @@
+# OpenClash 覆写模块 - config.yaml
+# 生成日期：2026-04-09
+# 源文件：https://raw.githubusercontent.com/HenryChiao/MIHOMO_YAMLS/main/THEYAMLS/General_Config/Repcz/config.yaml
+# 格式：新版 OpenClash [YAML] 块覆写
+#
+# 本文件仅包含 [YAML] 块覆写内容，不含任何 [General] 插件设置。
+# 所有内容默认注释，不影响现有配置；取消注释对应段落即可启用该覆写。
+# ==========================================================
+# [YAML] 是新版 OpenClash 覆写模块的识别标记
+# 此行本身不可注释，内容写在此标记之后
+# 注释状态不生效；取消注释后重载覆写模块即可生效
+# ==========================================================
+[YAML]
+
+# ==========================================================
+# 操作符速查
+# ----------------------------------------------------------
+#  key       默认合并：Hash 递归合并，其他类型直接覆盖原值
+#  key!      强制覆盖：整个值全部替换，不做任何合并
+#  key+      数组后置追加：在数组末尾加入新元素
+#  +key      数组前置插入：在数组开头插入（规则越靠前越优先匹配）
+#  key-      数组差集删除：从数组移除指定元素；非数组则删除该键
+#  key*      批量条件更新：配合 where/set，按条件匹配后批量修改
+# ==========================================================
+
+# ==========================================================
+# 示例：追加自定义 rule-provider 并在规则末尾加入对应规则
+# 取消注释后，Steam 流量将走 Proxy 策略组
+# ----------------------------------------------------------
+# +rule-providers:
+#   Steam:
+#     type: http
+#     behavior: domain
+#     format: mrs
+#     url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/steam.mrs"
+#     interval: 86400
+# +rules:
+#   - RULE-SET,Steam,Proxy
+# ==========================================================
+
+# ==========================================================
+# 示例：在规则列表最前面插入高优先级规则（最先匹配）
+# ----------------------------------------------------------
+# +rules:
+#   - DOMAIN-SUFFIX,example.com,DIRECT
+#   - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+# ==========================================================
+
+# ==========================================================
+# 示例：强制替换整个 rules 数组（原有规则全部丢弃）
+# ----------------------------------------------------------
+# rules!:
+#   - DOMAIN-SUFFIX,example.com,DIRECT
+#   - MATCH,PROXY
+# ==========================================================
+
+# ==========================================================
+# 示例：修改 dns 配置中的部分字段，其余字段保持不变
+# ----------------------------------------------------------
+# dns:
+#   enable: true
+#   cache-algorithm: lru
+# ==========================================================
+
+# ==========================================================
+# 示例：给所有 url-test 类型的策略组在 proxies 末尾追加节点
+# ----------------------------------------------------------
+# proxy-groups*:
+#   where:
+#     type: url-test
+#   set:
+#     proxies+:
+#       - '节点名称'
+# ==========================================================
+
+# ==========================================================
+# proxy-providers（从源文件直接提取）
+# ----------------------------------------------------------
+# 以下内容原样复制自源 YAML 的 proxy-providers 块。
+# 使用方法：
+#   1. 将需要替换的 provider 的 url: 改为你自己的订阅链接
+#   2. 删除这整块前面的 # 号，保存后重载覆写模块即可
+# ==========================================================
+#
+# proxy-providers:
+#   Subscribe:
+#     health-check:
+#       enable: true
+#       interval: 1800
+#       timeout: 5000
+#       url: http://1.1.1.1/generate_204
+#     interval: 86400
+#     type: http
+#     url: http://your-service-provider
+
+# ==========================================================
+# proxy-groups（从源文件直接提取）
+# ----------------------------------------------------------
+# 原始策略组配置，默认注释不启用。
+# 如需覆写策略组，可取消注释后修改，或参考上方示例使用 proxy-groups* 条件更新。
+# 直接取消注释将强制替换整个 proxy-groups（等同于 proxy-groups! 操作）。
+# ==========================================================
+#
+# proxy-groups:
+# - icon: https://github.com/shindgewongxj/WHATSINStash/raw/main/icon/applesafari.png
+#   include-all: true
+#   name: 手动切换
+#   proxies:
+#   - 香港节点
+#   - 美国节点
+#   - 狮城节点
+#   - 日本节点
+#   - 台湾节点
+#   - DIRECT
+#   type: select
+# - icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Global.png
+#   name: 国外网站
+#   proxies: &id001
+#   - 手动切换
+#   - 香港节点
+#   - 美国节点
+#   - 狮城节点
+#   - 日本节点
+#   - 台湾节点
+#   - DIRECT
+#   type: select
+# - icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/YouTube.png
+#   name: 国际媒体
+#   proxies: *id001
+#   type: select
+# - icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Apple_1.png
+#   name: 苹果服务
+#   proxies: *id001
+#   type: select
+# - icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Microsoft.png
+#   name: 微软服务
+#   proxies: *id001
+#   type: select
+# - icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Google_Search.png
+#   name: 谷歌服务
+#   proxies: *id001
+#   type: select
+# - icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Telegram.png
+#   name: 电报消息
+#   proxies: *id001
+#   type: select
+# - icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Twitter.png
+#   name: 推特消息
+#   proxies: *id001
+#   type: select
+# - icon: https://raw.githubusercontent.com/Orz-3/mini/master/Color/OpenAI.png
+#   name: AI
+#   proxies: *id001
+#   type: select
+# - icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Game.png
+#   name: 游戏平台
+#   proxies: *id001
+#   type: select
+# - icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Emby.png
+#   include-all: true
+#   name: Emby
+#   proxies: *id001
+#   type: select
+# - icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Spotify.png
+#   include-all: true
+#   name: Spotify
+#   proxies: *id001
+#   type: select
+# - icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Final.png
+#   name: 兜底分流
+#   proxies: *id001
+#   type: select
+# - filter: "(?i)\U0001F1ED\U0001F1F0|香港|(\b(HK|Hong)\b)"
+#   icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Hong_Kong.png
+#   include-all: true
+#   interval: 300
+#   name: 香港节点
+#   tolerance: 0
+#   type: url-test
+#   url: http://1.1.1.1/generate_204
+# - filter: "(?i)\U0001F1FA\U0001F1F8|美国|洛杉矶|圣何塞|(\b(US|United States)\b)"
+#   icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/United_States.png
+#   include-all: true
+#   interval: 300
+#   name: 美国节点
+#   tolerance: 0
+#   type: url-test
+#   url: http://1.1.1.1/generate_204
+# - filter: "(?i)\U0001F1F8\U0001F1EC|新加坡|狮|(\b(SG|Singapore)\b)"
+#   icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Singapore.png
+#   include-all: true
+#   interval: 300
+#   name: 狮城节点
+#   tolerance: 0
+#   type: url-test
+#   url: http://1.1.1.1/generate_204
+# - filter: "(?i)\U0001F1EF\U0001F1F5|日本|东京|(\b(JP|Japan)\b)"
+#   icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Japan.png
+#   include-all: true
+#   interval: 300
+#   name: 日本节点
+#   tolerance: 0
+#   type: url-test
+#   url: http://1.1.1.1/generate_204
+# - filter: "(?i)\U0001F1E8\U0001F1F3|\U0001F1F9\U0001F1FC|台湾|(\b(TW|Tai|Taiwan)\b)"
+#   icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/China.png
+#   include-all: true
+#   interval: 300
+#   name: 台湾节点
+#   tolerance: 0
+#   type: url-test
+#   url: http://1.1.1.1/generate_204
+
+# ==========================================================
+# rule-providers（从源文件直接提取）
+# ----------------------------------------------------------
+# 原始规则集配置，默认注释不启用。
+# 如需追加新的 rule-provider，参考上方示例一使用 +rule-providers: 操作符。
+# ==========================================================
+#
+# rule-providers:
+#   AI:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/AI.list
+#   AppleCN:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/AppleCN.list
+#   AppleProxy:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/AppleServers.list
+#   Bahamut:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Bahamut.list
+#   Direct:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Direct.list
+#   Disney:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Disney.list
+#   Emby:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Emby.list
+#   Epic:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Epic.list
+#   Github:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Github.list
+#   Google:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Google.list
+#   HBO:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/HBO.list
+#   Lan:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Lan.list
+#   Microsoft:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Microsoft.list
+#   Netflix:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Netflix.list
+#   OneDrive:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/OneDrive.list
+#   PrimeVideo:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/PrimeVideo.list
+#   Proxy:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Proxy.list
+#   Reject:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Reject.list
+#   Spotify:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Spotify.list
+#   Steam:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Steam.list
+#   Telegram:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Telegram.list
+#   TikTok:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/TikTok.list
+#   Twitter:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Twitter.list
+#   YouTube:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     type: http
+#     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/YouTube.list
+
+# ==========================================================
+# rules（从源文件直接提取）
+# ----------------------------------------------------------
+# 原始规则列表，默认注释不启用。
+# 常用操作：
+#   +rules: [...]   在规则列表开头插入（优先匹配）
+#   rules+: [...]   在规则列表末尾追加
+#   rules!: [...]   强制替换整个规则列表（丢弃原有规则）
+# 参考上方示例，通常不需要取消注释整个 rules，而是用 +rules/rules+ 追加即可。
+# ==========================================================
+#
+# rules:
+# - RULE-SET,Direct,DIRECT
+# - RULE-SET,Reject,REJECT
+# - RULE-SET,AI,AI
+# - RULE-SET,Github,微软服务
+# - RULE-SET,OneDrive,微软服务
+# - RULE-SET,Microsoft,微软服务
+# - RULE-SET,YouTube,谷歌服务
+# - RULE-SET,Google,谷歌服务
+# - RULE-SET,Twitter,推特消息
+# - RULE-SET,Telegram,电报消息
+# - RULE-SET,Steam,游戏平台
+# - RULE-SET,Epic,游戏平台
+# - RULE-SET,Emby,Emby
+# - RULE-SET,Bahamut,国际媒体
+# - RULE-SET,Netflix,国际媒体
+# - RULE-SET,Disney,国际媒体
+# - RULE-SET,PrimeVideo,国际媒体
+# - RULE-SET,HBO,国际媒体
+# - RULE-SET,TikTok,国际媒体
+# - RULE-SET,Spotify,Spotify
+# - RULE-SET,Proxy,国外网站
+# - RULE-SET,AppleCN,DIRECT
+# - RULE-SET,AppleProxy,香港节点
+# - RULE-SET,Lan,DIRECT
+# - GEOIP,CN,DIRECT
+# - MATCH,兜底分流
+
+# ==========================================================
+# dns（从源文件直接提取）
+# ----------------------------------------------------------
+# 原始 DNS 配置，默认注释不启用。
+# 如只需修改部分字段，直接写需要修改的键值即可（默认合并，不影响其他字段）。
+# 如需完整替换 DNS 配置，使用 dns!: 操作符。
+# ==========================================================
+#
+# dns:
+#   enable: true
+#   enhanced-mode: fake-ip
+#   fake-ip-filter:
+#   - +.lan
+#   - '*'
+#   - +.local
+#   - +.cmpassport.com
+#   - id6.me
+#   - open.e.189.cn
+#   - mdn.open.wo.cn
+#   - opencloud.wostore.cn
+#   - auth.wosms.cn
+#   - +.10099.com.cn
+#   - +.msftconnecttest.com
+#   - +.msftncsi.com
+#   - lancache.steamcontent.com
+#   fake-ip-range: 198.18.0.1/16
+#   ipv6: false
+#   listen: :1053
+#   nameserver:
+#   - 223.5.5.5
+#   - 119.29.29.29

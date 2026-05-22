@@ -1,0 +1,499 @@
+# OpenClash 覆写模块 - rule-set_config.yaml
+# 生成日期：2026-04-09
+# 源文件：https://raw.githubusercontent.com/HenryChiao/MIHOMO_YAMLS/main/THEYAMLS/Official_Examples/Metacubex/rule-set_config.yaml
+# 格式：新版 OpenClash [YAML] 块覆写
+#
+# 本文件仅包含 [YAML] 块覆写内容，不含任何 [General] 插件设置。
+# 所有内容默认注释，不影响现有配置；取消注释对应段落即可启用该覆写。
+# ==========================================================
+# [YAML] 是新版 OpenClash 覆写模块的识别标记
+# 此行本身不可注释，内容写在此标记之后
+# 注释状态不生效；取消注释后重载覆写模块即可生效
+# ==========================================================
+[YAML]
+
+# ==========================================================
+# 操作符速查
+# ----------------------------------------------------------
+#  key       默认合并：Hash 递归合并，其他类型直接覆盖原值
+#  key!      强制覆盖：整个值全部替换，不做任何合并
+#  key+      数组后置追加：在数组末尾加入新元素
+#  +key      数组前置插入：在数组开头插入（规则越靠前越优先匹配）
+#  key-      数组差集删除：从数组移除指定元素；非数组则删除该键
+#  key*      批量条件更新：配合 where/set，按条件匹配后批量修改
+# ==========================================================
+
+# ==========================================================
+# 示例：追加自定义 rule-provider 并在规则末尾加入对应规则
+# 取消注释后，Steam 流量将走 Proxy 策略组
+# ----------------------------------------------------------
+# +rule-providers:
+#   Steam:
+#     type: http
+#     behavior: domain
+#     format: mrs
+#     url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/steam.mrs"
+#     interval: 86400
+# +rules:
+#   - RULE-SET,Steam,Proxy
+# ==========================================================
+
+# ==========================================================
+# 示例：在规则列表最前面插入高优先级规则（最先匹配）
+# ----------------------------------------------------------
+# +rules:
+#   - DOMAIN-SUFFIX,example.com,DIRECT
+#   - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+# ==========================================================
+
+# ==========================================================
+# 示例：强制替换整个 rules 数组（原有规则全部丢弃）
+# ----------------------------------------------------------
+# rules!:
+#   - DOMAIN-SUFFIX,example.com,DIRECT
+#   - MATCH,PROXY
+# ==========================================================
+
+# ==========================================================
+# 示例：修改 dns 配置中的部分字段，其余字段保持不变
+# ----------------------------------------------------------
+# dns:
+#   enable: true
+#   cache-algorithm: lru
+# ==========================================================
+
+# ==========================================================
+# 示例：给所有 url-test 类型的策略组在 proxies 末尾追加节点
+# ----------------------------------------------------------
+# proxy-groups*:
+#   where:
+#     type: url-test
+#   set:
+#     proxies+:
+#       - '节点名称'
+# ==========================================================
+
+# ==========================================================
+# proxy-providers（从源文件直接提取）
+# ----------------------------------------------------------
+# 以下内容原样复制自源 YAML 的 proxy-providers 块。
+# 使用方法：
+#   1. 将需要替换的 provider 的 url: 改为你自己的订阅链接
+#   2. 删除这整块前面的 # 号，保存后重载覆写模块即可
+# ==========================================================
+#
+# proxy-providers:
+#   provider1:
+#     health-check:
+#       enable: true
+#       interval: 300
+#       url: https://www.gstatic.com/generate_204
+#     interval: 86400
+#     override:
+#       additional-prefix: '[provider1]'
+#     type: http
+#     url: ''
+#   provider2:
+#     health-check:
+#       enable: true
+#       interval: 300
+#       url: https://www.gstatic.com/generate_204
+#     interval: 86400
+#     override:
+#       additional-prefix: '[provider2]'
+#     type: http
+#     url: ''
+
+# ==========================================================
+# proxy-groups（从源文件直接提取）
+# ----------------------------------------------------------
+# 原始策略组配置，默认注释不启用。
+# 如需覆写策略组，可取消注释后修改，或参考上方示例使用 proxy-groups* 条件更新。
+# 直接取消注释将强制替换整个 proxy-groups（等同于 proxy-groups! 操作）。
+# ==========================================================
+#
+# proxy-groups:
+# - name: 默认
+#   proxies:
+#   - 自动选择
+#   - 直连
+#   - 香港
+#   - 台湾
+#   - 日本
+#   - 新加坡
+#   - 美国
+#   - 其它地区
+#   - 全部节点
+#   type: select
+# - name: Google
+#   proxies:
+#   - 默认
+#   - 香港
+#   - 台湾
+#   - 日本
+#   - 新加坡
+#   - 美国
+#   - 其它地区
+#   - 全部节点
+#   - 自动选择
+#   - 直连
+#   type: select
+# - name: Telegram
+#   proxies:
+#   - 默认
+#   - 香港
+#   - 台湾
+#   - 日本
+#   - 新加坡
+#   - 美国
+#   - 其它地区
+#   - 全部节点
+#   - 自动选择
+#   - 直连
+#   type: select
+# - name: Twitter
+#   proxies:
+#   - 默认
+#   - 香港
+#   - 台湾
+#   - 日本
+#   - 新加坡
+#   - 美国
+#   - 其它地区
+#   - 全部节点
+#   - 自动选择
+#   - 直连
+#   type: select
+# - name: 哔哩哔哩
+#   proxies:
+#   - 默认
+#   - 香港
+#   - 台湾
+#   - 日本
+#   - 新加坡
+#   - 美国
+#   - 其它地区
+#   - 全部节点
+#   - 自动选择
+#   - 直连
+#   type: select
+# - name: 巴哈姆特
+#   proxies:
+#   - 默认
+#   - 香港
+#   - 台湾
+#   - 日本
+#   - 新加坡
+#   - 美国
+#   - 其它地区
+#   - 全部节点
+#   - 自动选择
+#   - 直连
+#   type: select
+# - name: YouTube
+#   proxies:
+#   - 默认
+#   - 香港
+#   - 台湾
+#   - 日本
+#   - 新加坡
+#   - 美国
+#   - 其它地区
+#   - 全部节点
+#   - 自动选择
+#   - 直连
+#   type: select
+# - name: NETFLIX
+#   proxies:
+#   - 默认
+#   - 香港
+#   - 台湾
+#   - 日本
+#   - 新加坡
+#   - 美国
+#   - 其它地区
+#   - 全部节点
+#   - 自动选择
+#   - 直连
+#   type: select
+# - name: Spotify
+#   proxies:
+#   - 默认
+#   - 香港
+#   - 台湾
+#   - 日本
+#   - 新加坡
+#   - 美国
+#   - 其它地区
+#   - 全部节点
+#   - 自动选择
+#   - 直连
+#   type: select
+# - name: Github
+#   proxies:
+#   - 默认
+#   - 香港
+#   - 台湾
+#   - 日本
+#   - 新加坡
+#   - 美国
+#   - 其它地区
+#   - 全部节点
+#   - 自动选择
+#   - 直连
+#   type: select
+# - name: 国内
+#   proxies:
+#   - 直连
+#   - 默认
+#   - 香港
+#   - 台湾
+#   - 日本
+#   - 新加坡
+#   - 美国
+#   - 其它地区
+#   - 全部节点
+#   - 自动选择
+#   type: select
+# - name: 其他
+#   proxies:
+#   - 默认
+#   - 香港
+#   - 台湾
+#   - 日本
+#   - 新加坡
+#   - 美国
+#   - 其它地区
+#   - 全部节点
+#   - 自动选择
+#   - 直连
+#   type: select
+# - exclude-type: direct
+#   filter: (?i)港|hk|hongkong|hong kong
+#   include-all: true
+#   name: 香港
+#   type: select
+# - exclude-type: direct
+#   filter: (?i)台|tw|taiwan
+#   include-all: true
+#   name: 台湾
+#   type: select
+# - exclude-type: direct
+#   filter: (?i)日|jp|japan
+#   include-all: true
+#   name: 日本
+#   type: select
+# - exclude-type: direct
+#   filter: (?i)美|us|unitedstates|united states
+#   include-all: true
+#   name: 美国
+#   type: select
+# - exclude-type: direct
+#   filter: (?i)(新|sg|singapore)
+#   include-all: true
+#   name: 新加坡
+#   type: select
+# - exclude-type: direct
+#   filter: (?i)^(?!.*(?:🇭🇰|🇯🇵|🇺🇸|🇸🇬|🇨🇳|港|hk|hongkong|台|tw|taiwan|日|jp|japan|新|sg|singapore|美|us|unitedstates)).*
+#   include-all: true
+#   name: 其它地区
+#   type: select
+# - exclude-type: direct
+#   include-all: true
+#   name: 全部节点
+#   type: select
+# - exclude-type: direct
+#   include-all: true
+#   name: 自动选择
+#   tolerance: 10
+#   type: url-test
+
+# ==========================================================
+# rule-providers（从源文件直接提取）
+# ----------------------------------------------------------
+# 原始规则集配置，默认注释不启用。
+# 如需追加新的 rule-provider，参考上方示例一使用 +rule-providers: 操作符。
+# ==========================================================
+#
+# rule-providers:
+#   bahamut_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bahamut.mrs
+#   bilibili_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bilibili.mrs
+#   biliintl_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/biliintl.mrs
+#   cn_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs
+#   cn_ip:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs
+#   ehentai_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ehentai.mrs
+#   geolocation-!cn:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-!cn.mrs
+#   github_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github.mrs
+#   google_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google.mrs
+#   google_ip:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/google.mrs
+#   netflix_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netflix.mrs
+#   netflix_ip:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/netflix.mrs
+#   pixiv_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/pixiv.mrs
+#   private_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.mrs
+#   private_ip:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.mrs
+#   spotify_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/spotify.mrs
+#   telegram_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/telegram.mrs
+#   telegram_ip:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/telegram.mrs
+#   twitter_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/twitter.mrs
+#   twitter_ip:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/twitter.mrs
+#   youtube_domain:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     type: http
+#     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs
+
+# ==========================================================
+# rules（从源文件直接提取）
+# ----------------------------------------------------------
+# 原始规则列表，默认注释不启用。
+# 常用操作：
+#   +rules: [...]   在规则列表开头插入（优先匹配）
+#   rules+: [...]   在规则列表末尾追加
+#   rules!: [...]   强制替换整个规则列表（丢弃原有规则）
+# 参考上方示例，通常不需要取消注释整个 rules，而是用 +rules/rules+ 追加即可。
+# ==========================================================
+#
+# rules:
+# - RULE-SET,private_ip,直连,no-resolve
+# - RULE-SET,github_domain,Github
+# - RULE-SET,twitter_domain,Twitter
+# - RULE-SET,youtube_domain,YouTube
+# - RULE-SET,google_domain,Google
+# - RULE-SET,telegram_domain,Telegram
+# - RULE-SET,netflix_domain,NETFLIX
+# - RULE-SET,bilibili_domain,哔哩哔哩
+# - RULE-SET,bahamut_domain,巴哈姆特
+# - RULE-SET,spotify_domain,Spotify
+# - RULE-SET,cn_domain,国内
+# - RULE-SET,geolocation-!cn,其他
+# - RULE-SET,google_ip,Google
+# - RULE-SET,netflix_ip,NETFLIX
+# - RULE-SET,telegram_ip,Telegram
+# - RULE-SET,twitter_ip,Twitter
+# - RULE-SET,cn_ip,国内
+# - MATCH,其他
+
+# ==========================================================
+# dns（从源文件直接提取）
+# ----------------------------------------------------------
+# 原始 DNS 配置，默认注释不启用。
+# 如只需修改部分字段，直接写需要修改的键值即可（默认合并，不影响其他字段）。
+# 如需完整替换 DNS 配置，使用 dns!: 操作符。
+# ==========================================================
+#
+# dns:
+#   default-nameserver:
+#   - tls://223.5.5.5
+#   - tls://223.6.6.6
+#   enable: true
+#   enhanced-mode: fake-ip
+#   fake-ip-filter:
+#   - '*'
+#   - +.lan
+#   - +.local
+#   - +.market.xiaomi.com
+#   ipv6: true
+#   nameserver:
+#   - https://doh.pub/dns-query
+#   - https://dns.alidns.com/dns-query

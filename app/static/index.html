@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Subflow · 策略工作区</title>
+    <link rel="stylesheet" href="/static/styles.css?v=14" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>Subflow · 策略工作区</h1>
+          <p>输入机场订阅，生成可分析、可模拟、可编译的 Mihomo 策略工作区。</p>
+        </div>
+        <div class="status" id="status" role="status">就绪</div>
+      </header>
+
+      <section class="hero-panel">
+        <form id="convert-form" class="convert-form">
+          <label class="field url-field">
+            <span>机场订阅 URL</span>
+            <textarea id="subscription-url" name="subscription_url" placeholder="https://example.com/sub" required></textarea>
+          </label>
+          <label class="field">
+            <span>目标客户端</span>
+            <select id="target" name="target"></select>
+          </label>
+          <div class="actions">
+            <button type="button" id="preview-button">测试订阅</button>
+            <button type="submit" class="primary">创建工作区</button>
+          </div>
+        </form>
+        <section class="subscribe-box" aria-label="Mihomo 订阅链接">
+          <label class="field">
+            <span>Mihomo 订阅链接</span>
+            <input id="converted-url" type="url" readonly />
+          </label>
+          <button type="button" id="copy-url-button">复制链接</button>
+        </section>
+      </section>
+
+      <section class="powerfullz-panel" id="powerfullz-panel" hidden>
+        <div class="section-title">
+          <h2>Powerfullz 选项</h2>
+          <p>仅在选择 powerfullz 模板时生效。</p>
+        </div>
+        <div class="toggle-grid">
+          <label><input type="checkbox" id="powerfullz-loadbalance" /> loadbalance</label>
+          <label><input type="checkbox" id="powerfullz-landing" /> landing</label>
+          <label><input type="checkbox" id="powerfullz-ipv6" /> ipv6</label>
+          <label><input type="checkbox" id="powerfullz-full" checked /> full</label>
+          <label><input type="checkbox" id="powerfullz-keepalive" /> keepalive</label>
+          <label><input type="checkbox" id="powerfullz-fakeip" checked /> fakeip</label>
+          <label><input type="checkbox" id="powerfullz-quic" /> quic</label>
+          <label><input type="checkbox" id="powerfullz-tun" /> tun</label>
+        </div>
+      </section>
+
+      <section class="powerfullz-panel" id="subconverter-panel">
+        <div class="section-title">
+          <h2>增强能力</h2>
+          <p id="subconverter-panel-desc">按目标客户端生成策略组、规则和节点清洗参数。</p>
+        </div>
+        <div class="toggle-grid enhancement-grid">
+          <label><input type="checkbox" id="enhance-ai" checked /> AI 工具分流</label>
+          <label><input type="checkbox" id="enhance-dev" checked /> 开发者服务分流</label>
+          <label><input type="checkbox" id="enhance-streaming" /> 流媒体分流</label>
+          <label><input type="checkbox" id="enhance-adblock" /> 广告拦截</label>
+          <label><input type="checkbox" id="enhance-tun" checked /> TUN 配置</label>
+          <label><input type="checkbox" id="enhance-fakeip" checked /> fake-ip DNS</label>
+        </div>
+        <div class="preset-status" aria-live="polite">
+          <span>当前内置预设</span>
+          <strong id="active-preset-label">-</strong>
+          <select id="template" name="template" hidden></select>
+        </div>
+        <p class="template-description" id="template-description"></p>
+        <div class="subconverter-config-area">
+          <label class="field">
+            <span>Subconverter 配置文件</span>
+            <select id="subconverter-config-select" name="subconverter_config_select">
+              <option value="">不额外指定配置文件</option>
+            </select>
+          </label>
+          <label class="field" id="subconverter-config-custom-field" hidden>
+            <span>自定义模板 URL</span>
+            <input id="subconverter-config" name="subconverter_config" placeholder="https://example.com/profile.ini" />
+          </label>
+          <button type="button" id="preview-subconverter-config" class="secondary-action">预览配置</button>
+        </div>
+        <div class="toggle-grid">
+          <label><input type="checkbox" id="subconverter-emoji" /> 节点 Emoji</label>
+          <label><input type="checkbox" id="subconverter-udp" checked /> UDP</label>
+          <label><input type="checkbox" id="subconverter-tfo" /> TCP Fast Open</label>
+          <label><input type="checkbox" id="subconverter-sort" checked /> 节点排序</label>
+          <label><input type="checkbox" id="subconverter-append-type" /> 追加协议类型</label>
+          <label><input type="checkbox" id="subconverter-scv" /> 跳过证书校验</label>
+        </div>
+        <div class="convert-form subconverter-rules">
+          <label class="field">
+            <span>地区 / 包含关键词</span>
+            <input id="subconverter-include" placeholder="HK|SG|JP|US|Premium|BGP" />
+          </label>
+          <label class="field">
+            <span>排除关键词 / 倍率</span>
+            <input id="subconverter-exclude" placeholder="剩余流量|官网|套餐|过期|0.1x|10x" />
+          </label>
+          <label class="field">
+            <span>节点重命名</span>
+            <input id="subconverter-rename" placeholder="^香港@HK;^日本@JP" />
+          </label>
+        </div>
+      </section>
+
+      <div class="stats-strip" id="result-stats">
+        <div class="stat-card"><span>节点</span><strong id="stat-nodes">-</strong></div>
+        <div class="stat-card"><span>策略组</span><strong id="stat-groups">-</strong></div>
+        <div class="stat-card"><span>规则集</span><strong id="stat-providers">-</strong></div>
+        <div class="stat-card"><span>规则</span><strong id="stat-rules">-</strong></div>
+      </div>
+
+      <section class="workspace-section">
+        <!-- 内部模板库：保留给自动预设加载和调试，不作为页面入口展示 -->
+        <section class="panel policy-workspace advanced-only" hidden>
+          <div class="preset-intro">
+            <h2>模板文件库</h2>
+            <p>内部模板库，仅供调试自动预设加载状态。</p>
+          </div>
+          <div class="policy-toolbar">
+            <input id="policy-local-query" placeholder="搜索模板…" />
+            <span class="selection-label">当前：<strong id="selected-package-count">—</strong></span>
+            <button type="button" id="clear-visible-policy">定位当前</button>
+            <button type="button" id="open-community-browser">浏览社区配置</button>
+          </div>
+          <div class="table-wrap policy-table-wrap" id="policy-table"></div>
+        </section>
+
+        <!-- 右侧：工作区 -->
+        <div class="output-workspace">
+          <div class="output-tabs-bar">
+            <button type="button" class="output-tab active" data-output-tab="config">配置预览</button>
+            <button type="button" class="output-tab" data-output-tab="nodes">节点列表</button>
+            <button type="button" class="output-tab" data-output-tab="analysis">规则分析</button>
+            <button type="button" class="output-tab" data-output-tab="graph">策略图</button>
+            <button type="button" class="output-tab" data-output-tab="simulate">流量模拟</button>
+            <button type="button" class="output-tab advanced-only" data-output-tab="groups">策略组调试</button>
+          </div>
+
+          <!-- 面板：策略组调试 -->
+          <div class="output-pane advanced-only" id="output-pane-groups" hidden>
+            <div class="panel-header">
+              <div>
+                <h2>策略组调试</h2>
+                <p>查看自动预设生成的策略组；必要时再手动追加覆盖分组。</p>
+              </div>
+              <button type="button" id="add-group-button">新增分组</button>
+            </div>
+            <div class="groups-list" id="groups-list"></div>
+          </div>
+
+          <!-- 面板：配置预览 -->
+          <div class="output-pane" id="output-pane-config">
+            <div class="panel-header">
+              <div>
+                <h2 id="config-output-title">配置预览</h2>
+                <p id="template-meta">等待生成配置</p>
+              </div>
+              <div class="button-row">
+                <button type="button" id="download-button">下载</button>
+                <button type="button" id="copy-button">复制</button>
+              </div>
+            </div>
+            <div class="yaml-view-tabs">
+              <button type="button" class="yaml-tab active advanced-only" data-yaml-tab="policy">策略片段</button>
+              <button type="button" class="yaml-tab" data-yaml-tab="full">完整输出</button>
+              <button type="button" class="yaml-tab advanced-only" data-yaml-tab="template">自动预设源</button>
+            </div>
+            <div class="template-summary advanced-only" id="template-summary"></div>
+            <textarea id="config-output" spellcheck="false" readonly></textarea>
+          </div>
+
+          <!-- 面板：节点列表 -->
+          <div class="output-pane" id="output-pane-nodes" hidden>
+            <div class="panel-header">
+              <h2>节点列表</h2>
+              <div class="nodes-toolbar">
+                <input id="node-filter" placeholder="搜索节点…" />
+                <span id="node-count" class="count-badge">0</span>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>名称</th>
+                    <th>类型</th>
+                    <th>服务器</th>
+                    <th>端口</th>
+                  </tr>
+                </thead>
+                <tbody id="nodes-body">
+                  <tr><td colspan="4" class="empty">暂无节点</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 面板：规则分析 -->
+          <div class="output-pane" id="output-pane-analysis" hidden>
+            <div class="panel-header">
+              <div>
+                <h2>规则分析</h2>
+                <p>检查缺失规则集、缺失目标、重复规则和策略组循环。</p>
+              </div>
+            </div>
+            <div id="findings-container" class="findings-container">
+              <div class="empty">创建工作区后查看分析结果</div>
+            </div>
+          </div>
+
+          <!-- 面板：策略图 -->
+          <div class="output-pane" id="output-pane-graph" hidden>
+            <div class="panel-header">
+              <div>
+                <h2>策略图</h2>
+                <p>策略组、规则集与流量目标的依赖关系（聚合视图）</p>
+              </div>
+              <button type="button" id="load-graph-button">刷新策略图</button>
+            </div>
+            <div id="policy-graph-container" class="policy-graph-container">
+              <div class="empty">创建工作区后查看策略依赖关系</div>
+            </div>
+          </div>
+
+          <!-- 面板：流量模拟 -->
+          <div class="output-pane" id="output-pane-simulate" hidden>
+            <div class="panel-header">
+              <div>
+                <h2>流量模拟</h2>
+                <p>输入域名或 IP，查看命中规则和最终策略目标。</p>
+              </div>
+            </div>
+            <form id="simulate-form" class="simulate-form">
+              <input id="simulate-destination" placeholder="chat.openai.com 或 8.8.8.8" required />
+              <button type="submit">模拟</button>
+            </form>
+            <div id="simulate-trace" class="trace-list">
+              <div class="empty">创建工作区后输入目的地进行模拟</div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+    </main>
+
+    <!-- 社区配置浏览器 -->
+    <dialog id="community-browser" aria-label="社区配置浏览器">
+      <div class="cb-header">
+        <h2>社区配置浏览器</h2>
+        <div class="cb-header-actions">
+          <input id="community-search" placeholder="搜索名称 / 路径…" />
+          <select id="community-format-filter">
+            <option value="">全部格式</option>
+            <option value="yaml">YAML</option>
+            <option value="conf">Subconverter</option>
+            <option value="openclash">OpenClash</option>
+          </select>
+          <button type="button" id="close-community-browser" class="cb-close">✕</button>
+        </div>
+      </div>
+      <div class="cb-body">
+        <div class="cb-list-panel">
+          <div id="community-list" class="cb-list">
+            <div class="empty">加载中…</div>
+          </div>
+        </div>
+        <div class="cb-preview-panel" id="community-preview">
+          <div class="empty">选择一个模板查看详情</div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="subconverter-config-preview" aria-label="Subconverter 配置文件预览">
+      <div class="cb-header">
+        <h2>Subconverter 配置文件</h2>
+        <div class="cb-header-actions">
+          <button type="button" id="copy-subconverter-config" class="cb-close">复制</button>
+          <button type="button" id="close-subconverter-config-preview" class="cb-close">✕</button>
+        </div>
+      </div>
+      <div class="subconverter-preview-body">
+        <div class="subconverter-preview-meta" id="subconverter-config-preview-meta">选择配置文件后查看内容</div>
+        <pre id="subconverter-config-preview-content" class="subconverter-preview-content">暂无内容</pre>
+      </div>
+    </dialog>
+
+    <script src="/static/app.js?v=17"></script>
+  </body>
+</html>

@@ -1,0 +1,219 @@
+proxy-providers:
+  机场1:
+    type: http
+    # 机场订阅链接，使用 Clash 链接
+    url: ""
+    path: ./proxy_provider/air1.yaml
+    interval: 300
+    health-check:
+      enable: true
+      url: https://www.gstatic.com/generate_204
+      interval: 600
+
+proxy-groups:
+  # --- 主选择逻辑 ---
+  - { name: 🚀 节点选择, type: url-test, url: https://www.gstatic.com/generate_204, interval: 120, tolerance: 50, proxies: [🇭🇰 香港节点, 🇯🇵 日本节点, 🇰🇷 韩国节点, 🇸🇬 新加坡节点, 🇺🇸 美国节点, 🇹🇼 台湾节点, 🇪🇺 欧洲节点, 🇹🇷 土耳其节点, 🇮🇳 印度节点, 🇷🇺 俄罗斯节点, 🌏 其他地区, 🎯 全球直连] }
+  
+  - { name: 🤖 人工智能, type: select, proxies: [🇺🇸 美国自动选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇰🇷 韩国节点, 🇸🇬 新加坡节点, 🇺🇸 美国节点, 🇹🇼 台湾节点, 🇪🇺 欧洲节点, 🇹🇷 土耳其节点, 🇮🇳 印度节点, 🇷🇺 俄罗斯节点, 🌏 其他地区, 🚀 节点选择] }
+
+  - { name: 📲 电报消息, type: select, proxies: [🚀 节点选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇰🇷 韩国节点, 🇸🇬 新加坡节点, 🇺🇸 美国节点, 🇹🇼 台湾节点, 🇪🇺 欧洲节点, 🇹🇷 土耳其节点, 🇮🇳 印度节点, 🇷🇺 俄罗斯节点, 🌏 其他地区] }
+
+  - { name: 🐟 漏网之鱼, type: url-test, url: https://www.gstatic.com/generate_204, interval: 120, tolerance: 50, proxies: [🚀 节点选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇰🇷 韩国节点, 🇸🇬 新加坡节点, 🇺🇸 美国节点, 🇹🇼 台湾节点, 🇪🇺 欧洲节点, 🇹🇷 土耳其节点, 🇮🇳 印度节点, 🇷🇺 俄罗斯节点, 🌏 其他地区, 🎯 全球直连] }
+
+  # --- 基础组 ---
+  - { name: 🎯 全球直连, type: select, proxies: [DIRECT] }
+
+  # --- 地区自动选择策略组 ---
+  
+  - { name: 🇭🇰 香港节点, type: url-test, url: https://www.gstatic.com/generate_204, interval: 120, tolerance: 50, include-all-providers: true, filter: "香港|HK|HKG|(?i)HongKong" }
+  
+  - { name: 🇯🇵 日本节点, type: url-test, url: https://www.gstatic.com/generate_204, interval: 120, tolerance: 50, include-all-providers: true, filter: "日本|JP|(?i)Japan" }
+  
+  - { name: 🇰🇷 韩国节点, type: url-test, url: https://www.gstatic.com/generate_204, interval: 120, tolerance: 50, include-all-providers: true, filter: "韩国|韩|KR|(?i)Korea" }
+  
+  - { name: 🇸🇬 新加坡节点, type: url-test, url: https://www.gstatic.com/generate_204, interval: 120, tolerance: 50, include-all-providers: true, filter: "新加坡|坡|SG|(?i)Singapore" }
+  
+  - { name: 🇺🇸 美国节点, type: url-test, url: https://www.gstatic.com/generate_204, interval: 120, tolerance: 50, include-all-providers: true, filter: "美国|美|US|(?i)States" }
+
+  - { name: 🇺🇸 美国自动选择, type: url-test, url: https://www.gstatic.com/generate_204, interval: 120, tolerance: 50, include-all-providers: true, filter: "美国|美|US|(?i)States" }
+  
+  - { name: 🇹🇼 台湾节点, type: url-test, url: https://www.gstatic.com/generate_204, interval: 120, tolerance: 50, include-all-providers: true, filter: "台湾|台|TW|(?i)Taiwan" }
+
+  # 欧洲汇总：包含英国、西班牙、意大利、荷兰、德国
+  - { name: 🇪🇺 欧洲节点, type: url-test, url: https://www.gstatic.com/generate_204, interval: 120, tolerance: 50, include-all-providers: true, filter: "英国|UK|西班牙|ES|意大利|IT|荷兰|NL|德国|DE" }
+
+  - { name: 🇹🇷 土耳其节点, type: url-test, url: https://www.gstatic.com/generate_204, interval: 120, tolerance: 50, include-all-providers: true, filter: "土耳其|TR|(?i)Turkey" }
+
+  - { name: 🇮🇳 印度节点, type: url-test, url: https://www.gstatic.com/generate_204, interval: 120, tolerance: 50, include-all-providers: true, filter: "印度|IN|(?i)India" }
+
+  - { name: 🇷🇺 俄罗斯节点, type: url-test, url: https://www.gstatic.com/generate_204, interval: 120, tolerance: 50, include-all-providers: true, filter: "俄罗斯|RU|(?i)Russia" }
+
+  # --- 关键：其他地区 (排除掉以上所有地区) ---
+  - { 
+      name: 🌏 其他地区, 
+      type: url-test,
+      url: https://www.gstatic.com/generate_204,
+      interval: 120,
+      tolerance: 50,
+      include-all-providers: true, 
+      # 排除正则：将上面所有组用到的关键词放进来，剩下的就是俄罗斯、加拿大、印度、土耳其等
+      exclude-filter: "香港|HK|HKG|HongKong|日本|JP|Japan|韩国|韩|KR|Korea|新加坡|坡|SG|Singapore|美国|美|US|States|台湾|台|TW|Taiwan|英国|UK|西班牙|ES|意大利|IT|荷兰|NL|德国|DE|土耳其|TR|Turkey|印度|IN|India|俄罗斯|RU|Russia"
+    }
+
+  # --- 专项服务（保持原样） ---
+  - { name: 🎮 游戏服务, type: select, proxies: [🚀 节点选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇰🇷 韩国节点, 🇸🇬 新加坡节点, 🇺🇸 美国节点, 🇹🇼 台湾节点, 🇪🇺 欧洲节点, 🇹🇷 土耳其节点, 🇮🇳 印度节点, 🇷🇺 俄罗斯节点, 🌏 其他地区, 🎯 全球直连] }
+  - { name: 🪜 代理域名, type: url-test, url: https://www.gstatic.com/generate_204, interval: 120, tolerance: 50, proxies: [🚀 节点选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇰🇷 韩国节点, 🇸🇬 新加坡节点, 🇺🇸 美国节点, 🇹🇼 台湾节点, 🇪🇺 欧洲节点, 🇹🇷 土耳其节点, 🇮🇳 印度节点, 🇷🇺 俄罗斯节点, 🌏 其他地区, 🎯 全球直连] }
+  - { name: 📈 网络测试, type: select, proxies: [🚀 节点选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇰🇷 韩国节点, 🇸🇬 新加坡节点, 🇺🇸 美国节点, 🇹🇼 台湾节点, 🇪🇺 欧洲节点, 🇹🇷 土耳其节点, 🇮🇳 印度节点, 🇷🇺 俄罗斯节点, 🌏 其他地区, 🎯 全球直连] }
+  - { name: 🪟 微软服务, type: select, proxies: [🚀 节点选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇰🇷 韩国节点, 🇸🇬 新加坡节点, 🇺🇸 美国节点, 🇹🇼 台湾节点, 🇪🇺 欧洲节点, 🇹🇷 土耳其节点, 🇮🇳 印度节点, 🇷🇺 俄罗斯节点, 🌏 其他地区, 🎯 全球直连] }
+  - { name: 🇬 谷歌服务, type: select, proxies: [🚀 节点选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇰🇷 韩国节点, 🇸🇬 新加坡节点, 🇺🇸 美国节点, 🇹🇼 台湾节点, 🇪🇺 欧洲节点, 🇹🇷 土耳其节点, 🇮🇳 印度节点, 🇷🇺 俄罗斯节点, 🌏 其他地区, 🎯 全球直连] }
+  - { name: 🍎 苹果服务, type: select, proxies: [🎯 全球直连, 🚀 节点选择, 🇭🇰 香港节点, 🇯🇵 日本节点, 🇰🇷 韩国节点, 🇸🇬 新加坡节点, 🇺🇸 美国节点, 🇹🇼 台湾节点, 🇪🇺 欧洲节点, 🇹🇷 土耳其节点, 🇮🇳 印度节点, 🇷🇺 俄罗斯节点, 🌏 其他地区] }
+  - { name: 🛑 广告拦截, type: select, proxies: [REJECT, DIRECT] }# 规则集(yaml 文件每天自动更新)
+  - { name: 🔒 私有网络, type: select, proxies: [DIRECT] }
+  - { name: 🇨🇳 直连域名, type: select, proxies: [DIRECT] }
+  - { name: 🇨🇳 直连 IP, type: select, proxies: [DIRECT] }
+  
+
+rule-providers:
+  ads:
+    type: http
+    behavior: domain
+    format: text
+    path: ./rule_provider/ads.list
+    url: "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/ads.list"
+    interval: 7200
+
+  private:
+    type: http
+    behavior: domain
+    format: text
+    path: ./rule_provider/private.list
+    url: "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/private.list"
+    interval: 7200
+
+  microsoft-cn:
+    type: http
+    behavior: domain
+    format: text
+    path: ./rule_provider/microsoft-cn.list
+    url: "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/microsoft-cn.list"
+    interval: 7200
+
+  apple-cn:
+    type: http
+    behavior: domain
+    format: text
+    path: ./rule_provider/apple-cn.list
+    url: "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/apple-cn.list"
+    interval: 7200
+
+  google-cn:
+    type: http
+    behavior: domain
+    format: text
+    path: ./rule_provider/google-cn.list
+    url: "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/google-cn.list"
+    interval: 7200
+
+  games-cn:
+    type: http
+    behavior: domain
+    format: text
+    path: ./rule_provider/games-cn.list
+    url: "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/games-cn.list"
+    interval: 7200
+
+  ai:
+    type: http
+    behavior: domain
+    format: text
+    path: ./rule_provider/ai.list
+    url: "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/ai.list"
+    interval: 7200
+
+  networktest:
+    type: http
+    behavior: classical
+    format: text
+    path: ./rule_provider/networktest.list
+    url: "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/networktest.list"
+    interval: 7200
+
+  proxy:
+    type: http
+    behavior: domain
+    format: text
+    path: ./rule_provider/proxy.list
+    url: "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/proxy.list"
+    interval: 7200
+
+  cn:
+    type: http
+    behavior: domain
+    format: text
+    path: ./rule_provider/cn.list
+    url: "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/cn.list"
+    interval: 7200
+
+  telegramip:
+    type: http
+    behavior: ipcidr
+    format: text
+    path: ./rule_provider/telegramip.list
+    url: "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/telegramip.list"
+    interval: 7200
+
+  privateip:
+    type: http
+    behavior: ipcidr
+    format: text
+    path: ./rule_provider/privateip.list
+    url: "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/privateip.list"
+    interval: 7200
+
+  cnip:
+    type: http
+    behavior: ipcidr
+    format: text
+    path: ./rule_provider/cnip.list
+    url: "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/cnip.list"
+    interval: 7200
+  myignore:
+    type: http
+    behavior: classical
+    format: text
+    path: ./rule_provider/myignore.list
+    url: "https://raw.githubusercontent.com/Pililink/AirRules/refs/heads/main/clash/ruleset/ignore.list"
+    interval: 7200
+  myproxy:
+    type: http
+    behavior: classical
+    format: text
+    path: ./rule_provider/myproxy.list
+    url: "https://raw.githubusercontent.com/Pililink/AirRules/refs/heads/main/clash/ruleset/proxy.list"
+    interval: 7200
+    
+
+# 规则
+rules:
+  - IP-CIDR,100.64.0.0/10,DIRECT,no-resolve
+  - RULE-SET,myignore,DIRECT
+  - RULE-SET,ads,🛑 广告拦截
+  # 为过滤 P2P 流量(BT 下载)，可添加一条 `DST-PORT` 规则(ShellCrash 会默认开启“只代理常用端口”，可删除此条 `DST-PORT`)
+  # - DST-PORT,6881-6889,🎯 全球直连
+  - RULE-SET,private,🔒 私有网络
+  - RULE-SET,myproxy,🪜 代理域名
+  - RULE-SET,microsoft-cn,🪟 微软服务
+  - RULE-SET,apple-cn,🍎 苹果服务
+  - RULE-SET,google-cn,🇬 谷歌服务
+  - RULE-SET,games-cn,🎮 游戏服务
+  - RULE-SET,ai,🤖 人工智能
+  - RULE-SET,networktest,📈 网络测试
+  - RULE-SET,proxy,🪜 代理域名
+  - RULE-SET,cn,🇨🇳 直连域名
+  - RULE-SET,telegramip,📲 电报消息,no-resolve
+  - RULE-SET,privateip,🔒 私有网络,no-resolve
+  - RULE-SET,cnip,🇨🇳 直连 IP
+  - MATCH,🐟 漏网之鱼
+
+
+

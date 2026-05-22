@@ -1,0 +1,264 @@
+mode: rule
+redir-mode: tproxy
+log-level: warning
+ipv6: true
+etag-support: true
+disable-keep-alive: false
+find-process-mode: always
+global-client-fingerprint: chrome
+unified-delay: true
+tcp-concurrent: true
+inbound-tfo: true
+inbound-mptcp: false
+udp-fallback-policy: slowest
+allow-lan: true
+keep-alive-idle: 300
+keep-alive-interval: 30
+bind-address: "*"
+authentication: ["meta:shi1993@#"]
+skip-auth-prefixes: ["127.0.0.1/8", "::1/128"]
+lan-allowed-ips: ["0.0.0.0/0", "::/0"]
+lan-disallowed-ips: []
+global-ua: "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36"
+profile: {store-selected: true, store-fake-ip: true, tracing: true, reload-config-on-change: true, keep-alive-interval: 300}
+ntp: {enable: true, server: time.apple.com, port: 123, interval: 30, dialer-proxy: "", write-to-system: false}
+
+external-controller-cors:
+  allow-origins: ["*"]
+  allow-private-network: true
+external-controller: 127.0.0.1:9092
+secret: "88888888"
+external-ui: './ui'
+external-ui-name: zashboard
+external-ui-url: "https://codeload.github.com/Zephyruso/zashboard/zip/refs/heads/gh-pages"
+
+listeners:
+  - {name: mixed-in, type: mixed, port: 7893, listen: 0.0.0.0, udp: true}
+  - {name: socks-in, type: socks, port: 7891, listen: 0.0.0.0, udp: true}
+  - {name: http-in, type: http, port: 7896, listen: 0.0.0.0, udp: false} 
+  - {name: redir-in, type: redir, port: 7892, listen: 0.0.0.0, udp: true}
+  - {name: tproxy-in, type: tproxy, port: 7894, listen: 0.0.0.0, udp: true}
+
+tun:
+  enable: true
+  device: mihomo
+  stack: mixed
+  mtu: 1500
+  inet4-address: [172.18.0.1/30]
+  inet6-address: [fdfe:dcba:9876::1/126]
+  strict-route: true
+  dns-hijack: ["any:53", "tcp://any:53"]
+  auto-route: true
+  auto-redirect: true
+  auto-detect-interface: true
+  gso: true
+  gso-max-size: 65536
+  endpoint-independent-nat: true
+  udp-timeout: 60
+  disable-icmp-forwarding: true
+  route-exclude-address-set: ["rule-set:cn-ip", "rule-set:private-ip"]
+  route-exclude-cidr: ["192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12"]  
+
+geodata-mode: true
+geodata-loader: standard
+geosite-matcher: succinct
+geox-url: {geoip: "https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/geoip.dat", geosite: "https://cdn.jsdelivr.net/gh/Loyalsoldier/v2ray-rules-dat@release/geosite.dat", mmdb: "https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/GeoLite2-Country.mmdb", asn: "https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/GeoLite2-ASN.mmdb"}
+geo-auto-update: true
+geo-update-interval: 24
+
+dns-anchor:
+  cn-dns: &cn-dns ["https://dns.alidns.com/dns-query", "https://doh.pub/dns-query"]
+  global-dns: &global-dns ["https://1.1.1.1/dns-query", "https://dns.google/dns-query", "https://dns.quad9.net/dns-query", "tls://cloudflare-dns.com:853", "tls://dns.google:853"]
+
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  ipv6: true
+  enhanced-mode: fake-ip
+  timeout: 8000
+  cache-algorithm: arc
+  cache: {enable: true, size: 4096, expired: 180}
+  fake-ip-range: 198.18.0.0/16
+  prefer-h3: true
+  tls-version: {min: 1.2, max: 1.3}
+  h3-grace-period: 2s
+  use-hosts: true
+  use-system-hosts: true
+  respect-rules: true
+  fake-ip-filter-mode: blacklist
+  fake-ip-ttl: 60
+  fake-ip-filter: ["localhost","+.lan","+.local","+.arpa","+.ntp.org","captive.apple.com","connectivitycheck.gstatic.com","msftconnecttest.com","msftncsi.com","openai.*","+.openai.*","+.srv.nintendo.net","+.stun.playstation.net","+.xboxlive.com","report-v2.samsung.japps.cn","rule-set:private"]
+  ignore-resolve-fail: true
+  direct-nameserver: ["system"]
+  default-nameserver: ["223.5.5.5", "119.29.29.29", "114.114.114.114", "180.76.76.76"]
+  nameserver: ["https://dns.alidns.com/dns-query", "https://1.1.1.1/dns-query", "https://doh.pub/dns-query", "https://dns.google/dns-query", "https://dns.quad9.net/dns-query", "https://dns.adguard.com/dns-query", "tls://cloudflare-dns.com:853", "tls://dns.google:853"]
+  proxy-server-nameserver: ["https://1.1.1.1/dns-query", "https://dns.google/dns-query", "https://cloudflare-dns.com/dns-query", "https://dns.quad9.net/dns-query", "https://dns.adguard.com/dns-query", "https://public.dns.iij.jp/dns-query", "tls://cloudflare-dns.com:853", "tls://dns.google:853"]  
+  fallback: ["https://dns.google/dns-query", "https://1.1.1.1/dns-query", "https://dns.alidns.com/dns-query", "https://public.dns.iij.jp/dns-query", "https://jp.tdns.dev/dns-query", "tls://dns.google:853"]
+  fallback-filter: {geoip: true, geoip-code: CN, geosite: [gfw], ipcidr: ["240.0.0.0/4"]}
+  direct-nameserver-follow-policy: true
+  nameserver-policy:
+    "rule-set:reject": ["https://dns.adguard.com/dns-query"]
+    "rule-set:OpenAI-zj": *global-dns
+    "rule-set:Claude-zj": *global-dns
+    "rule-set:Telegram-zj": *global-dns
+    "rule-set:Microsoft": *global-dns
+    "rule-set:GitHub-zj": *global-dns
+    "rule-set:TikTok-zj": *global-dns
+    "rule-set:PayPal": *global-dns
+    "rule-set:YouTube": *global-dns
+    "rule-set:Facebook-zj": *global-dns
+    "rule-set:Netflix": *global-dns
+    "rule-set:WildRift-zj": *global-dns
+    "rule-set:games-!cn": *global-dns
+    "rule-set:twitter": *global-dns
+    "rule-set:Google-zj": *global-dns
+    "rule-set:gfw": *global-dns
+    "rule-set:greatfire": *global-dns
+    "rule-set:geolocation-!cn": *global-dns
+    "rule-set:Apple": *global-dns
+    "rule-set:icloud": *global-dns
+    "rule-set:douyin-zj": *cn-dns
+    "rule-set:Alibaba": *cn-dns
+    "rule-set:Tencent": *cn-dns
+    "rule-set:games-cn": *cn-dns
+    "rule-set:private": *cn-dns
+    "rule-set:cn-domain": *cn-dns
+
+sniffer:
+  enable: true
+  force-dns-mapping: true
+  parse-pure-ip: true
+  sniff: {HTTP: {ports: [80, 8080-8880], override-destination: true}, TLS: {ports: [443, 8443]}, QUIC: {ports: [443, 8443]}}
+  force-domain: ["+.cloudflare.net","+.akamaized.net","+.akamai.net","+.fastly.net","+.cloudfront.net","+.googlevideo.com","+.googlecdn.com","+.ytimg.com","+.youtube.com","+.netflix.com","+.instagram.com","+.tiktokcdn.com","+.tiktokv.com","+.douyin.com","+.douyincdn.com","+.telegram.org","+.t.me","+.tdesktop.com","+.cdn-telegram.org","+.telegram-cdn.org","+.cdn.telegram.org"]  
+  skip-domain: ["localhost","+.lan","+.local","+.arpa","+.invalid","+.test","+.pvp.net","+.riotgames.com","openai.*","+.openai.*","rule-set:Alibaba","rule-set:Tencent","rule-set:cn-domain","rule-set:private","rule-set:games-cn"]
+  skip-src-address: ["127.0.0.0/8","10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","::1/128","fc00::/7","fe80::/10"]
+  
+proxies:
+  - {name: "🇺🇸 VLESS_TCP/TLS_Vision", type: vless, server: la.shichunhui88.cc, port: 29986, uuid: b6114c5c-6f10-460b-a4df-1638563c0d72, udp: true, tls: true, network: tcp, client-fingerprint: chrome, flow: xtls-rprx-vision, servername: la.shichunhui88.cc, skip-cert-verify: false}
+  - {name: "🇺🇸 VLESS_WS", type: vless, server: la.shichunhui88.cc, port: 20594, uuid: b6114c5c-6f10-460b-a4df-1638563c0d72, udp: true, tls: true, network: ws, client-fingerprint: chrome, servername: la.shichunhui88.cc, skip-cert-verify: false, ws-opts: {path: /kagmws, headers: {Host: la.shichunhui88.cc}}}
+  - {name: "🇺🇸 VMess_WS", type: vmess, server: la.shichunhui88.cc, port: 33081, uuid: b6114c5c-6f10-460b-a4df-1638563c0d72, alterId: 0, cipher: none, udp: true, tls: true, network: ws, servername: la.shichunhui88.cc, skip-cert-verify: false, ws-opts: {path: /mlau, headers: {Host: la.shichunhui88.cc}}}
+  - {name: "🇺🇸 Trojan_TCP", type: trojan, server: la.shichunhui88.cc, port: 16285, password: b6114c5c-6f10-460b-a4df-1638563c0d72, udp: true, sni: la.shichunhui88.cc, skip-cert-verify: false, alpn: [http/1.1], client-fingerprint: chrome}
+  - {name: "🇺🇸 Hysteria2_TLS", type: hysteria2, server: la.shichunhui88.cc, ports: 30000-31000, hop-interval: 30, password: b6114c5c-6f10-460b-a4df-1638563c0d72, sni: la.shichunhui88.cc, skip-cert-verify: false, alpn: [h3], udp: true}
+  - {name: "🇺🇸 VLESS_Reality_Vision", type: vless, server: 45.59.185.199, port: 36200, uuid: b6114c5c-6f10-460b-a4df-1638563c0d72, udp: true, tls: true, network: tcp, client-fingerprint: chrome, servername: www.bing.com, skip-cert-verify: false, reality-opts: {public-key: 84rHqorG_l_uVq-kKtnLEHOg4Y1fiyM-jkbqQy_f0zs, short-id: 6ba85179e30d4fc2}, flow: xtls-rprx-vision}
+  - {name: "🇺🇸 VLESS_Reality_gRPC", type: vless, server: 45.59.185.199, port: 19652, uuid: b6114c5c-6f10-460b-a4df-1638563c0d72, udp: true, tls: true, network: grpc, client-fingerprint: chrome, servername: www.bing.com, skip-cert-verify: false, reality-opts: {public-key: 84rHqorG_l_uVq-kKtnLEHOg4Y1fiyM-jkbqQy_f0zs, short-id: 6ba85179e30d4fc2}, grpc-opts: {grpc-service-name: grpc}}
+  - {name: "🇺🇸 singbox_tuic", type: tuic, server: la.shichunhui88.cc, port: 18400, uuid: b6114c5c-6f10-460b-a4df-1638563c0d72, password: b6114c5c-6f10-460b-a4df-1638563c0d72, udp: true, congestion-controller: bbr, alpn: [h3], sni: la.shichunhui88.cc, skip-cert-verify: false}
+  - {name: "🇺🇸 AnyTLS", type: anytls, server: la.shichunhui88.cc, port: 20989, uuid: b6114c5c-6f10-460b-a4df-1638563c0d72, password: b6114c5c-6f10-460b-a4df-1638563c0d72, peer: la.shichunhui88.cc, sni: la.shichunhui88.cc, insecure: false, skip-cert-verify: false, udp: true, alpn: [h2, http/1.1]}
+  - {name: "🇺🇸 VMess_HTTPUpgrade_TLS", type: vmess, server: la.shichunhui88.cc, port: 38760, uuid: b6114c5c-6f10-460b-a4df-1638563c0d72, alterId: 0, cipher: auto, udp: true, tls: true, servername: la.shichunhui88.cc, skip-cert-verify: false, network: ws, ws-opts: {path: /lqqt, headers: {Host: la.shichunhui88.cc}, v2ray-http-upgrade: true}}      
+    
+proxy-groups:
+  - {name: "🌍全球加速", type: select, icon: https://cdn.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Global.png, proxies: ["♻️随机"], include-all: true, exclude-type: direct, filter: ".*", url: https://www.gstatic.com/generate_204, interval: 120, timeout: 5000}
+  - {name: "♻️随机", type: url-test, icon: https://cdn.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Bypass.png, include-all: true, exclude-type: direct, filter: ".*", url: "https://www.gstatic.com/generate_204", interval: 120, tolerance: 30, timeout: 5000, hidden: true}
+  - {name: "🎷抖音", type: select, icon: https://cdn.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/TikTok.png, proxies: ["🌍全球加速","♻️随机","🎯直连"], include-all: true, exclude-type: direct, filter: ".*"}
+  - {name: "🎬TikTok", type: select, icon: https://cdn.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/TikTok_2.png, proxies: ["🌍全球加速","♻️随机","🎯直连"], include-all: true, exclude-type: direct, filter: ".*"}
+  - {name: "🎮国际游戏", type: select, icon: https://cdn.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Game.png, proxies: ["🌍全球加速","♻️随机","🎯直连"], include-all: true, exclude-type: direct, filter: ".*"}
+  - {name: "💻Telegram", type: select, icon: https://cdn.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Telegram.png, proxies: ["🌍全球加速","♻️随机","🎯直连"], include-all: true, exclude-type: direct, filter: ".*"}
+  - {name: "🧠OpenAI", type: select, icon: https://cdn.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/ChatGPT.png, proxies: ["🌍全球加速","♻️随机","🎯直连"], include-all: true, exclude-type: direct, filter: ".*"}
+  - {name: "💳PayPal", type: select, icon: https://cdn.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/PayPal.png, proxies: ["🌍全球加速","♻️随机","🎯直连"], include-all: true, exclude-type: direct, filter: ".*"}
+  - {name: "🌐Google服务", type: select, icon: https://cdn.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Google_Search.png, proxies: ["🌍全球加速","♻️随机","🎯直连"], include-all: true, exclude-type: direct, filter: ".*"}
+  - {name: "📺国际流媒体", type: select, icon: https://cdn.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Facebook.png, proxies: ["🌍全球加速","♻️随机","🎯直连"], include-all: true, exclude-type: direct, filter: ".*"}
+  - {name: "😊微软服务", type: select, icon: https://cdn.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Microsoft.png, proxies: ["🌍全球加速","♻️随机","🎯直连"], include-all: true, exclude-type: direct, filter: ".*"}
+  - {name: "🍎苹果服务", type: select, icon: https://cdn.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Apple.png, proxies: ["🌍全球加速","♻️随机","🎯直连"], include-all: true, exclude-type: direct, filter: ".*"}
+  - {name: "⛩️阿里腾讯", type: select, icon: https://cdn.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/China.png, proxies: ["🎯直连","🌍全球加速"]}
+  - {name: "🎯直连", type: select, icon: https://cdn.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/China_Map.png, proxies: ["DIRECT","🌍全球加速"], url: "http://connect.rom.miui.com/generate_204"}
+  - {name: "🤡漏网之鱼", type: select, icon: https://cdn.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Final.png, proxies: ["🌍全球加速","🎯直连"]}
+
+tunnels:
+  - {network: [tcp, udp], address: 127.0.0.1:7788, target: jp1.wildrift.riotgames.com:443, proxy: "🎮国际游戏"}
+  - {network: [tcp, udp], address: 127.0.0.1:7789, target: jp1.pvp.net:443, proxy: "🎮国际游戏"}
+  - {network: [tcp, udp], address: 127.0.0.1:9000, target: 149.154.167.91:443, proxy: "💻Telegram"}
+  - {network: [tcp, udp], address: 127.0.0.1:9001, target: 149.154.167.92:443, proxy: "💻Telegram"}
+  - {network: [tcp, udp], address: 127.0.0.1:9002, target: 149.154.175.100:443, proxy: "💻Telegram"}
+  - {network: [tcp, udp], address: 127.0.0.1:7999, target: api.openai.com:443, proxy: "🧠OpenAI"}
+  - {network: [tcp, udp], address: 127.0.0.1:7443, target: chat.openai.com:443, proxy: "🧠OpenAI"}
+  - {network: [tcp, udp], address: 127.0.0.1:7700, target: www.google.com:443, proxy: "🌐Google服务"}
+  - {network: [tcp, udp], address: 127.0.0.1:7701, target: accounts.google.com:443, proxy: "🌐Google服务"}
+  - {network: [tcp, udp], address: 127.0.0.1:7702, target: www.googleapis.com:443, proxy: "🌐Google服务"}
+
+rules:
+  - RULE-SET,reject,REJECT
+  - RULE-SET,douyin-zj,🎷抖音
+  - RULE-SET,OpenAI-zj,🧠OpenAI
+  - RULE-SET,Claude-zj,🧠OpenAI
+  - RULE-SET,TikTok-zj,🎬TikTok
+  - RULE-SET,PayPal,💳PayPal
+  - RULE-SET,Facebook-zj,📺国际流媒体
+  - RULE-SET,Netflix,📺国际流媒体
+  - RULE-SET,WildRift-zj,🎮国际游戏
+  - RULE-SET,games-!cn,🎮国际游戏
+  - RULE-SET,Telegram-zj,💻Telegram
+  - RULE-SET,telegram-ip,💻Telegram,no-resolve
+  - RULE-SET,YouTube,🌐Google服务
+  - RULE-SET,Google-zj,🌐Google服务
+  - RULE-SET,google-ip,🌐Google服务,no-resolve
+  - RULE-SET,GitHub-zj,😊微软服务
+  - RULE-SET,Microsoft,😊微软服务
+  - RULE-SET,icloud,🍎苹果服务
+  - RULE-SET,Apple,🍎苹果服务
+  - RULE-SET,twitter,🌍全球加速
+  - RULE-SET,cloudflare-ip,🌍全球加速,no-resolve
+  - RULE-SET,cloudfront-ip,🌍全球加速,no-resolve
+  - RULE-SET,fastly-ip,🌍全球加速,no-resolve
+  - RULE-SET,greatfire,🌍全球加速
+  - RULE-SET,gfw,🌍全球加速
+  - RULE-SET,geolocation-!cn,🌍全球加速
+  - RULE-SET,games-cn,🎯直连
+  - RULE-SET,Alibaba,⛩️阿里腾讯
+  - RULE-SET,Tencent,⛩️阿里腾讯
+  - RULE-SET,private,🎯直连
+  - RULE-SET,cn-domain,🎯直连
+  - RULE-SET,private-ip,🎯直连,no-resolve
+  - RULE-SET,cn-ip,🎯直连,no-resolve
+  - MATCH,🤡漏网之鱼
+
+rule-anchor:
+  mrs-domain: &mrs-domain {type: http, behavior: domain, interval: 86400, format: mrs}
+  mrs-ipcidr: &mrs-ipcidr {type: http, behavior: ipcidr, interval: 86400, format: mrs}
+  class-yaml: &class-yaml {type: http, behavior: classical, interval: 86400, format: yaml}
+  
+rule-providers:
+  reject: {<<: *mrs-domain, url: "https://gh.669588.xyz/rules/geo/geosite/category-ads-all.mrs"}
+  douyin-zj: {<<: *class-yaml, url: "https://gh.669588.xyz/rules/geo/geosite/douyin.yaml"}
+  TikTok-zj: {<<: *class-yaml, url: "https://gh.669588.xyz/rules/geo/geosite/tiktok.yaml"}
+  Telegram-zj: {<<: *class-yaml, url: "https://gh.669588.xyz/rules/geo/geosite/telegram.yaml"}
+  OpenAI-zj: {<<: *class-yaml, url: "https://gh.669588.xyz/rules/geo/geosite/openai.yaml"}
+  Facebook-zj: {<<: *class-yaml, url: "https://gh.669588.xyz/rules/geo/geosite/facebook.yaml"}
+  Google-zj: {<<: *class-yaml, url: "https://gh.669588.xyz/rules/geo/geosite/google.yaml"}
+  WildRift-zj: {<<: *class-yaml, url: "https://gh.669588.xyz/rules/geo/geosite/wildrift.yaml"}
+  GitHub-zj: {<<: *mrs-domain, url: "https://gh.669588.xyz/rules/geo/geosite/github.mrs"}
+  Claude-zj: {<<: *class-yaml, url: "https://gh.669588.xyz/rules/geo/geosite/claude.yaml"}
+  PayPal: {<<: *mrs-domain, url: "https://gh.669588.xyz/rules/geo/geosite/paypal.mrs"}
+  YouTube: {<<: *mrs-domain, url: "https://gh.669588.xyz/rules/geo/geosite/youtube.mrs"}
+  Netflix: {<<: *mrs-domain, url: "https://gh.669588.xyz/rules/geo/geosite/netflix.mrs"}
+  games-!cn: {<<: *mrs-domain, url: "https://gh.669588.xyz/rules/geo/geosite/category-games-!cn.mrs"}
+  twitter: {<<: *mrs-domain, url: "https://gh.669588.xyz/rules/geo/geosite/twitter.mrs"}
+  telegram-ip: {<<: *mrs-ipcidr, url: "https://gh.669588.xyz/rules/geo/geoip/telegram.mrs"}
+  google-ip: {<<: *mrs-ipcidr, url: "https://gh.669588.xyz/rules/geo/geoip/google.mrs"}
+  cloudflare-ip: {<<: *mrs-ipcidr, url: "https://gh.669588.xyz/rules/geo/geoip/cloudflare.mrs"}
+  cloudfront-ip: {<<: *mrs-ipcidr, url: "https://gh.669588.xyz/rules/geo/geoip/cloudfront.mrs"}
+  fastly-ip: {<<: *mrs-ipcidr, url: "https://gh.669588.xyz/rules/geo/geoip/fastly.mrs"}
+  icloud: {<<: *mrs-domain, url: "https://gh.669588.xyz/rules/geo/geosite/icloud.mrs"}
+  Apple: {<<: *mrs-domain, url: "https://gh.669588.xyz/rules/geo/geosite/apple.mrs"}
+  Microsoft: {<<: *mrs-domain, url: "https://gh.669588.xyz/rules/geo/geosite/microsoft.mrs"}
+  gfw: {<<: *mrs-domain, url: "https://gh.669588.xyz/rules/geo/geosite/gfw.mrs"}
+  greatfire: {<<: *mrs-domain, url: "https://gh.669588.xyz/rules/geo/geosite/greatfire.mrs"}
+  geolocation-!cn: {<<: *mrs-domain, url: "https://gh.669588.xyz/rules/geo/geosite/geolocation-!cn.mrs"}
+  games-cn: {<<: *mrs-domain, url: "https://gh.669588.xyz/rules/geo/geosite/category-games-cn.mrs"}
+  Alibaba: {<<: *mrs-domain, url: "https://gh.669588.xyz/rules/geo/geosite/alibaba.mrs"}
+  Tencent: {<<: *mrs-domain, url: "https://gh.669588.xyz/rules/geo/geosite/tencent.mrs"}
+  private: {<<: *mrs-domain, url: "https://gh.669588.xyz/rules/geo/geosite/private.mrs"}
+  cn-domain: {<<: *mrs-domain, url: "https://gh.669588.xyz/rules/geo/geosite/cn.mrs"}
+  private-ip: {<<: *mrs-ipcidr, url: "https://gh.669588.xyz/rules/geo/geoip/private.mrs"}
+  cn-ip: {<<: *mrs-ipcidr, url: "https://gh.669588.xyz/rules/geo/geoip/cn.mrs"}
+    
+global-interval: 300   
+health-check:
+  enable: true
+  url: https://www.gstatic.com/generate_204
+  fallback:
+    - https://www.apple.com/library/test/success.html
+    - https://cp.cloudflare.com/generate_204
+    - http://connect.rom.miui.com/generate_204
+
+experimental:
+  quic-go-disable-ecn: true
+  clash-api: true

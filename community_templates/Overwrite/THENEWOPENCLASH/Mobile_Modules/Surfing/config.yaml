@@ -1,0 +1,685 @@
+# OpenClash 覆写模块 - config.yaml
+# 生成日期：2026-04-09
+# 源文件：https://raw.githubusercontent.com/HenryChiao/MIHOMO_YAMLS/main/THEYAMLS/Mobile_Modules/Surfing/config.yaml
+# 格式：新版 OpenClash [YAML] 块覆写
+#
+# 本文件仅包含 [YAML] 块覆写内容，不含任何 [General] 插件设置。
+# 所有内容默认注释，不影响现有配置；取消注释对应段落即可启用该覆写。
+# ==========================================================
+# [YAML] 是新版 OpenClash 覆写模块的识别标记
+# 此行本身不可注释，内容写在此标记之后
+# 注释状态不生效；取消注释后重载覆写模块即可生效
+# ==========================================================
+[YAML]
+
+# ==========================================================
+# 操作符速查
+# ----------------------------------------------------------
+#  key       默认合并：Hash 递归合并，其他类型直接覆盖原值
+#  key!      强制覆盖：整个值全部替换，不做任何合并
+#  key+      数组后置追加：在数组末尾加入新元素
+#  +key      数组前置插入：在数组开头插入（规则越靠前越优先匹配）
+#  key-      数组差集删除：从数组移除指定元素；非数组则删除该键
+#  key*      批量条件更新：配合 where/set，按条件匹配后批量修改
+# ==========================================================
+
+# ==========================================================
+# 示例：追加自定义 rule-provider 并在规则末尾加入对应规则
+# 取消注释后，Steam 流量将走 Proxy 策略组
+# ----------------------------------------------------------
+# +rule-providers:
+#   Steam:
+#     type: http
+#     behavior: domain
+#     format: mrs
+#     url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/steam.mrs"
+#     interval: 86400
+# +rules:
+#   - RULE-SET,Steam,Proxy
+# ==========================================================
+
+# ==========================================================
+# 示例：在规则列表最前面插入高优先级规则（最先匹配）
+# ----------------------------------------------------------
+# +rules:
+#   - DOMAIN-SUFFIX,example.com,DIRECT
+#   - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+# ==========================================================
+
+# ==========================================================
+# 示例：强制替换整个 rules 数组（原有规则全部丢弃）
+# ----------------------------------------------------------
+# rules!:
+#   - DOMAIN-SUFFIX,example.com,DIRECT
+#   - MATCH,PROXY
+# ==========================================================
+
+# ==========================================================
+# 示例：修改 dns 配置中的部分字段，其余字段保持不变
+# ----------------------------------------------------------
+# dns:
+#   enable: true
+#   cache-algorithm: lru
+# ==========================================================
+
+# ==========================================================
+# 示例：给所有 url-test 类型的策略组在 proxies 末尾追加节点
+# ----------------------------------------------------------
+# proxy-groups*:
+#   where:
+#     type: url-test
+#   set:
+#     proxies+:
+#       - '节点名称'
+# ==========================================================
+
+# ==========================================================
+# proxy-providers（从源文件直接提取）
+# ----------------------------------------------------------
+# 以下内容原样复制自源 YAML 的 proxy-providers 块。
+# 使用方法：
+#   1. 将需要替换的 provider 的 url: 改为你自己的订阅链接
+#   2. 删除这整块前面的 # 号，保存后重载覆写模块即可
+# ==========================================================
+#
+# proxy-providers:
+#   1.主要地址:
+#     header: &id001
+#       User-Agent:
+#       - ClashMetaForAndroid/2.11.2.Meta
+#       - clash-verge/v2.2.3
+#       - ClashforWindows/0.19.23
+#       - clash.meta
+#       - mihomo
+#     health-check: &id002
+#       enable: true
+#       interval: 300
+#       url: https://www.gstatic.com/generate_204
+#     interval: 86400
+#     override:
+#       additional-prefix: Main：
+#     path: ./proxies/1.主要地址.yaml
+#     proxy: 订阅更新
+#     type: http
+#     url: 此处引入您的Clash订阅链接地址
+#   2.备用地址:
+#     header: *id001
+#     health-check: *id002
+#     interval: 86400
+#     override:
+#       additional-prefix: Minor：
+#     path: ./proxies/2.备用地址.yaml
+#     proxy: 订阅更新
+#     type: http
+#     url: 此处引入您的Clash订阅链接地址
+#   3.额外地址:
+#     header: *id001
+#     health-check: *id002
+#     interval: 86400
+#     override:
+#       additional-prefix: Additi：
+#     path: ./proxies/3.额外地址.yaml
+#     proxy: 订阅更新
+#     type: http
+#     url: 此处引入您的Clash订阅链接地址
+
+# ==========================================================
+# proxy-groups（从源文件直接提取）
+# ----------------------------------------------------------
+# 原始策略组配置，默认注释不启用。
+# 如需覆写策略组，可取消注释后修改，或参考上方示例使用 proxy-groups* 条件更新。
+# 直接取消注释将强制替换整个 proxy-groups（等同于 proxy-groups! 操作）。
+# ==========================================================
+#
+# proxy-groups:
+# - icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/All.svg
+#   name: 总模式
+#   proxies:
+#   - ALL·延迟最低
+#   - ALL·负载均衡
+#   - ALL·故障转移
+#   - ALL·日本地区
+#   - ALL·中国台湾
+#   - ALL·香港地区
+#   - ALL·美国地区
+#   - ALL·狮城地区
+#   - ALL·其它地区
+#   - 🌐 本机·本地直连
+#   type: select
+# - icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/Update.svg
+#   name: 订阅更新
+#   proxies:
+#   - 🌐 本机·本地直连
+#   - 总模式
+#   type: select
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/XiaoHongShu.svg
+#   name: 小红书
+#   proxies: &id001
+#   - 总模式
+#   - ALL·延迟最低
+#   - ALL·负载均衡
+#   - ALL·故障转移
+#   - ALL·中国台湾
+#   - ALL·香港地区
+#   - ALL·美国地区
+#   - ALL·日本地区
+#   - ALL·狮城地区
+#   - ALL·其它地区
+#   - ⛔️ 禁止·拒绝连接
+#   - 🌐 本机·本地直连
+#   type: select
+#   use: &id002
+#   - 1.主要地址
+#   - 2.备用地址
+#   - 3.额外地址
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/DouYin.svg
+#   name: 抖音
+#   proxies: *id001
+#   type: select
+#   use: *id002
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/BiliBili.svg
+#   name: BiliBili
+#   proxies: *id001
+#   type: select
+#   use: *id002
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/Steam.svg
+#   name: Steam
+#   proxies: *id001
+#   type: select
+#   use: *id002
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/Apple.svg
+#   name: Apple
+#   proxies: *id001
+#   type: select
+#   use: *id002
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/Microsoft.svg
+#   name: Microsoft
+#   proxies: *id001
+#   type: select
+#   use: *id002
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/Telegram.svg
+#   name: Telegram
+#   proxies: *id001
+#   type: select
+#   use: *id002
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/Discord.svg
+#   name: Discord
+#   proxies: *id001
+#   type: select
+#   use: *id002
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/Spotify.svg
+#   name: Spotify
+#   proxies: *id001
+#   type: select
+#   use: *id002
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/TikTok.svg
+#   name: TikTok
+#   proxies: *id001
+#   type: select
+#   use: *id002
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/YouTube.svg
+#   name: YouTube
+#   proxies: *id001
+#   type: select
+#   use: *id002
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/Netflix.svg
+#   name: Netflix
+#   proxies: *id001
+#   type: select
+#   use: *id002
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/Google.svg
+#   name: Google
+#   proxies: *id001
+#   type: select
+#   use: *id002
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/GoogleFCM.svg
+#   name: GoogleFCM
+#   proxies: *id001
+#   type: select
+#   use: *id002
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/Facebook.svg
+#   name: Facebook
+#   proxies: *id001
+#   type: select
+#   use: *id002
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/OpenAI.svg
+#   name: OpenAI
+#   proxies: *id001
+#   type: select
+#   use: *id002
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/GitHub.svg
+#   name: GitHub
+#   proxies: *id001
+#   type: select
+#   use: *id002
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/Twitter.svg
+#   name: Twitter(X)
+#   proxies: *id001
+#   type: select
+#   use: *id002
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/DNS.svg
+#   name: DNS连接
+#   proxies: *id001
+#   type: select
+#   use: *id002
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/HBASE-copy.svg
+#   name: 漏网之鱼
+#   proxies: *id001
+#   type: select
+#   use: *id002
+# - icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/No-ads-all.svg
+#   name: 广告拦截
+#   proxies:
+#   - ⛔️ 禁止·拒绝连接
+#   - 🌐 DNS_Hijack
+#   - REJECT-DROP
+#   - PASS
+#   type: select
+# - icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/WebRTC.svg
+#   name: WebRTC
+#   proxies:
+#   - ⛔️ 禁止·拒绝连接
+#   - 🌐 DNS_Hijack
+#   - REJECT-DROP
+#   - PASS
+#   type: select
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/Return.svg
+#   name: ALL·延迟最低
+#   type: url-test
+#   use: *id002
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/Return.svg
+#   name: ALL·负载均衡
+#   strategy: round-robin
+#   type: load-balance
+#   use: *id002
+# - filter: ^(?!.*(套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|失联|余额)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/Return.svg
+#   name: ALL·故障转移
+#   type: fallback
+#   use: *id002
+# - filter: ^(?=.*(日本|川日|东京|大阪|泉日|埼玉|沪日|深日|[^-]日|JP|Japan)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/JP.svg
+#   name: ALL·日本地区
+#   type: url-test
+#   use: &id003
+#   - 1.主要地址
+#   - 2.备用地址
+#   - 3.额外地址
+# - filter: ^(?=.*(台|新北|彰化|TW|Taiwan|taipei)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/CN.svg
+#   name: ALL·中国台湾
+#   type: url-test
+#   use: *id003
+# - filter: ^(?=.*(港|HK|hk|Hong Kong|HongKong|hongkong)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/HK.svg
+#   name: ALL·香港地区
+#   type: url-test
+#   use: *id003
+# - filter: ^(?=.*(美|波特兰|达拉斯|俄勒冈|凤凰城|费利蒙|硅谷|拉斯维加斯|洛杉矶|圣何塞|圣克拉拉|西雅图|芝加哥|US|United States)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/US.svg
+#   name: ALL·美国地区
+#   type: url-test
+#   use: *id003
+# - filter: ^(?=.*(新加坡|坡|狮城|SG|Singapore)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/Singapore.svg
+#   name: ALL·狮城地区
+#   type: url-test
+#   use: *id003
+# - filter: ^(?!.*(港|HK|hk|Hong Kong|HongKong|hongkong|日本|川日|东京|大阪|泉日|埼玉|沪日|深日|[^-]日|JP|Japan|美|波特兰|达拉斯|俄勒冈|凤凰城|费利蒙|硅谷|拉斯维加斯|洛杉矶|圣何塞|圣克拉拉|西雅图|芝加哥|US|United
+#     States|台|新北|彰化|TW|Taiwan|新加坡|坡|狮城|SG|Singapore|灾|网易|Netease|套餐|重置|剩余|到期|订阅|群|账户|流量|有效期|时间|官网|拒绝|DNS|Ch|网址|售|防失)).*$
+#   icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/Globe.svg
+#   name: ALL·其它地区
+#   type: url-test
+#   use: *id003
+# - icon: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/app/icon/User.svg
+#   interval: 86400
+#   name: 特殊地址
+#   proxies:
+#   - 🌐 本机·本地直连
+#   - ⛔️ 禁止·拒绝连接
+#   type: select
+#   url: https://www.baidu.com/favicon.ico
+
+# ==========================================================
+# rule-providers（从源文件直接提取）
+# ----------------------------------------------------------
+# 原始规则集配置，默认注释不启用。
+# 如需追加新的 rule-provider，参考上方示例一使用 +rule-providers: 操作符。
+# ==========================================================
+#
+# rule-providers:
+#   Apple_IP:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/Apple_IP.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo-lite/geoip/apple.mrs
+#   Apple_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/Apple.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/apple.mrs
+#   BiliBili_IP:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/BiliBili_IP.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo-lite/geoip/bilibili.mrs
+#   BiliBili_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/BiliBili.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/bilibili.mrs
+#   CN_IP:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/CN_IP.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo-lite/geoip/cn.mrs
+#   CN_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/CN_域.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/cn.mrs
+#   Discord_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/Discord.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/discord.mrs
+#   DouYin_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/DouYin.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/douyin.mrs
+#   Facebook_IP:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/Facebook_IP.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo-lite/geoip/facebook.mrs
+#   Facebook_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/Facebook.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/facebook.mrs
+#   GitHub_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/GitHub.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/github.mrs
+#   GoogleFCM_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/GoogleFCM.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/googlefcm.mrs
+#   Google_IP:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/Google_IP.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo-lite/geoip/google.mrs
+#   Google_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/Google.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/google.mrs
+#   Microsoft_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/Microsoft.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/microsoft.mrs
+#   Netflix_IP:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/Netflix_IP.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo-lite/geoip/netflix.mrs
+#   Netflix_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/Netflix.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/netflix.mrs
+#   No-ads-all_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/No-ads-all.mrs
+#     type: http
+#     url: https://anti-ad.net/mihomo.mrs
+#   OpenAI_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/OpenAI.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/openai.mrs
+#   Private_IP:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/Private_IP.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo-lite/geoip/private.mrs
+#   Private_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/Private.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/private.mrs
+#   Spotify_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/Spotify.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/spotify.mrs
+#   Steam_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/Steam.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/steam.mrs
+#   Telegram_IP:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/Telegram_IP.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo-lite/geoip/telegram.mrs
+#   Telegram_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/Telegram.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/telegram.mrs
+#   TikTok_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/TikTok.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/tiktok.mrs
+#   Twitter_IP:
+#     behavior: ipcidr
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/Twitter_IP.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo-lite/geoip/twitter.mrs
+#   Twitter_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/Twitter.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/twitter.mrs
+#   WebRTC_端/域:
+#     behavior: classical
+#     format: text
+#     interval: 86400
+#     path: ./rules/WebRTC.list
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@main/box_bll/clash/rules/WebRTC.list
+#   XiaoHongShu_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/XiaoHongShu.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/xiaohongshu.mrs
+#   YouTube_域:
+#     behavior: domain
+#     format: mrs
+#     interval: 86400
+#     path: ./rules/YouTube.mrs
+#     type: http
+#     url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/youtube.mrs
+#   自定义规则:
+#     behavior: classical
+#     format: text
+#     path: ./etc/自定义规则.list
+#     type: file
+
+# ==========================================================
+# rules（从源文件直接提取）
+# ----------------------------------------------------------
+# 原始规则列表，默认注释不启用。
+# 常用操作：
+#   +rules: [...]   在规则列表开头插入（优先匹配）
+#   rules+: [...]   在规则列表末尾追加
+#   rules!: [...]   强制替换整个规则列表（丢弃原有规则）
+# 参考上方示例，通常不需要取消注释整个 rules，而是用 +rules/rules+ 追加即可。
+# ==========================================================
+#
+# rules:
+# - DST-PORT,53,🌐 DNS_Hijack
+# - DST-PORT,853,DNS连接
+# - RULE-SET,自定义规则,特殊地址
+# - RULE-SET,WebRTC_端/域,WebRTC
+# - RULE-SET,No-ads-all_域,广告拦截
+# - PROCESS-NAME,com.ss.android.ugc.aweme,抖音
+# - RULE-SET,DouYin_域,抖音
+# - PROCESS-NAME,com.xingin.xhs,小红书
+# - RULE-SET,XiaoHongShu_域,小红书
+# - PROCESS-NAME,tv.danmaku.bili,BiliBili
+# - RULE-SET,BiliBili_域,BiliBili
+# - RULE-SET,BiliBili_IP,BiliBili,no-resolve
+# - RULE-SET,Steam_域,Steam
+# - RULE-SET,GitHub_域,GitHub
+# - RULE-SET,Discord_域,Discord
+# - RULE-SET,TikTok_域,TikTok
+# - RULE-SET,Twitter_域,Twitter(X)
+# - RULE-SET,Twitter_IP,Twitter(X),no-resolve
+# - RULE-SET,YouTube_域,YouTube
+# - RULE-SET,GoogleFCM_域,GoogleFCM
+# - RULE-SET,Google_域,Google
+# - RULE-SET,Google_IP,Google,no-resolve
+# - RULE-SET,Netflix_域,Netflix
+# - RULE-SET,Netflix_IP,Netflix,no-resolve
+# - RULE-SET,Spotify_域,Spotify
+# - RULE-SET,Facebook_域,Facebook
+# - RULE-SET,Facebook_IP,Facebook,no-resolve
+# - RULE-SET,OpenAI_域,OpenAI
+# - RULE-SET,Apple_域,Apple
+# - RULE-SET,Apple_IP,Apple,no-resolve
+# - RULE-SET,Microsoft_域,Microsoft
+# - RULE-SET,Telegram_域,Telegram
+# - RULE-SET,Telegram_IP,Telegram,no-resolve
+# - RULE-SET,Private_域,🌐 本机·本地直连
+# - RULE-SET,Private_IP,🌐 本机·本地直连,no-resolve
+# - RULE-SET,CN_域,🌐 本机·本地直连
+# - RULE-SET,CN_IP,🌐 本机·本地直连
+# - MATCH,漏网之鱼
+
+# ==========================================================
+# dns（从源文件直接提取）
+# ----------------------------------------------------------
+# 原始 DNS 配置，默认注释不启用。
+# 如只需修改部分字段，直接写需要修改的键值即可（默认合并，不影响其他字段）。
+# 如需完整替换 DNS 配置，使用 dns!: 操作符。
+# ==========================================================
+#
+# dns:
+#   direct-nameserver:
+#   - 1.12.12.12
+#   - 223.6.6.6
+#   enable: true
+#   enhanced-mode: fake-ip
+#   fake-ip-filter:
+#   - RULE-SET:CN_域
+#   - RULE-SET:Private_域
+#   - RULE-SET:GoogleFCM_域
+#   - RULE-SET:自定义规则
+#   fake-ip-range: 198.18.0.0/16
+#   fake-ip-range6: fdfe:dcba:9876::/48
+#   ipv6: true
+#   listen: 0.0.0.0:1053
+#   nameserver:
+#   - https://8.8.8.8:443/dns-query#DNS连接&h3=true
+#   - https://8.8.4.4:443/dns-query#DNS连接&h3=true
+#   - https://1.1.1.1:443/dns-query#DNS连接&h3=true
+#   - https://1.0.0.1:443/dns-query#DNS连接&h3=true
+#   nameserver-policy:
+#     RULE-SET:CN_域,Microsoft_域,Apple_域:
+#     - https://1.12.12.12:443/dns-query#🌐 本机·本地直连&h3=false
+#     - https://120.53.53.53:443/dns-query#🌐 本机·本地直连&h3=false
+#     - https://223.5.5.5:443/dns-query#🌐 本机·本地直连&h3=true
+#     - https://223.6.6.6:443/dns-query#🌐 本机·本地直连&h3=true
+#   proxy-server-nameserver:
+#   - https://1.12.12.12:443/dns-query#🌐 本机·本地直连&h3=false
+#   - https://120.53.53.53:443/dns-query#🌐 本机·本地直连&h3=false
+#   - https://223.5.5.5:443/dns-query#🌐 本机·本地直连&h3=true
+#   - https://223.6.6.6:443/dns-query#🌐 本机·本地直连&h3=true
