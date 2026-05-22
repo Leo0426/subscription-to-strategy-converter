@@ -166,57 +166,32 @@ http://127.0.0.1:8000/subscribe?subscription_url=https%3A%2F%2Fexample.com%2Fsub
 
 内置模板：
 
-- `minimal`
-- `developer`
-- `powerfullz`
-- `henrychiao-mrs`
-- `loyalsoldier-whitelist`
-- `loyalsoldier-blacklist`
+- `minimal`：最小策略，核心组 Proxy / Auto / Fallback / DIRECT。
+- `developer`：开发者策略，GitHub、npm、Docker、JetBrains、Microsoft、Apple 独立分流。
+- `ai-tools`：AI 工具策略，Claude、OpenAI、Gemini、Perplexity、Cursor、GitHub Copilot 独立分流。
+- `streaming`：流媒体策略，Netflix、YouTube、Disney、Spotify、Telegram 独立分流。
+- `full`：全量策略，AI + Developer + Streaming + 地区自动筛选（HK / SG / JP / US）。
+- `powerfullz`：基于 powerfullz/override-rules 静态 YAML 覆写，支持按需开关负载均衡、IPv6、Fake-IP 等。
 
 本地模板：
 
-- 服务会自动扫描 `app/THEYAMLS/**/*.yaml`。
+- 服务会自动扫描 `community_templates/THEYAMLS/**/*.yaml`。
 - 能被解析为 YAML 对象且包含 `proxy-groups` 的文件会出现在页面模板下拉框中。
-- 本地模板 ID 形如 `local:THEYAMLS/General_Config/666OS/OneTouch_Config.yaml`。
+- 本地模板 ID 形如 `local:community_templates/THEYAMLS/General_Config/666OS/OneTouch_Config.yaml`。
 - 生成配置时会向本地模板注入订阅解析出的 `proxies`。
 - `PROXY`、`AUTO`、`手动选择`、`全球手动`、`全部节点`、`节点选择` 等常见入口分组会自动补入节点名。
 
 暂不自动加载：
 
-- `app/Overwrite/THEOPENCLASH/**/*.conf`：这是 OpenClash 覆写模块格式，不是完整 YAML 配置。
-- `app/Overwrite/THENEWOPENCLASH/**/*.yaml`：多数文件是新版 OpenClash `[YAML]` 块覆写片段，默认包含大量注释内容，不适合作为完整订阅配置直接输出。
-- `app/Overwrite/THEINI/**/*.ini`：这是 subconverter 配置格式，不是 Mihomo YAML。
+- `community_templates/Overwrite/THEOPENCLASH/**/*.conf`：OpenClash 覆写模块格式，不是完整 YAML 配置。
+- `community_templates/Overwrite/THENEWOPENCLASH/**/*.yaml`：新版 OpenClash `[YAML]` 块覆写片段，不适合作为完整订阅配置输出。
+- `community_templates/Overwrite/THEINI/**/*.ini`：subconverter 配置格式，不是 Mihomo YAML。
 
 模板列表 API：
 
 ```bash
 curl http://127.0.0.1:8000/templates
 ```
-
-## 规则模板说明
-
-本项目内置了基于 [Loyalsoldier/clash-rules](https://github.com/Loyalsoldier/clash-rules) 的 RULE-SET 模板，用于生成 Clash Premium / Mihomo 可用的 `rule-providers` 和 `rules`。
-
-模板说明：
-
-- `loyalsoldier-whitelist`：白名单模式。先匹配直连、拒绝、Apple、Google、代理、Telegram 等规则，未命中流量最终走 `PROXY`。
-- `loyalsoldier-blacklist`：黑名单模式。只将 `tld-not-cn`、`gfw`、`telegramcidr` 等命中流量走 `PROXY`，未命中流量最终 `DIRECT`。
-- `developer`：在白名单规则基础上增加 `AI` 和 `GitHub` 分流组，优先处理 OpenAI、ChatGPT、Anthropic、GitHub 相关域名。
-
-规则文件使用 jsDelivr CDN 地址：
-
-```text
-https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/{rule}.txt
-```
-
-出处：
-
-- 规则集项目：[Loyalsoldier/clash-rules](https://github.com/Loyalsoldier/clash-rules)
-- 规则数据主要来源：[Loyalsoldier/v2ray-rules-dat](https://github.com/Loyalsoldier/v2ray-rules-dat) 和 [v2fly/domain-list-community](https://github.com/v2fly/domain-list-community)
-- Apple / Google 域名来源：[felixonmars/dnsmasq-china-list](https://github.com/felixonmars/dnsmasq-china-list)
-- 中国大陆 IPv4 数据来源：[17mon/china_ip_list](https://github.com/17mon/china_ip_list)
-
-注意：`Loyalsoldier/clash-rules` README 标明这些 RULE-SET 面向 Clash Premium 内核；Mihomo 兼容 Clash Premium 规则能力，因此本项目模板默认面向 `target=mihomo`。
 
 ## powerfullz 覆写集成
 
@@ -249,8 +224,6 @@ https://cdn.jsdelivr.net/gh/powerfullz/override-rules/yamls/config_lb-{0|1}_land
 出处：
 
 - 覆写规则项目：[powerfullz/override-rules](https://github.com/powerfullz/override-rules)
-- JS 覆写 CDN：[https://cdn.jsdelivr.net/gh/powerfullz/override-rules/convert.min.js](https://cdn.jsdelivr.net/gh/powerfullz/override-rules/convert.min.js)
-- 静态 YAML CDN 示例：[https://cdn.jsdelivr.net/gh/powerfullz/override-rules/yamls/config_lb-0_landing-0_ipv6-0_full-1_keepalive-0_fakeip-1_quic-0.yaml](https://cdn.jsdelivr.net/gh/powerfullz/override-rules/yamls/config_lb-0_landing-0_ipv6-0_full-1_keepalive-0_fakeip-1_quic-0.yaml)
 - 上游规则来源包括：[SukkaW/Surge](https://github.com/SukkaW/Surge)、[217heidai/adblockfilters](https://github.com/217heidai/adblockfilters)、[Loyalsoldier/v2ray-rules-dat](https://github.com/Loyalsoldier/v2ray-rules-dat)
 
 限制：
@@ -258,30 +231,6 @@ https://cdn.jsdelivr.net/gh/powerfullz/override-rules/yamls/config_lb-{0|1}_land
 - powerfullz 官方更推荐 JS 动态覆写；本项目为了保持后端实现简单，当前只拉取静态 YAML。
 - 静态 YAML 无法像 JS 覆写那样根据真实节点动态裁剪所有国家/地区分组，但 Mihomo 的 `include-all` 和 `filter` 会在运行时筛选节点。
 - 如果开启 `landing`，而订阅中没有符合落地规则的节点，可能导致客户端无法正常启动；这是 powerfullz 原规则的使用注意事项。
-
-## HenryChiao MRS 规则集成
-
-`henrychiao-mrs` 模板集成了 [HenryChiao/mihomo_yamls](https://github.com/HenryChiao/mihomo_yamls/tree/ruleset) 的 `ruleset` 分支规则集。该规则集面向 mihomo/clash.meta 和 Stash，提供按 `domain`、`ipcidr`、`classical` 拆分的规则文件，并包含 Mihomo 独有的 `.mrs` 二进制格式。
-
-本项目当前集成方式：
-
-- 只引用上游 `meta/domain/*.mrs` 与 `meta/ipcidr/*.mrs` URL，不转载、不内置规则文件内容。
-- 为常见场景内置分流组：`AI`、`Apple`、`Microsoft`、`Google`、`Git`、`Streaming`、`Bilibili`、`Social`、`Crypto`、`Games`、`CDN`、`Speedtest`、`PayPal`。
-- IP 类 RULE-SET 默认追加 `no-resolve`。
-- 保留页面自定义分组策略能力，可继续叠加自定义代理组。
-
-规则 URL 格式：
-
-```text
-https://raw.githubusercontent.com/HenryChiao/mihomo_yamls/refs/heads/ruleset/meta/{domain|ipcidr}/{rule}.mrs
-```
-
-出处：
-
-- 规则集项目：[HenryChiao/mihomo_yamls ruleset 分支](https://github.com/HenryChiao/mihomo_yamls/tree/ruleset)
-- 上游鸣谢中列出的规则来源包括：[blackmatrix7/ios_rule_script](https://github.com/blackmatrix7/ios_rule_script)、[MetaCubeX/meta-rules-dat](https://github.com/MetaCubeX/meta-rules-dat)、[SukkaW/Surge](https://github.com/SukkaW/Surge)、[Loyalsoldier/v2ray-rules-dat](https://github.com/Loyalsoldier/v2ray-rules-dat)、[ACL4SSR/ACL4SSR](https://github.com/ACL4SSR/ACL4SSR) 等。
-
-注意：上游 README 标注“禁止任何形式转载或发布至中国大陆地区”。本项目仅在本地生成配置时引用公开规则 URL，不打包、镜像或再分发规则文件；请遵守上游项目的使用限制。
 
 ## 自定义分组策略
 
@@ -302,7 +251,8 @@ uv run pytest
 ## Roadmap
 
 - 支持 Base64 URI 订阅解析。
-- 支持更多 Mihomo 策略模板。
+- 增加 Mihomo 编译器 golden-output 测试。
 - 增加模板参数化能力。
 - 增加更严格的 SSRF 防护和重定向目标校验。
 - 提供 Docker 镜像和部署示例。
+- 多平台编译器（Surge、sing-box）达到与 Mihomo 同等的语义覆盖后移出实验状态。
