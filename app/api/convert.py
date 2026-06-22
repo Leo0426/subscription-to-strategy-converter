@@ -3,6 +3,7 @@ from fastapi.responses import PlainTextResponse
 from pydantic import AnyHttpUrl, TypeAdapter, ValidationError
 
 import json
+import os
 
 from app.core.config_tree import build_config_tree
 from app.core.parsers.clash import ir_to_clash_dict
@@ -10,8 +11,10 @@ from app.core.platforms.singbox import build_singbox_config
 from app.core.platforms.surge import build_surge_config
 from app.core.policy_analyzer import analyze_workspace
 from app.core.policy_graph import build_policy_graph
+from app.core.profiles import ProfileStore
 from app.core.policy_simulator import simulate_destination
 from app.core.policy_workspace import (
+    compile_mihomo_config,
     config_to_workspace,
     workspace_from_dict,
     workspace_to_dict,
@@ -186,7 +189,7 @@ def _render_output(target: str, nodes: list[ProxyNode], config: dict) -> tuple[s
             config.get("rules", []),
             config.get("rule-providers", {}),
         )
-    return render_yaml(config), []
+    return render_yaml(compile_mihomo_config(config, nodes)), []
 
 
 async def _render_config(
@@ -314,6 +317,59 @@ async def create_policy_session(body: dict) -> dict[str, str]:
     a multi-kilobyte query string.
     """
     return {"session_id": create_session(body)}
+
+
+def _profile_store() -> ProfileStore:
+    return ProfileStore(os.environ.get("SUBFLOW_DB_PATH", "data/subflow.db"))
+
+
+@router.post("/profiles", status_code=201)
+async def create_profile(request: ConvertRequest) -> dict[str, str]:
+    if request.target != "mihomo":
+        raise HTTPException(status_code=422, detail="persistent profiles currently support Mihomo only")
+    created = _profile_store().create(request.model_dump(mode="json"))
+    return {
+        "id": created.id,
+        "token": created.token,
+        "subscribe_url": f"/subscribe/{created.id}?token={created.token}",
+    }
+
+
+@router.get("/subscribe/{profile_id}", response_class=PlainTextResponse)
+async def subscribe_profile(profile_id: str, token: str = Query(...)) -> PlainTextResponse:
+    store = _profile_store()
+    profile = store.get(profile_id, token)
+    if profile is None:
+        raise HTTPException(status_code=404, detail="profile not found")
+
+    request = ConvertRequest.model_validate(profile.request)
+    try:
+        _, config, warnings = await _render_config(
+            str(request.subscription_url),
+            request.template,
+            request.target,
+            request.custom_strategy,
+            request.selected_policy,
+            request.powerfullz,
+            request.subconverter,
+        )
+    except HTTPException as exc:
+        external_failures = (SubscriptionError, SubconverterError, TemplateError)
+        if profile.artifact is None or not isinstance(exc.__cause__, external_failures):
+            raise
+        return PlainTextResponse(
+            profile.artifact,
+            media_type="text/yaml; charset=utf-8",
+            headers={
+                "Content-Disposition": 'inline; filename="mihomo.yaml"',
+                "X-Subflow-Stale": "true",
+            },
+        )
+    store.save_artifact(profile.id, config)
+    headers = {"Content-Disposition": 'inline; filename="mihomo.yaml"'}
+    if warnings:
+        headers["X-Compile-Warnings"] = json.dumps(warnings, ensure_ascii=True)
+    return PlainTextResponse(config, media_type="text/yaml; charset=utf-8", headers=headers)
 
 
 @router.get("/subscribe", response_class=PlainTextResponse)

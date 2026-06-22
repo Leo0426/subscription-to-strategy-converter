@@ -11,7 +11,7 @@ def test_index_page_is_served() -> None:
     assert response.status_code == 200
     assert "Subflow" in response.text
     assert "/static/app.js" in response.text
-    assert "策略工作区" in response.text
+    assert "策略指挥室" in response.text
     assert "创建工作区" in response.text
     assert "Mihomo 订阅链接" in response.text
     assert "yaml-view-tabs" in response.text

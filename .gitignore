@@ -32,6 +32,8 @@ dist/
 *.pid
 *.sqlite
 *.sqlite3
+*.db
+*.db-*
 
 # Editor and OS files
 .idea/

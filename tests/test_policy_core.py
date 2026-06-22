@@ -3,7 +3,7 @@ from __future__ import annotations
 from app.core.policy_analyzer import analyze_workspace
 from app.core.policy_graph import build_policy_graph
 from app.core.policy_simulator import simulate_destination
-from app.core.policy_workspace import config_to_workspace, workspace_to_mihomo_config
+from app.core.policy_workspace import compile_mihomo_config, config_to_workspace, workspace_to_mihomo_config
 from app.ir import ProxyNode
 
 
@@ -48,6 +48,35 @@ def test_workspace_compiles_back_to_mihomo_config() -> None:
     assert config["proxies"][0]["name"] == "HK-01"
     assert config["proxy-groups"][0]["proxies"] == ["HK-01"]
     assert config["rules"] == ["MATCH,PROXY"]
+
+
+def test_mihomo_compiler_routes_config_through_policy_workspace() -> None:
+    config = compile_mihomo_config(
+        {
+            "mixed-port": 7890,
+            "proxy-groups": [{"name": "PROXY", "type": "select", "proxies": ["HK-01"]}],
+            "rule-providers": {},
+            "rules": ["MATCH,PROXY"],
+        },
+        [_node()],
+    )
+
+    assert config == {
+        "mixed-port": 7890,
+        "proxies": [
+            {
+                "name": "HK-01",
+                "type": "ss",
+                "server": "hk.example.com",
+                "port": 443,
+                "cipher": "",
+                "password": "",
+            }
+        ],
+        "proxy-groups": [{"name": "PROXY", "type": "select", "proxies": ["HK-01"]}],
+        "rule-providers": {},
+        "rules": ["MATCH,PROXY"],
+    }
 
 
 def test_analyzer_reports_structural_findings() -> None:

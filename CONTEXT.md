@@ -27,6 +27,7 @@ New issues should state which pain points they address.
 |------|---------|
 | **ProxyNode** | A single proxy server entry (SS, Trojan, VMess, etc.) — the canonical IR type |
 | **PolicyWorkspace** | Product core for the MVP: an in-memory policy workspace holding nodes, groups, rules, providers, settings, graph data, analyzer findings, simulator traces, and compile output |
+| **Profile** | A durable saved conversion input that owns a stable token-protected Subscription URL and its last successful compile artifact |
 | **ProxyGroup** | A named group of nodes or groups with a dispatch strategy (select / url-test / fallback / load-balance) |
 | **RuleProvider** | An external rule-set URL referenced by name in rules (Clash: `rule-providers`) |
 | **Template** | A community-contributed or built-in YAML skeleton providing proxy-groups, rules, rule-providers — loaded via `load_any_template()` |
@@ -64,11 +65,12 @@ Mihomo YAML
 | `app/core/subscription.py` | `load_subscription()` — end-to-end: URL → subconverter → Clash YAML → `ProxyNode` list |
 | `app/core/template_engine.py` | Built-in preset definitions, local template loader, `apply_template()`, `list_templates()` |
 | `app/core/powerfullz.py` | Fetches powerfullz static YAML from jsDelivr CDN |
-| `app/core/policy_workspace.py` | `config_to_workspace()`, `workspace_from_dict()`, `workspace_to_mihomo_config()` |
+| `app/core/policy_workspace.py` | Workspace conversion boundary: `config_to_workspace()`, `workspace_from_dict()`, `workspace_to_mihomo_config()`, `compile_mihomo_config()` |
 | `app/core/policy_graph.py` | `build_policy_graph()` → `PolicyGraph` (nodes + edges) |
 | `app/core/policy_analyzer.py` | `analyze_workspace()` → `list[AnalyzerFinding]` |
 | `app/core/policy_simulator.py` | `simulate_destination()` → `SimulationTrace` |
 | `app/core/policy_catalog.py` | Extracts and deduplicates policy entries across community templates |
+| `app/core/profiles.py` | Persistent Profile store with token authorization and last-successful artifact caching |
 | `app/core/renderer.py` | `render_yaml()` — serializes a dict to YAML string |
 | `app/core/platforms/surge.py` | Experimental Surge compiler |
 | `app/core/platforms/singbox.py` | Experimental sing-box compiler |
@@ -110,6 +112,8 @@ Community templates are auto-scanned from `community_templates/THEYAMLS/**/*.yam
 | POST | `/simulate` | Simulate a destination through workspace rules |
 | POST | `/compile/mihomo` | Compile workspace dict → Mihomo YAML |
 | POST | `/session` | Store large policy payload, return session ID |
+| POST | `/profiles` | Persist a Mihomo Profile and return its token-protected Subscription URL |
+| GET | `/subscribe/{profile_id}` | Compile a persisted Profile or return its stale last-successful artifact on an external dependency failure |
 | GET | `/subscribe` | Stable URL for proxy clients — returns config directly |
 
 ## Platform Support
@@ -123,13 +127,17 @@ Community templates are auto-scanned from `community_templates/THEYAMLS/**/*.yam
 ## Key Invariants
 
 - `ProxyNode` is the only internal representation of a proxy — never pass raw dicts across module boundaries
+- Mihomo output from `/convert` and `/subscribe` must compile through `PolicyWorkspace` via `compile_mihomo_config()`
 - Mihomo is the first quality-bar compiler; other compilers remain experimental until semantic parity is explicit
 - Experimental compilers should report unsupported protocols without breaking the workspace loop
 - `RULE-SET` in Surge uses a direct URL (not provider name); the compiler resolves the name via `rule_providers` dict
 - Community templates live under `community_templates/` (scanned root) and `community_templates/THEYAMLS/` (YAML templates); `community_templates/Overwrite/` contains non-template formats (OpenClash conf, INI) that are intentionally excluded
 - All template IDs from the community are prefixed `local:` (e.g. `local:community_templates/THEYAMLS/...`)
 - Sessions in `app/core/sessions.py` are in-memory only; they do not persist across restarts
+- Profiles persist in SQLite; access requires both the profile ID and an independent token whose hash is stored in the database
+- A Profile may serve its last successful artifact only for an external source dependency failure and must mark it with `X-Subflow-Stale: true`
 
 ## ADRs
 
 - [ADR 0001: Workspace-first Mihomo MVP](docs/adr/0001-workspace-first-mihomo-mvp.md)
+- [ADR 0002: Persistent profiles and stale fallback](docs/adr/0002-persistent-profiles-and-stale-fallback.md)

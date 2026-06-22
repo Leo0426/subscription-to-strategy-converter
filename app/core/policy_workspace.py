@@ -232,3 +232,8 @@ def workspace_to_mihomo_config(workspace: PolicyWorkspace) -> dict[str, Any]:
     }
     config["rules"] = [rule.raw for rule in workspace.rules]
     return config
+
+
+def compile_mihomo_config(config: dict[str, Any], nodes: list[ProxyNode]) -> dict[str, Any]:
+    workspace = config_to_workspace(config, nodes, target="mihomo")
+    return workspace_to_mihomo_config(workspace)

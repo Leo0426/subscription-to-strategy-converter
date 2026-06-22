@@ -3,18 +3,32 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Subflow · 策略工作区</title>
-    <link rel="stylesheet" href="/static/styles.css?v=14" />
+    <title>Subflow · Route Control Room</title>
+    <link rel="stylesheet" href="/static/styles.css?v=19" />
   </head>
   <body>
     <main class="app-shell">
       <header class="topbar">
-        <div>
-          <h1>Subflow · 策略工作区</h1>
-          <p>输入机场订阅，生成可分析、可模拟、可编译的 Mihomo 策略工作区。</p>
+        <div class="brand-lockup">
+          <div class="station-mark" aria-hidden="true"><span>RC</span><strong>01</strong></div>
+          <div>
+            <p class="eyebrow">SUBFLOW OPERATIONS · ROUTE CONTROL ROOM</p>
+            <h1>ROUTE CONTROL <span>/ 策略指挥室</span></h1>
+            <p>导入订阅、检修策略、模拟流量，并发布可信的 Mihomo 运行配置。</p>
+          </div>
         </div>
-        <div class="status" id="status" role="status">就绪</div>
+        <div class="system-cluster">
+          <span class="system-clock">CONTROL PLANE / ONLINE</span>
+          <div class="status" id="status" role="status">就绪</div>
+        </div>
       </header>
+
+      <div class="line-legend" aria-label="操作阶段">
+        <span><i class="line-dot line-cyan"></i><b>INTAKE</b> 订阅接入</span>
+        <span><i class="line-dot line-pink"></i><b>BUILD</b> 策略编排</span>
+        <span><i class="line-dot line-yellow"></i><b>VERIFY</b> 规则验证</span>
+        <span><i class="line-dot line-green"></i><b>DEPLOY</b> 配置发布</span>
+      </div>
 
       <section class="hero-panel">
         <form id="convert-form" class="convert-form">
@@ -295,6 +309,10 @@
       </div>
     </dialog>
 
-    <script src="/static/app.js?v=17"></script>
+    <div class="control-atmosphere" aria-hidden="true">
+      <span></span><span></span><span></span>
+      <span></span><span></span><span></span>
+    </div>
+    <script src="/static/app.js?v=19"></script>
   </body>
 </html>

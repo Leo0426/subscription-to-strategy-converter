@@ -139,6 +139,24 @@ http://127.0.0.1:8000/subscribe?subscription_url=https%3A%2F%2Fexample.com%2Fsub
 
 这个接口直接返回 YAML，适合填到客户端的订阅 URL 中。
 
+### 持久化 Profile
+
+如果需要服务重启后仍然有效的短订阅地址，可以创建 Mihomo Profile：
+
+```bash
+curl -X POST http://127.0.0.1:8000/profiles \
+  -H "Content-Type: application/json" \
+  -d '{
+    "subscription_url": "https://example.com/sub",
+    "template": "developer",
+    "target": "mihomo"
+  }'
+```
+
+响应中的 `subscribe_url` 包含 Profile ID 和独立 token，不会暴露原始订阅地址。Profile 默认保存到 `data/subflow.db`，可通过 `SUBFLOW_DB_PATH` 修改路径。数据库包含敏感订阅信息，应当保护其文件权限和备份。
+
+当外部订阅或转换服务暂时不可用时，Profile 订阅会返回最后一份成功产物，并添加 `X-Subflow-Stale: true` 响应头。
+
 如果页面中配置了自定义分组策略，订阅 URL 会额外携带 `strategy` 参数，用 JSON 编码分组配置。客户端每次刷新订阅时，服务会重新拉取原始订阅并应用同一套分组策略。
 
 返回示例：
