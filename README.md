@@ -1,151 +1,128 @@
-# Subflow Strategy Builder
+# Subflow · Route Control Room
 
-输入用户已拥有访问权限的机场订阅地址，通过 [tindy2013/subconverter](https://github.com/tindy2013/subconverter) 归一化为 Clash YAML，再和策略模板合成为 `PolicyWorkspace`。用户可以分析规则、模拟流量、查看策略图，最后编译出可信的 Mihomo YAML。
+Subflow 是一个面向 Mihomo 的可视化代理策略工作区。它将用户已授权的订阅源、策略模板和自定义分组合成 `PolicyWorkspace`，让配置在导出前可以被查看、分析、模拟和验证。
 
-本项目的长期目标不是做一个 Clash 配置生成器，而是演进为代理策略编排平台：围绕统一 Policy IR，支持规则 provider 收集、策略图可视化、规则分析、流量模拟、多平台编译和发布管理。当前阶段已明确收束为 Workspace-first Mihomo MVP，决策记录见 [ADR 0001](docs/adr/0001-workspace-first-mihomo-mvp.md)。
+> 这不只是一个 YAML 生成器。Subflow 的产品中心是可理解、可检查、可编译的代理策略工作区。
 
-Mihomo 是当前唯一质量保证输出目标；Surge 和 sing-box 保留为实验编译器。MVP 产品边界见 [Traffic Policy Control Plane MVP PRD](docs/prd/traffic-policy-control-plane-mvp.md)，架构演进路线见 [Control Plane Roadmap](docs/architecture/control-plane-roadmap.md)。
+![Subflow Route Control Room](docs/assets/route-control-room.png)
 
-本项目不绕过鉴权，不破解订阅内容，只处理调用方提供且可正常访问的订阅地址。
+## 能做什么
 
-## 安装
+- 通过 [tindy2013/subconverter](https://github.com/tindy2013/subconverter) 将多种订阅格式归一化为 Clash YAML。
+- 将订阅节点转换为统一的 `ProxyNode` IR，再与内置或社区模板合成 `PolicyWorkspace`。
+- 查看节点、策略组、规则、RuleProvider 与内置目标之间的关系。
+- 检测缺失 provider、缺失目标、重复规则、策略组环与不可达策略组。
+- 输入域名或 IP，模拟规则命中与策略组解析路径。
+- 编译并导出 Mihomo YAML。
+- 创建持久化 Profile，获得不暴露原始订阅地址的 token 保护型短订阅 URL。
+- 外部订阅或转换服务暂时失败时，回退到 Profile 最后一份成功产物。
+
+Web 界面采用 **Route Control Room** 风格，将导入、编排、验证和发布收口到同一个操作台。
+
+## 核心流程
+
+```text
+Subscription URL
+      ↓ subconverter
+Clash YAML
+      ↓ parse + normalize
+ProxyNode IR
+      ↓ template + custom strategy
+PolicyWorkspace
+      ├─ analyze
+      ├─ simulate
+      ├─ visualize
+      └─ compile
+            ↓
+        Mihomo YAML
+```
+
+## 能力成熟度
+
+| 能力 | 状态 | 说明 |
+|---|---|---|
+| Mihomo / Clash 编译 | MVP 质量标准 | 主路径，统一经过 `PolicyWorkspace` |
+| 规则分析 | MVP | 确定性结构检查 |
+| 流量模拟 | MVP | 支持基础域名、IP 与 `MATCH`；`RULE-SET` / `GEOIP` 尚不做真实内容匹配 |
+| 策略图 | MVP | 只读依赖视图 |
+| 持久化 Profile | MVP | SQLite、token 授权、最后成功产物回退 |
+| Surge | 实验性 | 不承诺与 Mihomo 的完整语义对等 |
+| sing-box | 实验性 | 不承诺与 Mihomo 的完整语义对等 |
+
+## 快速启动
+
+### 环境要求
+
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/)
+- Docker（用于运行 subconverter）
+
+### 1. 安装依赖
 
 ```bash
 uv sync
 ```
 
-本项目依赖 subconverter 处理订阅格式转换。先启动 subconverter：
+### 2. 启动 subconverter
 
 ```bash
-docker run --rm -p 25500:25500 tindy2013/subconverter:latest
+docker run --rm --name subflow-subconverter \
+  -p 25500:25500 \
+  tindy2013/subconverter:latest
 ```
 
-默认后端会请求：
-
-```text
-http://127.0.0.1:25500/sub?target=clash&url=...
-```
-
-如果 subconverter 部署在其他地址，启动本项目时设置：
-
-```bash
-SUBCONVERTER_BASE_URL=http://127.0.0.1:25500 uv run uvicorn app.main:app --reload
-```
-
-## Workspace 输入
-
-现在配置分成两层：
-
-- `Subconverter 转换模板`：传给 `tindy2013/subconverter` 的 `/sub` 接口，用来控制源订阅如何被归一化为 Clash YAML。对应参数包括 `config`、`include`、`exclude`、`rename`、`emoji`、`udp`、`tfo`、`sort`、`append_type`、`scv` 等。
-- `策略模板`：本项目已有的 Mihomo 策略编排模板，例如 powerfullz 或 `community_templates/**/*.yaml`，负责策略组、规则集、分流关系。
-
-两层输入会合成为 `PolicyWorkspace`，再用于分析、模拟、可视化和 Mihomo 编译。
-
-API 示例：
-
-```bash
-curl -X POST http://127.0.0.1:8000/convert \
-  -H "Content-Type: application/json" \
-  -d '{
-    "subscription_url": "https://example.com/sub",
-    "template": "powerfullz",
-    "target": "mihomo",
-    "subconverter": {
-      "config": "https://example.com/profile.ini",
-      "include": "香港|日本|美国",
-      "exclude": "官网|流量|套餐|剩余",
-      "rename": "^香港@HK",
-      "emoji": true,
-      "udp": true,
-      "sort": true
-    }
-  }'
-```
-
-`config` 可以是远程 `http(s)` 地址，也可以是仓库内 `community_templates` 下的本地配置路径，例如：
-
-```text
-community_templates/Overwrite/THEINI/Ordinary/tindy2013/ehpo1_main.ini
-```
-
-如果使用 Docker 运行 subconverter，本地路径需要让 subconverter 容器也能访问；更稳的方式是使用远程 `config` URL。
-
-## 启动
-
-```bash
-uv run fastapi dev app/main.py
-```
-
-或：
+### 3. 启动 Subflow
 
 ```bash
 uv run uvicorn app.main:app --reload
 ```
 
-启动后打开：
+打开 [http://127.0.0.1:8000](http://127.0.0.1:8000)。
 
-```text
-http://127.0.0.1:8000/
-```
-
-页面功能：
-
-- 输入订阅地址并预览节点。订阅会先交给 subconverter 转为 Clash YAML，因此可支持 subconverter 兼容的源格式。
-- 选择内置模板并生成 Policy Workspace。
-- 查看规则、策略组、节点和 provider 的策略图。
-- 运行基础规则分析和域名流量模拟。
-- 编译并导出 Mihomo YAML。
-- 设置 Subconverter 转换模板、节点过滤、批量重命名和转换开关。
-- 管理自定义代理分组策略。
-- 复制转换后的订阅 URL，供 Mihomo / Clash 客户端使用。
-
-## API 示例
-
-健康检查：
+subconverter 不在默认地址时：
 
 ```bash
-curl http://127.0.0.1:8000/health
+SUBCONVERTER_BASE_URL=http://127.0.0.1:25500 \
+uv run uvicorn app.main:app --reload
 ```
 
-预览节点：
+## 基本使用
 
-```bash
-curl -X POST http://127.0.0.1:8000/preview \
-  -H "Content-Type: application/json" \
-  -d '{
-    "subscription_url": "https://example.com/sub",
-    "template": "developer",
-    "target": "mihomo"
-  }'
-```
+1. 输入你已获授权的订阅 URL。
+2. 选择目标客户端与增强能力。
+3. 配置节点过滤、重命名、Subconverter 模板或自定义策略组。
+4. 创建 Workspace，检查规则分析、策略图和流量模拟。
+5. 复制、下载或发布 Mihomo 配置。
 
-生成 Mihomo YAML：
+## 配置模型
 
-```bash
-curl -X POST http://127.0.0.1:8000/convert \
-  -H "Content-Type: application/json" \
-  -d '{
-    "subscription_url": "https://example.com/sub",
-    "template": "developer",
-    "target": "mihomo"
-  }'
-```
+Subflow 将输入分为两层：
 
-可直接给 Mihomo / Clash 使用的转换订阅地址：
+- **Subconverter 转换选项**：控制源订阅如何归一化，包括 `config`、`include`、`exclude`、`rename`、`emoji`、`udp`、`tfo`、`sort`、`append_type` 和 `scv` 等。
+- **策略模板**：提供策略组、规则、RuleProvider、DNS 和 TUN 骨架。
 
-```text
-http://127.0.0.1:8000/subscribe?subscription_url=https%3A%2F%2Fexample.com%2Fsub&template=developer&target=mihomo
-```
+两层输入先合成 `PolicyWorkspace`，再用于分析、模拟、可视化和 Mihomo 编译。
 
-这个接口直接返回 YAML，适合填到客户端的订阅 URL 中。
+### 内置模板
 
-### 持久化 Profile
+| ID | 用途 |
+|---|---|
+| `minimal` | Proxy / Auto / Fallback / DIRECT 最小策略 |
+| `developer` | GitHub、npm、Docker、JetBrains、Microsoft、Apple |
+| `ai-tools` | Claude、OpenAI、Gemini、Perplexity、Cursor、GitHub Copilot |
+| `streaming` | Netflix、YouTube、Disney、Spotify、Telegram |
+| `full` | AI + Developer + Streaming + HK / SG / JP / US |
+| `powerfullz` | 基于 powerfullz/override-rules 静态 YAML |
 
-如果需要服务重启后仍然有效的短订阅地址，可以创建 Mihomo Profile：
+服务还会扫描 `community_templates/THEYAMLS/**/*.yaml`。社区模板 ID 以 `local:` 开头。`community_templates/Overwrite/` 中的 OpenClash 片段与 subconverter INI 不会被当作完整 Mihomo 模板自动加载。
+
+## 持久化 Profile
+
+临时 `/subscribe?...` 地址会携带原始订阅参数。需要长期使用时，建议创建 Profile：
 
 ```bash
 curl -X POST http://127.0.0.1:8000/profiles \
-  -H "Content-Type: application/json" \
+  -H 'Content-Type: application/json' \
   -d '{
     "subscription_url": "https://example.com/sub",
     "template": "developer",
@@ -153,124 +130,90 @@ curl -X POST http://127.0.0.1:8000/profiles \
   }'
 ```
 
-响应中的 `subscribe_url` 包含 Profile ID 和独立 token，不会暴露原始订阅地址。Profile 默认保存到 `data/subflow.db`，可通过 `SUBFLOW_DB_PATH` 修改路径。数据库包含敏感订阅信息，应当保护其文件权限和备份。
-
-当外部订阅或转换服务暂时不可用时，Profile 订阅会返回最后一份成功产物，并添加 `X-Subflow-Stale: true` 响应头。
-
-如果页面中配置了自定义分组策略，订阅 URL 会额外携带 `strategy` 参数，用 JSON 编码分组配置。客户端每次刷新订阅时，服务会重新拉取原始订阅并应用同一套分组策略。
-
-返回示例：
+响应示例：
 
 ```json
 {
-  "target": "mihomo",
-  "template": "developer",
-  "node_count": 12,
-  "config": "mixed-port: 7890\n..."
+  "id": "<profile-id>",
+  "token": "<access-token>",
+  "subscribe_url": "/subscribe/<profile-id>?token=<access-token>"
 }
 ```
 
+- Profile 默认保存到 `data/subflow.db`。
+- 使用 `SUBFLOW_DB_PATH` 可修改数据库路径。
+- Profile ID 用于定位，token 用于授权；数据库中只保存 token 哈希。
+- 数据库文件会设置为 `0600`，但其中的原始订阅 URL 未做应用层加密；请将数据库与备份视为敏感资产。
+- 外部订阅、subconverter 或远程模板暂时失败时，会返回最后成功配置，并添加 `X-Subflow-Stale: true`。
+- 认证失败、Profile 数据非法或内部编译错误不会静默回退。
+
+## API 概览
+
+| Method | Path | 用途 |
+|---|---|---|
+| `GET` | `/health` | 健康检查 |
+| `GET` | `/templates` | 模板列表 |
+| `GET` | `/templates/detail` | 模板详情与 YAML 预览 |
+| `GET` | `/policy-catalog` | 本地策略目录 |
+| `GET` | `/subconverter/targets` | 支持的输出目标 |
+| `POST` | `/preview` | 预览归一化节点与配置树 |
+| `POST` | `/convert` | 转换并编译配置 |
+| `POST` | `/workspace/preview` | 创建 Workspace、策略图和分析结果 |
+| `POST` | `/analyze` | 重新分析 Workspace |
+| `POST` | `/simulate` | 模拟域名或 IP 的规则路径 |
+| `POST` | `/compile/mihomo` | 将 Workspace 编译为 Mihomo YAML |
+| `POST` | `/profiles` | 创建持久化 Mihomo Profile |
+| `GET` | `/subscribe/{profile_id}` | 访问 token 保护的 Profile 订阅 |
+| `GET` | `/subscribe` | 无持久化的直接订阅地址 |
+
+FastAPI 交互文档可在运行时通过 [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) 查看。
+
 ## 安全边界
 
-- 只支持 `http` / `https` 订阅 URL。
-- 拒绝本地和私有地址，包括 `localhost`、`127.0.0.0/8`、`10.0.0.0/8`、`172.16.0.0/12`、`192.168.0.0/16`、`::1`。
-- 调用 subconverter 前会先校验订阅地址的主机名和解析结果；subconverter 请求设置 30 秒超时，并对非 2xx 响应返回明确错误。
-- 不存储订阅 URL、订阅内容或生成配置。
+- 只处理调用方已获得访问权限的订阅；不绕过鉴权，不破解订阅内容。
+- 只接受 `http` / `https` 订阅 URL。
+- 拒绝 localhost、回环、私有网段、链路本地地址与其他非公网解析结果。
+- 调用 subconverter 前会检查主机名与 DNS 解析结果。
+- `/preview`、`/convert` 与直接 `/subscribe` 路径不主动持久化订阅数据。
+- 只有用户显式创建的 Profile 会在 SQLite 中持久化原始订阅 URL、配置选项与最后成功产物。
 
-## 当前支持格式
+Subflow 的 SSRF 防护不应被视为通用的多租户安全边界。当前更适合本地或受信任的单用户环境。
 
-- 源订阅格式：由 `tindy2013/subconverter` 负责转换，后端固定请求 `target=clash`。
-- 后端处理格式：subconverter 返回的 Clash YAML，读取并保留 `proxies` 节点字段。
+## 开发
 
-内置模板：
-
-- `minimal`：最小策略，核心组 Proxy / Auto / Fallback / DIRECT。
-- `developer`：开发者策略，GitHub、npm、Docker、JetBrains、Microsoft、Apple 独立分流。
-- `ai-tools`：AI 工具策略，Claude、OpenAI、Gemini、Perplexity、Cursor、GitHub Copilot 独立分流。
-- `streaming`：流媒体策略，Netflix、YouTube、Disney、Spotify、Telegram 独立分流。
-- `full`：全量策略，AI + Developer + Streaming + 地区自动筛选（HK / SG / JP / US）。
-- `powerfullz`：基于 powerfullz/override-rules 静态 YAML 覆写，支持按需开关负载均衡、IPv6、Fake-IP 等。
-
-本地模板：
-
-- 服务会自动扫描 `community_templates/THEYAMLS/**/*.yaml`。
-- 能被解析为 YAML 对象且包含 `proxy-groups` 的文件会出现在页面模板下拉框中。
-- 本地模板 ID 形如 `local:community_templates/THEYAMLS/General_Config/666OS/OneTouch_Config.yaml`。
-- 生成配置时会向本地模板注入订阅解析出的 `proxies`。
-- `PROXY`、`AUTO`、`手动选择`、`全球手动`、`全部节点`、`节点选择` 等常见入口分组会自动补入节点名。
-
-暂不自动加载：
-
-- `community_templates/Overwrite/THEOPENCLASH/**/*.conf`：OpenClash 覆写模块格式，不是完整 YAML 配置。
-- `community_templates/Overwrite/THENEWOPENCLASH/**/*.yaml`：新版 OpenClash `[YAML]` 块覆写片段，不适合作为完整订阅配置输出。
-- `community_templates/Overwrite/THEINI/**/*.ini`：subconverter 配置格式，不是 Mihomo YAML。
-
-模板列表 API：
-
-```bash
-curl http://127.0.0.1:8000/templates
-```
-
-## powerfullz 覆写集成
-
-`powerfullz` 模板集成了 [powerfullz/override-rules](https://github.com/powerfullz/override-rules) 发布的 Mihomo/SubStore 覆写规则。该项目面向 Mihomo/SubStore，提供包含 AI、TikTok、Telegram、加密货币、静态资源、广告拦截、国家/地区节点分组等场景的覆写配置。
-
-本项目当前集成方式：
-
-- 使用其预生成的静态 YAML 覆写文件，而不是执行 JS 动态覆写脚本。
-- 按页面开关生成对应 YAML 文件名并从 jsDelivr 拉取。
-- 将用户订阅解析出的 `proxies` 注入到该覆写配置中。
-- 保留 powerfullz 模板中的 `include-all`、`filter`、`rule-providers`、`rules`、`dns` 等配置。
-- 页面中的自定义分组策略仍可叠加到 powerfullz 模板上。
-
-支持的页面参数：
-
-- `loadbalance`
-- `landing`
-- `ipv6`
-- `full`
-- `keepalive`
-- `fakeip`
-- `quic`
-
-静态 YAML 地址格式：
-
-```text
-https://cdn.jsdelivr.net/gh/powerfullz/override-rules/yamls/config_lb-{0|1}_landing-{0|1}_ipv6-{0|1}_full-{0|1}_keepalive-{0|1}_fakeip-{0|1}_quic-{0|1}.yaml
-```
-
-出处：
-
-- 覆写规则项目：[powerfullz/override-rules](https://github.com/powerfullz/override-rules)
-- 上游规则来源包括：[SukkaW/Surge](https://github.com/SukkaW/Surge)、[217heidai/adblockfilters](https://github.com/217heidai/adblockfilters)、[Loyalsoldier/v2ray-rules-dat](https://github.com/Loyalsoldier/v2ray-rules-dat)
-
-限制：
-
-- powerfullz 官方更推荐 JS 动态覆写；本项目为了保持后端实现简单，当前只拉取静态 YAML。
-- 静态 YAML 无法像 JS 覆写那样根据真实节点动态裁剪所有国家/地区分组，但 Mihomo 的 `include-all` 和 `filter` 会在运行时筛选节点。
-- 如果开启 `landing`，而订阅中没有符合落地规则的节点，可能导致客户端无法正常启动；这是 powerfullz 原规则的使用注意事项。
-
-## 自定义分组策略
-
-页面中的「分组策略」用于在模板生成后追加或替换 `proxy-groups`：
-
-- 支持分组类型：`select`、`url-test`、`fallback`、`load-balance`。
-- 成员每行一个，可以填写节点名、其他分组名、`DIRECT`、`REJECT`。
-- 成员留空时，服务会自动把全部订阅节点注入该分组。
-- 如果自定义分组与模板中已有分组同名，会替换原分组。
-- 新增的自定义分组会自动加入 `PROXY` 选择组前部，方便在客户端里手动选择。
-
-## 测试
+运行测试：
 
 ```bash
 uv run pytest
 ```
 
-## Roadmap
+项目主要目录：
 
-- 支持 Base64 URI 订阅解析。
-- 增加 Mihomo 编译器 golden-output 测试。
-- 增加模板参数化能力。
-- 增加更严格的 SSRF 防护和重定向目标校验。
-- 提供 Docker 镜像和部署示例。
-- 多平台编译器（Surge、sing-box）达到与 Mihomo 同等的语义覆盖后移出实验状态。
+```text
+app/api/                 HTTP 入口
+app/core/                订阅、Workspace、分析、模拟与编译
+app/core/platforms/      实验性平台编译器
+app/models/              API 请求 / 响应模型
+app/static/              Route Control Room Web UI
+community_templates/     社区模板与上游素材
+docs/                    PRD、ADR 与架构文档
+tests/                   核心与 API 回归测试
+```
+
+## 设计与决策文档
+
+- [Domain Context](CONTEXT.md)
+- [Workspace-first Mihomo MVP ADR](docs/adr/0001-workspace-first-mihomo-mvp.md)
+- [Persistent Profiles ADR](docs/adr/0002-persistent-profiles-and-stale-fallback.md)
+- [Traffic Policy Control Plane MVP PRD](docs/prd/traffic-policy-control-plane-mvp.md)
+- [Control Plane Roadmap](docs/architecture/control-plane-roadmap.md)
+
+## 近期优先级
+
+1. 为持久化 Profile 补齐页面管理与最后更新状态。
+2. 增加 Mihomo golden-output 测试与更严格的兼容性验收。
+3. 下载并缓存 RuleProvider 内容，让 `RULE-SET` 模拟与 provider 健康检查真正可用。
+4. 增加 Workspace 版本、结构化 diff 与回滚。
+5. 提供 Docker Compose 与可备份的持久化部署方案。
+
+Surge、sing-box 和其他平台在达到 Mihomo 的 Workspace、Analyzer、Simulator 和 golden-output 语义要求前，仍保持实验性。
