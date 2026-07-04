@@ -19,15 +19,6 @@ const els = {
   templateDescription: document.querySelector("#template-description"),
   powerfullzPanel: document.querySelector("#powerfullz-panel"),
   subconverterPanel: document.querySelector("#subconverter-panel"),
-  subconverterConfig: document.querySelector("#subconverter-config"),
-  subconverterConfigCustomField: document.querySelector("#subconverter-config-custom-field"),
-  subconverterConfigSelect: document.querySelector("#subconverter-config-select"),
-  previewSubconverterConfigButton: document.querySelector("#preview-subconverter-config"),
-  subconverterConfigPreview: document.querySelector("#subconverter-config-preview"),
-  subconverterConfigPreviewMeta: document.querySelector("#subconverter-config-preview-meta"),
-  subconverterConfigPreviewContent: document.querySelector("#subconverter-config-preview-content"),
-  closeSubconverterConfigPreviewButton: document.querySelector("#close-subconverter-config-preview"),
-  copySubconverterConfigButton: document.querySelector("#copy-subconverter-config"),
   subconverterInclude: document.querySelector("#subconverter-include"),
   subconverterExclude: document.querySelector("#subconverter-exclude"),
   subconverterRename: document.querySelector("#subconverter-rename"),
@@ -77,7 +68,6 @@ const els = {
 const state = {
   templates: [],
   subconverterTargets: [],
-  subconverterTemplates: [],
   communityTemplates: [],
   communityMeta: new Map(),
   customGroups: [],
@@ -96,8 +86,6 @@ const state = {
   policyRules: [],
   catalogLimit: 60,
 };
-
-const CUSTOM_SUBCONVERTER_CONFIG = "__custom_subconverter_config__";
 
 function isAdvancedMode() {
   return true;
@@ -167,13 +155,7 @@ function getPowerfullzOptions() {
 }
 
 function getSubconverterOptions() {
-  const selectedConfig = els.subconverterConfigSelect?.value || "";
-  const config =
-    selectedConfig === CUSTOM_SUBCONVERTER_CONFIG
-      ? els.subconverterConfig?.value.trim()
-      : selectedConfig;
   const options = {
-    config: config || undefined,
     include: els.subconverterInclude?.value.trim() || undefined,
     exclude: els.subconverterExclude?.value.trim() || undefined,
     rename: els.subconverterRename?.value.trim() || undefined,
@@ -595,102 +577,11 @@ async function loadCommunityMeta() {
     if (!response.ok) return;
     const items = await response.json();
     state.communityTemplates = items;
-    state.subconverterTemplates = items.filter((item) => item.format === "conf");
     state.communityMeta = new Map(
       items.map((item) => [communityIdToLocalId(item.id), item])
     );
-    renderSubconverterConfigOptions();
     renderPolicyTable();
   } catch (_e) {}
-}
-
-function renderSubconverterConfigOptions() {
-  if (els.subconverterConfigSelect) {
-    const previous = els.subconverterConfigSelect.value;
-    els.subconverterConfigSelect.replaceChildren();
-    const empty = document.createElement("option");
-    empty.value = "";
-    empty.textContent = "不额外指定配置文件";
-    els.subconverterConfigSelect.append(empty);
-    const custom = document.createElement("option");
-    custom.value = CUSTOM_SUBCONVERTER_CONFIG;
-    custom.textContent = "自定义远程配置 URL";
-    els.subconverterConfigSelect.append(custom);
-    for (const item of state.subconverterTemplates) {
-      const option = document.createElement("option");
-      option.value = item.config_value || item.id;
-      option.textContent = `${item.name} · ${item.source_path.replace(/^community_templates\//, "")}`;
-      els.subconverterConfigSelect.append(option);
-    }
-    if ([...els.subconverterConfigSelect.options].some((option) => option.value === previous)) {
-      els.subconverterConfigSelect.value = previous;
-    }
-    syncSubconverterConfigField();
-  }
-}
-
-function syncSubconverterConfigField() {
-  const isCustom = els.subconverterConfigSelect?.value === CUSTOM_SUBCONVERTER_CONFIG;
-  if (els.subconverterConfigCustomField) els.subconverterConfigCustomField.hidden = !isCustom;
-  if (!isCustom && els.subconverterConfig) els.subconverterConfig.value = "";
-}
-
-function selectedSubconverterConfigMeta() {
-  const value = els.subconverterConfigSelect?.value || "";
-  if (!value || value === CUSTOM_SUBCONVERTER_CONFIG) return null;
-  return state.subconverterTemplates.find((item) => (item.config_value || item.id) === value) || null;
-}
-
-function openSubconverterConfigPreview() {
-  if (!els.subconverterConfigPreview) return;
-  if (typeof els.subconverterConfigPreview.showModal === "function") {
-    els.subconverterConfigPreview.showModal();
-  } else {
-    els.subconverterConfigPreview.setAttribute("open", "");
-  }
-}
-
-function closeSubconverterConfigPreview() {
-  if (!els.subconverterConfigPreview) return;
-  if (typeof els.subconverterConfigPreview.close === "function") {
-    els.subconverterConfigPreview.close();
-  } else {
-    els.subconverterConfigPreview.removeAttribute("open");
-  }
-}
-
-async function previewSubconverterConfig() {
-  if (!els.subconverterConfigPreviewContent || !els.subconverterConfigPreviewMeta) return;
-  const selectedValue = els.subconverterConfigSelect?.value || "";
-  const customUrl = els.subconverterConfig?.value.trim() || "";
-  openSubconverterConfigPreview();
-
-  if (!selectedValue) {
-    els.subconverterConfigPreviewMeta.textContent = "当前未额外指定 Subconverter 配置文件";
-    els.subconverterConfigPreviewContent.textContent = "使用 subconverter 默认配置生成转换链接。";
-    return;
-  }
-
-  if (selectedValue === CUSTOM_SUBCONVERTER_CONFIG) {
-    els.subconverterConfigPreviewMeta.textContent = customUrl ? "自定义远程配置 URL" : "自定义远程配置 URL 未填写";
-    els.subconverterConfigPreviewContent.textContent = customUrl || "请先填写一个可公开访问的 profile.ini / pref.ini 地址。";
-    return;
-  }
-
-  const meta = selectedSubconverterConfigMeta();
-  els.subconverterConfigPreviewMeta.textContent = meta
-    ? `${meta.name} · ${meta.source_path}`
-    : selectedValue;
-  els.subconverterConfigPreviewContent.textContent = "加载中...";
-
-  try {
-    const response = await fetch(`/community/templates/raw?id=${encodeURIComponent(selectedValue)}`);
-    const text = await response.text();
-    if (!response.ok) throw new Error(text || `HTTP ${response.status}`);
-    els.subconverterConfigPreviewContent.textContent = text || "配置文件为空";
-  } catch (error) {
-    els.subconverterConfigPreviewContent.textContent = `加载失败：${error.message}`;
-  }
 }
 
 function communityIdToLocalId(communityId) {
@@ -748,7 +639,7 @@ function templateFormatBadge(item) {
   const cm = state.communityMeta.get(item.id);
   if (!cm) return "";
   const fmt = cm.format || "yaml";
-  const label = fmt === "conf" ? "Subconverter" : fmt === "openclash" ? "OpenClash" : "YAML";
+  const label = fmt === "openclash" ? "OpenClash" : "YAML";
   return `<span class="format-pill fmt-${escapeAttr(fmt)}">${escapeHtml(label)}</span>`;
 }
 
@@ -1291,7 +1182,6 @@ function filteredCommunityTemplates() {
 }
 
 function communityFormatLabel(fmt) {
-  if (fmt === "conf") return "Subconverter";
   if (fmt === "openclash") return "OpenClash";
   return "YAML";
 }
@@ -1347,9 +1237,7 @@ async function renderCommunityPreview(item) {
   const canApply = item.format === "yaml" && state.templates.some((t) => t.id === localId);
 
   let compatNote = "";
-  if (item.format === "conf") {
-    compatNote = `<div class="cb-compat-note">Subconverter INI 格式，可作为上方“Subconverter 模板”使用。</div>`;
-  } else if (item.format === "openclash") {
+  if (item.format === "openclash") {
     compatNote = `<div class="cb-compat-note">OpenClash 覆写片段，无法直接作为当前 YAML 预设使用。</div>`;
   } else if (isSurge && item.surge_compatible === false) {
     compatNote = `<div class="cb-compat-note cb-compat-warn">该模板含 MRS 格式规则集，Surge 模式下部分规则可能无法直接使用。可以应用并手动替换规则集 URL。</div>`;
@@ -1370,7 +1258,7 @@ async function renderCommunityPreview(item) {
     ${compatNote}
     <div id="cb-groups-area" class="cb-groups-area"><div class="empty">加载策略组中…</div></div>
     <div class="cb-actions">
-      <button type="button" id="cb-apply-button" ${canApply || item.format === "conf" ? "" : "disabled"} title="${canApply || item.format === "conf" ? "" : "只有 YAML 模板或 Subconverter INI 可以应用"}">${item.format === "conf" ? "用作 Subconverter 配置" : "应用到工作区"}</button>
+      <button type="button" id="cb-apply-button" ${canApply ? "" : "disabled"} title="${canApply ? "" : "只有 YAML 模板可以应用"}">应用到工作区</button>
       <button type="button" id="cb-cancel-button">取消</button>
     </div>
   `;
@@ -1409,13 +1297,6 @@ async function renderCommunityPreview(item) {
 
 function applyCommunityTemplate(item, localId) {
   closeCommunityBrowser();
-  if (item.format === "conf") {
-    if (els.subconverterConfigSelect) els.subconverterConfigSelect.value = item.config_value || item.id;
-    syncSubconverterConfigField();
-    refreshSubscribeUrl();
-    setStatus(`已设置 Subconverter 模板：${item.name}`, "ok");
-    return;
-  }
   selectTemplateFile(localId);
   setStatus(`已应用社区模板：${item.name}`, "ok");
 }
@@ -2048,23 +1929,6 @@ function bindEvents() {
   els.form.addEventListener("change", refreshSubscribeUrl);
   els.subconverterPanel?.addEventListener("input", refreshSubscribeUrl);
   els.subconverterPanel?.addEventListener("change", refreshSubscribeUrl);
-  els.subconverterConfigSelect?.addEventListener("change", () => {
-    syncSubconverterConfigField();
-    refreshSubscribeUrl();
-  });
-  els.previewSubconverterConfigButton?.addEventListener("click", previewSubconverterConfig);
-  els.closeSubconverterConfigPreviewButton?.addEventListener("click", closeSubconverterConfigPreview);
-  els.subconverterConfigPreview?.addEventListener("click", (event) => {
-    if (event.target === els.subconverterConfigPreview) closeSubconverterConfigPreview();
-  });
-  els.copySubconverterConfigButton?.addEventListener("click", () =>
-    copyText(
-      els.subconverterConfigPreviewContent?.textContent || "",
-      "没有可复制的配置内容",
-      "配置内容已复制",
-      els.subconverterConfigPreviewContent
-    )
-  );
   els.templateSelect.addEventListener("change", refreshTemplateOptions);
   els.targetSelect.addEventListener("change", () => { renderPolicyTable(); updateConfigOutputTitle(); refreshSubscribeUrl(); });
   [els.enhanceAi, els.enhanceDev, els.enhanceStreaming].forEach((input) => {

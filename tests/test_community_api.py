@@ -8,7 +8,6 @@ from pathlib import Path
 
 
 _YAML_ID = "community:THEYAMLS/General_Config/666OS/OneTouch_Config.yaml"
-_INI_ID = "community:Overwrite/THEINI/Ordinary/szkane/kclash.ini"
 _OPENCLASH_ID = "community:Overwrite/THENEWOPENCLASH/Official_Examples/Metacubex/rule-set_config.yaml"
 
 
@@ -34,12 +33,6 @@ def test_list_includes_yaml_entry(client: TestClient) -> None:
     assert _YAML_ID in ids
 
 
-def test_list_includes_ini_entry(client: TestClient) -> None:
-    response = client.get("/community/templates")
-    ids = {item["id"] for item in response.json()}
-    assert _INI_ID in ids
-
-
 def test_list_item_has_required_fields(client: TestClient) -> None:
     response = client.get("/community/templates")
     yaml_items = [item for item in response.json() if item["id"] == _YAML_ID]
@@ -52,17 +45,6 @@ def test_list_item_has_required_fields(client: TestClient) -> None:
     assert isinstance(item["surge_compatible"], bool)
     assert "source_path" in item
     assert item["source_path"].startswith("community_templates/")
-
-
-def test_list_ini_item_has_conf_format(client: TestClient) -> None:
-    response = client.get("/community/templates")
-    ini_items = [item for item in response.json() if item["id"] == _INI_ID]
-    assert ini_items, "INI template not found in list"
-    item = ini_items[0]
-    assert item["format"] == "conf"
-    assert item["proxy_group_count"] == 0
-    assert item["surge_compatible"] is False
-    assert item["config_value"] == _INI_ID
 
 
 def test_list_openclash_item_has_openclash_format(client: TestClient) -> None:
@@ -79,6 +61,8 @@ def test_list_excludes_md_and_list_files(client: TestClient) -> None:
         assert not item["source_path"].endswith(".list")
         assert not item["source_path"].endswith(".sh")
         assert not item["source_path"].endswith(".txt")
+        assert not item["source_path"].endswith(".ini")
+        assert not item["source_path"].endswith(".conf")
 
 
 # ── Preview endpoint ───────────────────────────────────────────────────────
@@ -106,12 +90,6 @@ def test_preview_proxy_group_shape(client: TestClient) -> None:
         assert isinstance(g["members"], list)
 
 
-def test_preview_ini_returns_422(client: TestClient) -> None:
-    response = client.get("/community/templates/preview", params={"id": _INI_ID})
-    assert response.status_code == 422
-    assert "yaml" in response.json()["detail"]
-
-
 def test_preview_nonexistent_returns_404(client: TestClient) -> None:
     response = client.get(
         "/community/templates/preview",
@@ -136,19 +114,7 @@ def test_preview_path_traversal_blocked(client: TestClient) -> None:
     assert response.status_code == 400
 
 
-def test_raw_ini_template_returns_text(client: TestClient) -> None:
-    response = client.get("/community/templates/raw", params={"id": _INI_ID})
-    assert response.status_code == 200
-    assert response.headers["content-type"].startswith("text/plain")
-    assert len(response.text) > 0
-
-
 # ── Unit tests for format detection ───────────────────────────────────────
-
-
-def test_detect_format_ini() -> None:
-    path = Path("/project/community_templates/Overwrite/THEINI/clash.ini")
-    assert _detect_format(path, None) == "conf"
 
 
 def test_detect_format_yaml_with_proxy_groups() -> None:
@@ -202,10 +168,6 @@ def test_surge_compatible_false_for_mrs_provider() -> None:
         },
     }
     assert _is_surge_compatible(loaded, "yaml") is False
-
-
-def test_surge_compatible_false_for_conf_format() -> None:
-    assert _is_surge_compatible(None, "conf") is False
 
 
 def test_surge_compatible_false_for_openclash_format() -> None:

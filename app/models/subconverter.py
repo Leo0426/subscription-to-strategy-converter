@@ -4,10 +4,6 @@ from pydantic import BaseModel, Field
 
 
 class SubconverterOptions(BaseModel):
-    config: str | None = Field(
-        default=None,
-        description="External subconverter config/profile URL or an allowed local community_templates path.",
-    )
     include: str | None = None
     exclude: str | None = None
     rename: str | None = None

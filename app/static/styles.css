@@ -288,16 +288,6 @@ h1 {
   min-height: 40px;
 }
 
-.subconverter-config-area {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: end;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1.5px solid var(--border);
-}
-
 .secondary-action {
   min-height: 38px;
   white-space: nowrap;
@@ -1627,10 +1617,6 @@ td input[type='checkbox'] {
     grid-template-columns: 1fr;
   }
 
-  .subconverter-config-area {
-    grid-template-columns: 1fr;
-  }
-
   .main-grid {
     grid-template-columns: 1fr;
   }
@@ -1733,11 +1719,6 @@ td input[type='checkbox'] {
   color: var(--accent);
 }
 
-.format-pill.fmt-conf {
-  background: #fff4e0;
-  color: #92400e;
-}
-
 .format-pill.fmt-openclash {
   background: #fef2f2;
   color: #991b1b;
@@ -1766,26 +1747,17 @@ td input[type='checkbox'] {
 
 /* ── 社区配置浏览器 dialog ────────────────────────────────────────────────── */
 
-#community-browser,
-#subconverter-config-preview {
+#community-browser {
   border: none;
   border-radius: 20px;
   padding: 0;
   max-height: min(88vh, 700px);
   box-shadow: 0 24px 56px rgba(147, 51, 234, 0.22);
   overflow: hidden;
-}
-
-#community-browser {
   width: min(92vw, 900px);
 }
 
-#subconverter-config-preview {
-  width: min(90vw, 820px);
-}
-
-#community-browser::backdrop,
-#subconverter-config-preview::backdrop {
+#community-browser::backdrop {
   background: rgba(46, 16, 101, 0.4);
   backdrop-filter: blur(4px);
 }
@@ -1986,40 +1958,6 @@ td input[type='checkbox'] {
   background: var(--surface-soft);
   color: var(--muted);
   border-color: var(--border);
-}
-
-.subconverter-preview-body {
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-  background: var(--surface-soft);
-}
-
-.subconverter-preview-meta {
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-  padding: 8px 12px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.subconverter-preview-content {
-  min-height: 420px;
-  max-height: min(62vh, 520px);
-  margin: 0;
-  overflow: auto;
-  border: 1.5px solid var(--border-strong);
-  border-radius: 12px;
-  background: var(--code-bg);
-  color: var(--code-text);
-  padding: 14px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-  line-height: 1.6;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
 }
 
 /* ── 策略图 ───────────────────────────────────────────────────────────────── */
@@ -2243,11 +2181,6 @@ td input[type='checkbox'] {
     color: #7dd3fc;
   }
 
-  .format-pill.fmt-conf {
-    background: #1c1208;
-    color: #fbbf24;
-  }
-
   .format-pill.fmt-openclash {
     background: #1c0808;
     color: #fca5a5;
@@ -2265,8 +2198,7 @@ td input[type='checkbox'] {
     border-color: #92400e;
   }
 
-  #community-browser::backdrop,
-  #subconverter-config-preview::backdrop {
+  #community-browser::backdrop {
     background: rgba(0, 0, 0, 0.75);
   }
 
@@ -2643,8 +2575,7 @@ tr:hover td { background: rgba(33,230,215,.045); }
 .severity-error { box-shadow: inset 3px 0 var(--danger); }.severity-warning { box-shadow: inset 3px 0 var(--line-yellow); }.severity-info, .finding-ok { box-shadow: inset 3px 0 var(--accent); }
 .trace-step.matched { border-color: rgba(118,240,149,.55); box-shadow: inset 3px 0 var(--line-green); }
 
-#community-browser,
-#subconverter-config-preview {
+#community-browser {
   border: 1px solid #475b65;
   border-radius: 2px;
   background: #090e12;
@@ -2653,7 +2584,7 @@ tr:hover td { background: rgba(33,230,215,.045); }
 }
 .cb-header { background: #0d171c; border-bottom-color: #33444d; }
 .cb-header h2 { color: #f3fbfa; font-family: 'Barlow Condensed', sans-serif; letter-spacing: .08em; }
-#community-browser::backdrop, #subconverter-config-preview::backdrop { background: rgba(2,5,7,.82); backdrop-filter: blur(6px); }
+#community-browser::backdrop { background: rgba(2,5,7,.82); backdrop-filter: blur(6px); }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: #080c0f; border-radius: 0; }

@@ -26,7 +26,7 @@ _OPENCLASH_DIR_MARKERS: frozenset[str] = frozenset({"theopenclash", "thenewopenc
 
 # File extensions that are definitely not templates — skip without inspection
 _SKIP_EXTENSIONS: frozenset[str] = frozenset({
-    ".md", ".sh", ".list", ".txt", ".json", ".gitignore", ".lock",
+    ".md", ".sh", ".list", ".txt", ".json", ".gitignore", ".lock", ".ini", ".conf",
 })
 
 
@@ -50,8 +50,6 @@ def _load_yaml_safe(path: Path) -> dict | None:
 def _detect_format(path: Path, loaded: dict | None) -> str:
     """Classify the template format from path and parsed content."""
     suffix = path.suffix.lower()
-    if suffix == ".ini":
-        return "conf"
     if suffix not in {".yaml", ".yml"}:
         return "unknown"
     # Directory-based OpenClash detection
@@ -131,7 +129,6 @@ def _build_meta(path: Path) -> dict[str, Any] | None:
         "rule_count": len(rules) if isinstance(rules, list) else 0,
         "surge_compatible": _is_surge_compatible(loaded, fmt),
         "source_path": f"community_templates/{relative.as_posix()}",
-        "config_value": _template_id(path) if fmt == "conf" else None,
     }
 
 
@@ -198,8 +195,6 @@ def raw_community_template(
     id: str = Query(..., description="Community template id (community:path/to/file)"),
 ) -> PlainTextResponse:
     path = _path_from_id(id)
-    suffix = path.suffix.lower()
-    if suffix not in {".ini", ".conf", ".yaml", ".yml"}:
+    if path.suffix.lower() not in {".yaml", ".yml"}:
         raise HTTPException(status_code=422, detail="raw template format is not supported")
-    media_type = "text/plain; charset=utf-8" if suffix in {".ini", ".conf"} else "text/yaml; charset=utf-8"
-    return PlainTextResponse(path.read_text(encoding="utf-8"), media_type=media_type)
+    return PlainTextResponse(path.read_text(encoding="utf-8"), media_type="text/yaml; charset=utf-8")

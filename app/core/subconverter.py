@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
-from urllib.parse import quote, urlparse
+from urllib.parse import urlparse
 
 import httpx
 
@@ -15,9 +14,6 @@ class SubconverterError(ValueError):
 
 
 DEFAULT_SUBCONVERTER_BASE_URL = "http://127.0.0.1:25500"
-DEFAULT_SUBCONVERTER_CONFIG_BASE_URL = "http://host.docker.internal:8000"
-_PROJECT_DIR = Path(__file__).resolve().parents[2]
-_COMMUNITY_DIR = (_PROJECT_DIR / "community_templates").resolve()
 
 SUBCONVERTER_TARGETS = (
     {"id": "clash", "label": "Clash"},
@@ -43,10 +39,6 @@ def subconverter_base_url() -> str:
     return os.getenv("SUBCONVERTER_BASE_URL", DEFAULT_SUBCONVERTER_BASE_URL).rstrip("/")
 
 
-def subconverter_config_base_url() -> str:
-    return os.getenv("SUBCONVERTER_CONFIG_BASE_URL", DEFAULT_SUBCONVERTER_CONFIG_BASE_URL).rstrip("/")
-
-
 async def _validate_remote_subscription_url(url: str) -> None:
     try:
         _validate_url(url)
@@ -54,35 +46,6 @@ async def _validate_remote_subscription_url(url: str) -> None:
         await _ensure_resolved_host_is_public(parsed.hostname)  # type: ignore[arg-type]
     except FetchError as exc:
         raise SubconverterError(str(exc)) from exc
-
-
-def _resolve_config_value(value: str) -> str:
-    config = value.strip()
-    if not config:
-        raise SubconverterError("subconverter config cannot be empty")
-
-    if config.startswith("community:"):
-        return f"{subconverter_config_base_url()}/community/templates/raw?id={quote(config, safe='')}"
-
-    parsed = urlparse(config)
-    if parsed.scheme in {"http", "https"}:
-        return config
-    if parsed.scheme:
-        raise SubconverterError("subconverter config must be an http(s) URL or a community_templates path")
-
-    candidate = Path(config)
-    if not candidate.is_absolute():
-        candidate = _PROJECT_DIR / candidate
-    candidate = candidate.resolve()
-    if not candidate.is_relative_to(_COMMUNITY_DIR):
-        raise SubconverterError("local subconverter config must be under community_templates")
-    if not candidate.exists():
-        raise SubconverterError(f"subconverter config not found: {value}")
-    if candidate.suffix.lower() not in {".ini", ".conf", ".yaml", ".yml"}:
-        raise SubconverterError("subconverter config must be .ini, .conf, .yaml, or .yml")
-    relative = candidate.relative_to(_COMMUNITY_DIR).as_posix()
-    template_id = f"community:{relative}"
-    return f"{subconverter_config_base_url()}/community/templates/raw?id={quote(template_id, safe='')}"
 
 
 def _build_subconverter_params(
@@ -99,10 +62,7 @@ def _build_subconverter_params(
     if options is None:
         return params
 
-    option_params = options.query_params()
-    if "config" in option_params:
-        option_params["config"] = _resolve_config_value(option_params["config"])
-    params.update(option_params)
+    params.update(options.query_params())
     return params
 
 

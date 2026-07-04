@@ -98,7 +98,7 @@ uv run uvicorn app.main:app --reload
 
 Subflow 将输入分为两层：
 
-- **Subconverter 转换选项**：控制源订阅如何归一化，包括 `config`、`include`、`exclude`、`rename`、`emoji`、`udp`、`tfo`、`sort`、`append_type` 和 `scv` 等。
+- **Subconverter 转换选项**：控制源订阅如何归一化，包括 `include`、`exclude`、`rename`、`emoji`、`udp`、`tfo`、`sort`、`append_type` 和 `scv` 等。
 - **策略模板**：提供策略组、规则、RuleProvider、DNS 和 TUN 骨架。
 
 两层输入先合成 `PolicyWorkspace`，再用于分析、模拟、可视化和 Mihomo 编译。
@@ -114,7 +114,7 @@ Subflow 将输入分为两层：
 | `full` | AI + Developer + Streaming + HK / SG / JP / US |
 | `powerfullz` | 基于 powerfullz/override-rules 静态 YAML |
 
-服务还会扫描 `community_templates/THEYAMLS/**/*.yaml`。社区模板 ID 以 `local:` 开头。`community_templates/Overwrite/` 中的 OpenClash 片段与 subconverter INI 不会被当作完整 Mihomo 模板自动加载。
+服务还会扫描 `community_templates/THEYAMLS/**/*.yaml`。社区模板 ID 以 `local:` 开头。`community_templates/Overwrite/` 中的 OpenClash 片段不会被当作完整 Mihomo 模板自动加载。
 
 ## 持久化 Profile
 

@@ -131,7 +131,7 @@ Community templates are auto-scanned from `community_templates/THEYAMLS/**/*.yam
 - Mihomo is the first quality-bar compiler; other compilers remain experimental until semantic parity is explicit
 - Experimental compilers should report unsupported protocols without breaking the workspace loop
 - `RULE-SET` in Surge uses a direct URL (not provider name); the compiler resolves the name via `rule_providers` dict
-- Community templates live under `community_templates/` (scanned root) and `community_templates/THEYAMLS/` (YAML templates); `community_templates/Overwrite/` contains non-template formats (OpenClash conf, INI) that are intentionally excluded
+- Community templates live under `community_templates/` (scanned root) and `community_templates/THEYAMLS/` (YAML templates); `community_templates/Overwrite/` contains non-template formats (OpenClash overrides) that are intentionally excluded
 - All template IDs from the community are prefixed `local:` (e.g. `local:community_templates/THEYAMLS/...`)
 - Sessions in `app/core/sessions.py` are in-memory only; they do not persist across restarts
 - Profiles persist in SQLite; access requires both the profile ID and an independent token whose hash is stored in the database

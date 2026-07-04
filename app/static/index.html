@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Subflow · Route Control Room</title>
-    <link rel="stylesheet" href="/static/styles.css?v=21" />
+    <link rel="stylesheet" href="/static/styles.css?v=22" />
   </head>
   <body>
     <main class="app-shell">
@@ -94,21 +94,8 @@
         </div>
         <p class="template-description" id="template-description"></p>
         <details class="advanced-section" id="subconverter-advanced">
-          <summary>高级选项 · 节点清洗与 Subconverter 配置</summary>
+          <summary>高级选项 · 节点清洗</summary>
           <div class="advanced-body">
-            <div class="subconverter-config-area">
-              <label class="field">
-                <span>Subconverter 配置文件</span>
-                <select id="subconverter-config-select" name="subconverter_config_select">
-                  <option value="">不额外指定配置文件</option>
-                </select>
-              </label>
-              <label class="field" id="subconverter-config-custom-field" hidden>
-                <span>自定义模板 URL</span>
-                <input id="subconverter-config" name="subconverter_config" placeholder="https://example.com/profile.ini" />
-              </label>
-              <button type="button" id="preview-subconverter-config" class="secondary-action">预览配置</button>
-            </div>
             <div class="toggle-grid">
               <label><input type="checkbox" id="subconverter-emoji" /> 节点 Emoji</label>
               <label><input type="checkbox" id="subconverter-udp" checked /> UDP</label>
@@ -349,7 +336,6 @@
           <select id="community-format-filter">
             <option value="">全部格式</option>
             <option value="yaml">YAML</option>
-            <option value="conf">Subconverter</option>
             <option value="openclash">OpenClash</option>
           </select>
           <button type="button" id="close-community-browser" class="cb-close">✕</button>
@@ -367,24 +353,10 @@
       </div>
     </dialog>
 
-    <dialog id="subconverter-config-preview" aria-label="Subconverter 配置文件预览">
-      <div class="cb-header">
-        <h2>Subconverter 配置文件</h2>
-        <div class="cb-header-actions">
-          <button type="button" id="copy-subconverter-config" class="cb-close">复制</button>
-          <button type="button" id="close-subconverter-config-preview" class="cb-close">✕</button>
-        </div>
-      </div>
-      <div class="subconverter-preview-body">
-        <div class="subconverter-preview-meta" id="subconverter-config-preview-meta">选择配置文件后查看内容</div>
-        <pre id="subconverter-config-preview-content" class="subconverter-preview-content">暂无内容</pre>
-      </div>
-    </dialog>
-
     <div class="control-atmosphere" aria-hidden="true">
       <span></span><span></span><span></span>
       <span></span><span></span><span></span>
     </div>
-    <script src="/static/app.js?v=21"></script>
+    <script src="/static/app.js?v=22"></script>
   </body>
 </html>

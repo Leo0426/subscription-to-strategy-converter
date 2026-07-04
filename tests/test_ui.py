@@ -28,5 +28,4 @@ def test_index_page_is_served() -> None:
     assert "节点列表" in response.text
     assert "浏览社区配置" in response.text
     assert "community-browser" in response.text
-    assert "预览配置" in response.text
-    assert "subconverter-config-preview" in response.text
+    assert "subconverter-config" not in response.text
