@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Subflow · Route Control Room</title>
-    <link rel="stylesheet" href="/static/styles.css?v=19" />
+    <link rel="stylesheet" href="/static/styles.css?v=20" />
   </head>
   <body>
     <main class="app-shell">
@@ -42,13 +42,13 @@
           </label>
           <div class="actions">
             <button type="button" id="preview-button">测试订阅</button>
-            <button type="submit" class="primary">创建工作区</button>
+            <button type="submit" class="primary">生成配置</button>
           </div>
         </form>
-        <section class="subscribe-box" aria-label="Mihomo 订阅链接">
+        <section class="subscribe-box" aria-label="Mihomo 订阅链接" id="subscribe-box">
           <label class="field">
             <span>Mihomo 订阅链接</span>
-            <input id="converted-url" type="url" readonly />
+            <input id="converted-url" type="url" readonly placeholder="粘贴订阅地址后自动生成，可直接导入 Mihomo / Clash 客户端" />
           </label>
           <button type="button" id="copy-url-button">复制链接</button>
         </section>
@@ -84,47 +84,55 @@
           <label><input type="checkbox" id="enhance-tun" checked /> TUN 配置</label>
           <label><input type="checkbox" id="enhance-fakeip" checked /> fake-ip DNS</label>
         </div>
-        <div class="preset-status" aria-live="polite">
-          <span>当前内置预设</span>
-          <strong id="active-preset-label">-</strong>
-          <select id="template" name="template" hidden></select>
+        <div class="preset-row">
+          <div class="preset-status" aria-live="polite">
+            <span>当前内置预设</span>
+            <strong id="active-preset-label">-</strong>
+            <select id="template" name="template" hidden></select>
+          </div>
+          <button type="button" id="open-community-browser" class="secondary-action">浏览社区配置</button>
         </div>
         <p class="template-description" id="template-description"></p>
-        <div class="subconverter-config-area">
-          <label class="field">
-            <span>Subconverter 配置文件</span>
-            <select id="subconverter-config-select" name="subconverter_config_select">
-              <option value="">不额外指定配置文件</option>
-            </select>
-          </label>
-          <label class="field" id="subconverter-config-custom-field" hidden>
-            <span>自定义模板 URL</span>
-            <input id="subconverter-config" name="subconverter_config" placeholder="https://example.com/profile.ini" />
-          </label>
-          <button type="button" id="preview-subconverter-config" class="secondary-action">预览配置</button>
-        </div>
-        <div class="toggle-grid">
-          <label><input type="checkbox" id="subconverter-emoji" /> 节点 Emoji</label>
-          <label><input type="checkbox" id="subconverter-udp" checked /> UDP</label>
-          <label><input type="checkbox" id="subconverter-tfo" /> TCP Fast Open</label>
-          <label><input type="checkbox" id="subconverter-sort" checked /> 节点排序</label>
-          <label><input type="checkbox" id="subconverter-append-type" /> 追加协议类型</label>
-          <label><input type="checkbox" id="subconverter-scv" /> 跳过证书校验</label>
-        </div>
-        <div class="convert-form subconverter-rules">
-          <label class="field">
-            <span>地区 / 包含关键词</span>
-            <input id="subconverter-include" placeholder="HK|SG|JP|US|Premium|BGP" />
-          </label>
-          <label class="field">
-            <span>排除关键词 / 倍率</span>
-            <input id="subconverter-exclude" placeholder="剩余流量|官网|套餐|过期|0.1x|10x" />
-          </label>
-          <label class="field">
-            <span>节点重命名</span>
-            <input id="subconverter-rename" placeholder="^香港@HK;^日本@JP" />
-          </label>
-        </div>
+        <details class="advanced-section" id="subconverter-advanced">
+          <summary>高级选项 · 节点清洗与 Subconverter 配置</summary>
+          <div class="advanced-body">
+            <div class="subconverter-config-area">
+              <label class="field">
+                <span>Subconverter 配置文件</span>
+                <select id="subconverter-config-select" name="subconverter_config_select">
+                  <option value="">不额外指定配置文件</option>
+                </select>
+              </label>
+              <label class="field" id="subconverter-config-custom-field" hidden>
+                <span>自定义模板 URL</span>
+                <input id="subconverter-config" name="subconverter_config" placeholder="https://example.com/profile.ini" />
+              </label>
+              <button type="button" id="preview-subconverter-config" class="secondary-action">预览配置</button>
+            </div>
+            <div class="toggle-grid">
+              <label><input type="checkbox" id="subconverter-emoji" /> 节点 Emoji</label>
+              <label><input type="checkbox" id="subconverter-udp" checked /> UDP</label>
+              <label><input type="checkbox" id="subconverter-tfo" /> TCP Fast Open</label>
+              <label><input type="checkbox" id="subconverter-sort" checked /> 节点排序</label>
+              <label><input type="checkbox" id="subconverter-append-type" /> 追加协议类型</label>
+              <label><input type="checkbox" id="subconverter-scv" /> 跳过证书校验</label>
+            </div>
+            <div class="convert-form subconverter-rules">
+              <label class="field">
+                <span>地区 / 包含关键词</span>
+                <input id="subconverter-include" placeholder="HK|SG|JP|US|Premium|BGP" />
+              </label>
+              <label class="field">
+                <span>排除关键词 / 倍率</span>
+                <input id="subconverter-exclude" placeholder="剩余流量|官网|套餐|过期|0.1x|10x" />
+              </label>
+              <label class="field">
+                <span>节点重命名</span>
+                <input id="subconverter-rename" placeholder="^香港@HK;^日本@JP" />
+              </label>
+            </div>
+          </div>
+        </details>
       </section>
 
       <div class="stats-strip" id="result-stats">
@@ -145,7 +153,6 @@
             <input id="policy-local-query" placeholder="搜索模板…" />
             <span class="selection-label">当前：<strong id="selected-package-count">—</strong></span>
             <button type="button" id="clear-visible-policy">定位当前</button>
-            <button type="button" id="open-community-browser">浏览社区配置</button>
           </div>
           <div class="table-wrap policy-table-wrap" id="policy-table"></div>
         </section>
@@ -186,8 +193,8 @@
               </div>
             </div>
             <div class="yaml-view-tabs">
-              <button type="button" class="yaml-tab active advanced-only" data-yaml-tab="policy">策略片段</button>
-              <button type="button" class="yaml-tab" data-yaml-tab="full">完整输出</button>
+              <button type="button" class="yaml-tab active" data-yaml-tab="full">完整输出</button>
+              <button type="button" class="yaml-tab advanced-only" data-yaml-tab="policy">策略片段</button>
               <button type="button" class="yaml-tab advanced-only" data-yaml-tab="template">自动预设源</button>
             </div>
             <div class="template-summary advanced-only" id="template-summary"></div>
@@ -229,7 +236,7 @@
               </div>
             </div>
             <div id="findings-container" class="findings-container">
-              <div class="empty">创建工作区后查看分析结果</div>
+              <div class="empty">生成配置后查看分析结果</div>
             </div>
           </div>
 
@@ -243,7 +250,7 @@
               <button type="button" id="load-graph-button">刷新策略图</button>
             </div>
             <div id="policy-graph-container" class="policy-graph-container">
-              <div class="empty">创建工作区后查看策略依赖关系</div>
+              <div class="empty">生成配置后查看策略依赖关系</div>
             </div>
           </div>
 
@@ -259,8 +266,15 @@
               <input id="simulate-destination" placeholder="chat.openai.com 或 8.8.8.8" required />
               <button type="submit">模拟</button>
             </form>
+            <div class="sim-examples" aria-label="快速示例">
+              <span>试一试：</span>
+              <button type="button" class="sim-example" data-destination="chat.openai.com">chat.openai.com</button>
+              <button type="button" class="sim-example" data-destination="github.com">github.com</button>
+              <button type="button" class="sim-example" data-destination="www.youtube.com">www.youtube.com</button>
+              <button type="button" class="sim-example" data-destination="8.8.8.8">8.8.8.8</button>
+            </div>
             <div id="simulate-trace" class="trace-list">
-              <div class="empty">创建工作区后输入目的地进行模拟</div>
+              <div class="empty">生成配置后输入目的地进行模拟</div>
             </div>
           </div>
 
@@ -313,6 +327,6 @@
       <span></span><span></span><span></span>
       <span></span><span></span><span></span>
     </div>
-    <script src="/static/app.js?v=19"></script>
+    <script src="/static/app.js?v=20"></script>
   </body>
 </html>

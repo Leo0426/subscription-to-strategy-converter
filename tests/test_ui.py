@@ -12,7 +12,8 @@ def test_index_page_is_served() -> None:
     assert "Subflow" in response.text
     assert "/static/app.js" in response.text
     assert "策略指挥室" in response.text
-    assert "创建工作区" in response.text
+    assert "生成配置" in response.text
+    assert "高级选项" in response.text
     assert "Mihomo 订阅链接" in response.text
     assert "yaml-view-tabs" in response.text
     assert "新增分组" in response.text

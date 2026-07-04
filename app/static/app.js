@@ -68,7 +68,7 @@ const state = {
   communityTemplates: [],
   communityMeta: new Map(),
   customGroups: [],
-  yamlView: "policy",
+  yamlView: "full",
   policyYaml: "",
   generatedYaml: "",
   compiledYaml: "",
@@ -983,7 +983,7 @@ function updateYamlDisplay() {
   if (state.yamlView === "policy") {
     els.configOutput.value = state.policyYaml;
   } else if (state.yamlView === "full") {
-    els.configOutput.value = state.generatedYaml || '# 还未创建工作区，请点击"创建工作区"按钮\n';
+    els.configOutput.value = state.generatedYaml || '# 还未生成配置：粘贴订阅地址后点击「生成配置」\n';
   } else {
     els.configOutput.value = state.templateYaml || "# 等待模板加载\n";
   }
@@ -998,7 +998,7 @@ function refreshLivePreview() {
   const customGroups = getCustomStrategy().proxy_groups;
   const lines = [
     "# 策略预览：以下策略组会注入到模板中",
-    "# 点击「创建工作区」后会用机场节点填充完整配置",
+    "# 点击「生成配置」后会用机场节点填充完整配置",
     "",
     "proxy-groups:",
   ];
@@ -1103,7 +1103,7 @@ function renderWorkspaceGraph() {
   if (!container) return;
   const raw = state.graph;
   if (!raw?.nodes?.length) {
-    container.innerHTML = '<div class="empty">创建工作区后查看策略依赖关系</div>';
+    container.innerHTML = '<div class="empty">生成配置后查看策略依赖关系</div>';
     return;
   }
   const agg = buildAggregatedGraph(raw);
@@ -1172,7 +1172,7 @@ async function convertConfig(event) {
     return;
   }
   setBusy(true);
-  setStatus("创建工作区中...");
+  setStatus("生成配置中...");
   refreshSubscribeUrl();
   try {
     state.lastPayload = payload;
@@ -1184,12 +1184,13 @@ async function convertConfig(event) {
       const errors = state.findings.filter((finding) => finding.severity === "error").length;
       setStatus(
         errors
-          ? `工作区已创建 · ${body.node_count} 个节点 · ${errors} 个错误`
-          : `工作区已创建 · ${body.node_count} 个节点`,
+          ? `配置已生成 · ${body.node_count} 个节点 · ${errors} 个错误`
+          : `配置已生成 · ${body.node_count} 个节点 · 订阅链接可复制`,
         errors ? "error" : "ok"
       );
+      flashSubscribeBox();
     } catch (compileError) {
-      setStatus(`工作区已创建，但 Mihomo 编译失败：${compileError.message}`, "error");
+      setStatus(`配置已生成，但 Mihomo 编译失败：${compileError.message}`, "error");
     }
   } catch (error) {
     setStatus(error.message, "error");
@@ -1198,7 +1199,7 @@ async function convertConfig(event) {
   }
 }
 
-async function copyText(text, emptyMessage, okMessage, fallbackElement) {
+async function copyText(text, emptyMessage, okMessage, fallbackElement, button) {
   if (!text) {
     setStatus(emptyMessage);
     return;
@@ -1206,10 +1207,30 @@ async function copyText(text, emptyMessage, okMessage, fallbackElement) {
   try {
     await navigator.clipboard.writeText(text);
     setStatus(okMessage, "ok");
+    if (button) flashButton(button, "已复制 ✓");
   } catch {
     if (fallbackElement && typeof fallbackElement.select === "function") fallbackElement.select();
     setStatus("已选中，请手动复制");
   }
+}
+
+function flashButton(button, text) {
+  if (button.dataset.flashing) return;
+  button.dataset.flashing = "1";
+  const original = button.textContent;
+  button.textContent = text;
+  setTimeout(() => {
+    button.textContent = original;
+    delete button.dataset.flashing;
+  }, 1500);
+}
+
+function flashSubscribeBox() {
+  const box = document.querySelector("#subscribe-box");
+  if (!box || !els.convertedUrl.value) return;
+  box.classList.remove("flash");
+  void box.offsetWidth;
+  box.classList.add("flash");
 }
 
 // ── Community browser ─────────────────────────────────────────────────────
@@ -1664,7 +1685,7 @@ async function simulateWorkspace(event) {
     return;
   }
   if (!state.workspace) {
-    setStatus("请先创建工作区", "error");
+    setStatus("请先生成配置", "error");
     switchOutputPane("config");
     return;
   }
@@ -1757,7 +1778,7 @@ function bindEvents() {
     loadTemplateDetail();
   });
   els.copyButton.addEventListener("click", () =>
-    copyText(els.configOutput.value, "没有可复制的内容", "已复制", els.configOutput)
+    copyText(els.configOutput.value, "没有可复制的内容", "已复制", els.configOutput, els.copyButton)
   );
   els.copyUrlButton.addEventListener("click", async () => {
     clearTimeout(_sessionRefreshTimer);
@@ -1771,7 +1792,7 @@ function bindEvents() {
     } else {
       refreshSubscribeUrl();
     }
-    copyText(els.convertedUrl.value, "还没有订阅地址", "订阅地址已复制", els.convertedUrl);
+    copyText(els.convertedUrl.value, "还没有订阅地址，请先填写订阅 URL", "订阅地址已复制", els.convertedUrl, els.copyUrlButton);
   });
   els.downloadButton?.addEventListener("click", downloadYaml);
   els.addGroupButton.addEventListener("click", addGroup);
@@ -1786,6 +1807,18 @@ function bindEvents() {
     if (els.subscriptionUrl.value.trim() && !state.allNodes.length) {
       previewNodes();
     }
+  });
+  els.subscriptionUrl.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      els.form.requestSubmit();
+    }
+  });
+  document.querySelectorAll(".sim-example").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (els.simulateDestination) els.simulateDestination.value = btn.dataset.destination || "";
+      els.simulateForm?.requestSubmit();
+    });
   });
   els.policyLocalQuery?.addEventListener("input", renderPolicyTable);
   els.policyLocalQuery?.addEventListener("change", renderPolicyTable);

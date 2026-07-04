@@ -334,6 +334,16 @@ h1 {
   margin-top: 14px;
   padding-top: 14px;
   border-top: 1.5px solid var(--border);
+  border-radius: 0 0 12px 12px;
+}
+
+@keyframes subscribe-flash {
+  0% { background: var(--accent-soft); }
+  100% { background: transparent; }
+}
+
+.subscribe-box.flash {
+  animation: subscribe-flash 1.4s ease-out;
 }
 
 /* ── Powerfullz / 增强面板 ───────────────────────────────────────────────── */
@@ -375,6 +385,45 @@ h1 {
   border-bottom-right-radius: 16px;
   background: var(--surface-soft);
   padding: 12px;
+}
+
+.advanced-section .advanced-body {
+  border: 1.5px solid var(--border);
+  border-top: 0;
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+  background: var(--surface-soft);
+  padding: 12px;
+}
+
+.advanced-section > summary::before {
+  content: "▸";
+  margin-right: 8px;
+  transition: transform 0.15s;
+}
+
+.advanced-section[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.advanced-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.advanced-section > summary {
+  list-style: none;
+}
+
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin: 10px 0 12px;
+}
+
+.preset-row .preset-status {
+  margin: 0;
 }
 
 .workspace-section {
@@ -682,6 +731,34 @@ button.count-clear {
   gap: 8px;
   padding: 10px;
   border-bottom: 1.5px solid var(--border);
+}
+
+.sim-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 10px;
+  border-bottom: 1.5px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.sim-examples .sim-example {
+  min-height: auto;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.sim-examples .sim-example:hover {
+  border-color: var(--border-strong);
+  background: var(--accent-soft);
 }
 
 .trace-summary {
