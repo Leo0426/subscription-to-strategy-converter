@@ -3,6 +3,8 @@ const els = {
   previewButton: document.querySelector("#preview-button"),
   copyButton: document.querySelector("#copy-button"),
   copyUrlButton: document.querySelector("#copy-url-button"),
+  saveProfileButton: document.querySelector("#save-profile-button"),
+  copyProfileUrlButton: document.querySelector("#copy-profile-url-button"),
   downloadButton: document.querySelector("#download-button"),
   nodeFilter: document.querySelector("#node-filter"),
   addGroupButton: document.querySelector("#add-group-button"),
@@ -11,6 +13,10 @@ const els = {
   nodesBody: document.querySelector("#nodes-body"),
   configOutput: document.querySelector("#config-output"),
   convertedUrl: document.querySelector("#converted-url"),
+  profileResult: document.querySelector("#profile-result"),
+  profileId: document.querySelector("#profile-id"),
+  profileUrl: document.querySelector("#profile-url"),
+  profilesList: document.querySelector("#profiles-list"),
   groupsList: document.querySelector("#groups-list"),
   templateSelect: document.querySelector("#template"),
   targetSelect: document.querySelector("#target"),
@@ -63,6 +69,9 @@ const els = {
   catalogList: document.querySelector("#catalog-list"),
   catalogCount: document.querySelector("#catalog-count"),
   catalogMore: document.querySelector("#catalog-more"),
+  systemAppStatus: document.querySelector("#system-app-status"),
+  systemProfileDbStatus: document.querySelector("#system-profile-db-status"),
+  systemSubconverterStatus: document.querySelector("#system-subconverter-status"),
 };
 
 const state = {
@@ -87,6 +96,10 @@ const state = {
   catalogLimit: 60,
 };
 
+function absoluteUrl(path) {
+  return new URL(path, window.location.origin).toString();
+}
+
 function isAdvancedMode() {
   return true;
 }
@@ -99,6 +112,7 @@ function setStatus(message, type = "") {
 function setBusy(isBusy) {
   els.previewButton.disabled = isBusy;
   els.form.querySelector("button[type='submit']").disabled = isBusy;
+  if (els.saveProfileButton) els.saveProfileButton.disabled = isBusy || els.targetSelect.value !== "mihomo";
   if (els.simulateForm) els.simulateForm.querySelector("button[type='submit']").disabled = isBusy;
   els.status.classList.toggle("loading", isBusy);
 }
@@ -336,6 +350,7 @@ function renderTargetOptions() {
   els.targetSelect.value = hasPrevious ? previous : "mihomo";
   updateConfigOutputTitle();
   refreshSubscribeUrl();
+  updateProfilePublishState();
 }
 
 function buildSubscribeUrl(payload) {
@@ -388,6 +403,7 @@ let _sessionRefreshTimer = null;
 function refreshSubscribeUrl() {
   clearTimeout(_sessionRefreshTimer);
   const payload = getPayload();
+  updateProfilePublishState();
   if (!payload.subscription_url) {
     els.convertedUrl.value = "";
     return;
@@ -405,6 +421,117 @@ function refreshSubscribeUrl() {
   _sessionRefreshTimer = setTimeout(() => {
     createSessionUrl(payload).catch(() => { els.convertedUrl.value = ""; });
   }, 400);
+}
+
+function updateProfilePublishState() {
+  if (!els.saveProfileButton) return;
+  const isMihomo = els.targetSelect.value === "mihomo";
+  els.saveProfileButton.disabled = !isMihomo;
+  els.saveProfileButton.title = isMihomo ? "" : "长期订阅暂仅支持 Mihomo";
+}
+
+async function saveProfile() {
+  const payload = getPayload();
+  if (!payload.subscription_url) {
+    els.form.reportValidity();
+    return;
+  }
+  if (payload.target !== "mihomo") {
+    setStatus("长期订阅暂仅支持 Mihomo", "error");
+    return;
+  }
+  setBusy(true);
+  setStatus("正在保存长期订阅…");
+  try {
+    const created = await postJson("/profiles", payload);
+    const subscribeUrl = absoluteUrl(created.subscribe_url);
+    if (els.profileResult) els.profileResult.hidden = false;
+    if (els.profileId) els.profileId.textContent = created.id;
+    if (els.profileUrl) els.profileUrl.value = subscribeUrl;
+    setStatus("长期订阅已创建，请立即复制 token 链接", "ok");
+    await loadProfiles();
+  } catch (error) {
+    setStatus(`保存长期订阅失败：${error.message}`, "error");
+  } finally {
+    setBusy(false);
+  }
+}
+
+function systemStatusText(item) {
+  if (!item) return "unknown";
+  return item.status === "ok" ? "ok" : "error";
+}
+
+function markSystemCard(kind, status) {
+  const card = document.querySelector(`[data-system-card="${kind}"]`);
+  if (!card) return;
+  card.classList.toggle("is-ok", status === "ok");
+  card.classList.toggle("is-error", status !== "ok");
+}
+
+async function loadSystemStatus() {
+  try {
+    const response = await fetch("/system/status");
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.detail || `HTTP ${response.status}`);
+    const appStatus = systemStatusText(body.app);
+    const dbStatus = systemStatusText(body.profile_db);
+    const subconverterStatus = systemStatusText(body.subconverter);
+    if (els.systemAppStatus) els.systemAppStatus.textContent = appStatus;
+    if (els.systemProfileDbStatus) els.systemProfileDbStatus.textContent = dbStatus;
+    if (els.systemSubconverterStatus) els.systemSubconverterStatus.textContent = subconverterStatus;
+    markSystemCard("app", appStatus);
+    markSystemCard("profile_db", dbStatus);
+    markSystemCard("subconverter", subconverterStatus);
+    if (subconverterStatus !== "ok") {
+      setStatus("转换依赖不可用：subconverter 离线", "error");
+    }
+  } catch (error) {
+    ["app", "profile_db", "subconverter"].forEach((kind) => markSystemCard(kind, "error"));
+    setStatus(`系统状态检测失败：${error.message}`, "error");
+  }
+}
+
+function renderProfiles(profiles) {
+  if (!els.profilesList) return;
+  if (!profiles.length) {
+    els.profilesList.innerHTML = '<div class="empty-state">暂无已保存 Profile</div>';
+    return;
+  }
+  els.profilesList.replaceChildren();
+  for (const profile of profiles) {
+    const item = document.createElement("div");
+    item.className = "profile-list-item";
+    item.innerHTML = `
+      <div>
+        <span class="micro-label">PROFILE</span>
+        <strong></strong>
+      </div>
+      <div class="profile-tags">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    `;
+    item.querySelector("strong").textContent = profile.id;
+    const tags = item.querySelectorAll(".profile-tags span");
+    tags[0].textContent = profile.target || "mihomo";
+    tags[1].textContent = profile.template || "powerfullz";
+    tags[2].textContent = profile.has_artifact ? "artifact ready" : "no artifact";
+    els.profilesList.append(item);
+  }
+}
+
+async function loadProfiles() {
+  if (!els.profilesList) return;
+  try {
+    const response = await fetch("/profiles");
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.detail || `HTTP ${response.status}`);
+    renderProfiles(body.profiles || []);
+  } catch (error) {
+    els.profilesList.innerHTML = `<div class="empty-state">Profile 列表加载失败：${error.message}</div>`;
+  }
 }
 
 // ── YAML utilities (used by refreshLivePreview) ───────────────────────────
@@ -1930,7 +2057,12 @@ function bindEvents() {
   els.subconverterPanel?.addEventListener("input", refreshSubscribeUrl);
   els.subconverterPanel?.addEventListener("change", refreshSubscribeUrl);
   els.templateSelect.addEventListener("change", refreshTemplateOptions);
-  els.targetSelect.addEventListener("change", () => { renderPolicyTable(); updateConfigOutputTitle(); refreshSubscribeUrl(); });
+  els.targetSelect.addEventListener("change", () => {
+    renderPolicyTable();
+    updateConfigOutputTitle();
+    refreshSubscribeUrl();
+    updateProfilePublishState();
+  });
   [els.enhanceAi, els.enhanceDev, els.enhanceStreaming].forEach((input) => {
     input?.addEventListener("change", applyEnhancementPreset);
   });
@@ -1959,6 +2091,10 @@ function bindEvents() {
     }
     copyText(els.convertedUrl.value, "还没有订阅地址，请先填写订阅 URL", "订阅地址已复制", els.convertedUrl, els.copyUrlButton);
   });
+  els.saveProfileButton?.addEventListener("click", saveProfile);
+  els.copyProfileUrlButton?.addEventListener("click", () =>
+    copyText(els.profileUrl?.value, "还没有长期订阅链接", "长期订阅链接已复制", els.profileUrl, els.copyProfileUrlButton)
+  );
   els.downloadButton?.addEventListener("click", downloadYaml);
   els.addGroupButton.addEventListener("click", addGroup);
   document.querySelectorAll(".yaml-tab").forEach((btn) => {
@@ -2015,6 +2151,8 @@ renderComposerEnabled();
 renderGroups();
 updateSelectionSummary();
 loadSubconverterTargets();
+loadSystemStatus();
+loadProfiles();
 loadTemplates();
 loadCommunityMeta();
 applyConversionMode();

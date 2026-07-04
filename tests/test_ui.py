@@ -15,6 +15,9 @@ def test_index_page_is_served() -> None:
     assert "生成配置" in response.text
     assert "高级选项" in response.text
     assert "Mihomo 订阅链接" in response.text
+    assert "保存为长期订阅" in response.text
+    assert "系统状态" in response.text
+    assert "已保存订阅" in response.text
     assert "yaml-view-tabs" in response.text
     assert "新增分组" in response.text
     assert "模板文件库" in response.text

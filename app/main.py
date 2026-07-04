@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.community import router as community_router
 from app.api.convert import router as convert_router
 from app.api.health import router as health_router
+from app.api.system import router as system_router
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -20,6 +21,7 @@ app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 app.include_router(health_router)
 app.include_router(convert_router)
 app.include_router(community_router)
+app.include_router(system_router)
 
 
 @app.get("/", include_in_schema=False)

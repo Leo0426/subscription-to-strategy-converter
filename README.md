@@ -53,17 +53,28 @@ PolicyWorkspace
 
 ### 环境要求
 
-- Python 3.12+
-- [uv](https://docs.astral.sh/uv/)
-- Docker（用于运行 subconverter）
+- Docker（推荐启动方式）
+- Python 3.12+ 与 [uv](https://docs.astral.sh/uv/)（本地开发方式）
 
-### 1. 安装依赖
+### 推荐：Docker Compose 一键启动
+
+```bash
+docker compose up
+```
+
+打开 [http://127.0.0.1:8000](http://127.0.0.1:8000)。
+
+Compose 会同时启动 Subflow 与 subconverter，并将 Profile 数据库保存到 `./data/subflow.db`。
+
+### 本地开发：手动启动
+
+安装依赖：
 
 ```bash
 uv sync
 ```
 
-### 2. 启动 subconverter
+启动 subconverter：
 
 ```bash
 docker run --rm --name subflow-subconverter \
@@ -71,7 +82,7 @@ docker run --rm --name subflow-subconverter \
   tindy2013/subconverter:latest
 ```
 
-### 3. 启动 Subflow
+启动 Subflow：
 
 ```bash
 uv run uvicorn app.main:app --reload
@@ -152,6 +163,7 @@ curl -X POST http://127.0.0.1:8000/profiles \
 | Method | Path | 用途 |
 |---|---|---|
 | `GET` | `/health` | 健康检查 |
+| `GET` | `/system/status` | App、Profile DB 与 subconverter 状态 |
 | `GET` | `/templates` | 模板列表 |
 | `GET` | `/templates/detail` | 模板详情与 YAML 预览 |
 | `GET` | `/policy-catalog` | 本地策略目录 |
@@ -163,6 +175,7 @@ curl -X POST http://127.0.0.1:8000/profiles \
 | `POST` | `/simulate` | 模拟域名或 IP 的规则路径 |
 | `POST` | `/compile/mihomo` | 将 Workspace 编译为 Mihomo YAML |
 | `POST` | `/profiles` | 创建持久化 Mihomo Profile |
+| `GET` | `/profiles` | 查看脱敏 Profile 清单 |
 | `GET` | `/subscribe/{profile_id}` | 访问 token 保护的 Profile 订阅 |
 | `GET` | `/subscribe` | 无持久化的直接订阅地址 |
 
@@ -210,10 +223,10 @@ tests/                   核心与 API 回归测试
 
 ## 近期优先级
 
-1. 为持久化 Profile 补齐页面管理与最后更新状态。
-2. 增加 Mihomo golden-output 测试与更严格的兼容性验收。
-3. 下载并缓存 RuleProvider 内容，让 `RULE-SET` 模拟与 provider 健康检查真正可用。
-4. 增加 Workspace 版本、结构化 diff 与回滚。
-5. 提供 Docker Compose 与可备份的持久化部署方案。
+1. 增加 Mihomo golden-output 测试与更严格的兼容性验收。
+2. 下载并缓存 RuleProvider 内容，让 `RULE-SET` 模拟与 provider 健康检查真正可用。
+3. 增加 Workspace 版本、结构化 diff 与回滚。
+4. 为 Profile 增加删除、备注、最近成功时间与备份/恢复操作。
+5. 为 Route Control Room 增加更完整的运行日志与故障排查视图。
 
 Surge、sing-box 和其他平台在达到 Mihomo 的 Workspace、Analyzer、Simulator 和 golden-output 语义要求前，仍保持实验性。

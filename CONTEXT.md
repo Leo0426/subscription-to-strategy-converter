@@ -79,6 +79,7 @@ Mihomo YAML
 | `app/api/convert.py` | Main API router — workspace, convert, subscribe, simulate, compile endpoints |
 | `app/api/community.py` | Community template catalog API |
 | `app/api/health.py` | Health check |
+| `app/api/system.py` | Route Control Room dependency status API for app, Profile DB, and subconverter |
 | `app/models/` | Pydantic request/response models |
 
 ## Built-in Templates
@@ -101,6 +102,7 @@ Community templates are auto-scanned from `community_templates/THEYAMLS/**/*.yam
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/health` | Health check |
+| GET | `/system/status` | App, Profile DB, and subconverter status for the Route Control Room |
 | GET | `/templates` | List all available templates |
 | GET | `/templates/detail` | Template structure and YAML preview |
 | GET | `/policy-catalog` | Extracted rule providers across community templates |
@@ -113,6 +115,7 @@ Community templates are auto-scanned from `community_templates/THEYAMLS/**/*.yam
 | POST | `/compile/mihomo` | Compile workspace dict → Mihomo YAML |
 | POST | `/session` | Store large policy payload, return session ID |
 | POST | `/profiles` | Persist a Mihomo Profile and return its token-protected Subscription URL |
+| GET | `/profiles` | List redacted local Profile summaries without token or source subscription URL |
 | GET | `/subscribe/{profile_id}` | Compile a persisted Profile or return its stale last-successful artifact on an external dependency failure |
 | GET | `/subscribe` | Stable URL for proxy clients — returns config directly |
 

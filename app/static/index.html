@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Subflow · Route Control Room</title>
-    <link rel="stylesheet" href="/static/styles.css?v=22" />
+    <link rel="stylesheet" href="/static/styles.css?v=23" />
   </head>
   <body>
     <main class="app-shell">
@@ -50,8 +50,54 @@
             <span>Mihomo 订阅链接</span>
             <input id="converted-url" type="url" readonly placeholder="粘贴订阅地址后自动生成，可直接导入 Mihomo / Clash 客户端" />
           </label>
-          <button type="button" id="copy-url-button">复制链接</button>
+          <div class="publish-actions">
+            <button type="button" id="copy-url-button">复制链接</button>
+            <button type="button" id="save-profile-button" class="primary">保存为长期订阅</button>
+          </div>
         </section>
+        <section class="profile-result" id="profile-result" hidden aria-live="polite">
+          <div>
+            <span class="micro-label">Profile 已发布</span>
+            <strong id="profile-id">-</strong>
+            <p>token 只展示一次；请立即复制长期订阅 URL。</p>
+          </div>
+          <label class="field">
+            <span>长期订阅 URL</span>
+            <input id="profile-url" type="url" readonly />
+          </label>
+          <button type="button" id="copy-profile-url-button">复制长期链接</button>
+        </section>
+      </section>
+
+      <section class="system-status-panel" aria-label="系统状态">
+        <div class="section-title">
+          <h2>系统状态</h2>
+          <p>Route Control Room 运行依赖检查；subconverter 离线时不会阻塞页面，但转换不可用。</p>
+        </div>
+        <div class="system-status-grid">
+          <div class="system-status-card" data-system-card="app">
+            <span>APP</span>
+            <strong id="system-app-status">检测中</strong>
+          </div>
+          <div class="system-status-card" data-system-card="profile_db">
+            <span>PROFILE DB</span>
+            <strong id="system-profile-db-status">检测中</strong>
+          </div>
+          <div class="system-status-card" data-system-card="subconverter">
+            <span>SUBCONVERTER</span>
+            <strong id="system-subconverter-status">检测中</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="saved-profiles-panel" aria-label="已保存订阅">
+        <div class="section-title">
+          <h2>已保存订阅</h2>
+          <p>本地 Profile 清单不会回显 token 或原始订阅 URL。</p>
+        </div>
+        <div id="profiles-list" class="profiles-list">
+          <div class="empty-state">等待 Profile 数据…</div>
+        </div>
       </section>
 
       <section class="powerfullz-panel" id="powerfullz-panel" hidden>
@@ -357,6 +403,6 @@
       <span></span><span></span><span></span>
       <span></span><span></span><span></span>
     </div>
-    <script src="/static/app.js?v=22"></script>
+    <script src="/static/app.js?v=23"></script>
   </body>
 </html>

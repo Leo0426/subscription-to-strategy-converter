@@ -24,6 +24,14 @@ class StoredProfile:
     artifact: str | None = None
 
 
+@dataclass(frozen=True)
+class ProfileSummary:
+    id: str
+    target: str
+    template: str
+    has_artifact: bool
+
+
 class ProfileStore:
     def __init__(self, database: str | Path) -> None:
         self.database = Path(database)
@@ -51,6 +59,24 @@ class ProfileStore:
     def save_artifact(self, profile_id: str, artifact: str) -> None:
         with self._connect() as connection:
             connection.execute("UPDATE profiles SET artifact = ? WHERE id = ?", (artifact, profile_id))
+
+    def list(self) -> list[ProfileSummary]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT id, request_json, artifact FROM profiles ORDER BY id"
+            ).fetchall()
+        summaries: list[ProfileSummary] = []
+        for profile_id, request_json, artifact in rows:
+            request = json.loads(request_json)
+            summaries.append(
+                ProfileSummary(
+                    id=profile_id,
+                    target=str(request.get("target", "mihomo")),
+                    template=str(request.get("template", "powerfullz")),
+                    has_artifact=artifact is not None,
+                )
+            )
+        return summaries
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:

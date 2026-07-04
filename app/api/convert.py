@@ -335,6 +335,21 @@ async def create_profile(request: ConvertRequest) -> dict[str, str]:
     }
 
 
+@router.get("/profiles")
+async def list_profiles() -> dict[str, list[dict[str, object]]]:
+    return {
+        "profiles": [
+            {
+                "id": profile.id,
+                "target": profile.target,
+                "template": profile.template,
+                "has_artifact": profile.has_artifact,
+            }
+            for profile in _profile_store().list()
+        ]
+    }
+
+
 @router.get("/subscribe/{profile_id}", response_class=PlainTextResponse)
 async def subscribe_profile(profile_id: str, token: str = Query(...)) -> PlainTextResponse:
     store = _profile_store()

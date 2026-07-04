@@ -57,6 +57,19 @@ proxies:
     assert "name: HK-01" in response.text
 
 
+def test_profile_creation_rejects_non_mihomo_target(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("SUBFLOW_DB_PATH", str(tmp_path / "subflow.db"))
+    client = TestClient(app)
+
+    response = client.post(
+        "/profiles",
+        json={"subscription_url": "https://example.com/sub", "template": "developer", "target": "surge"},
+    )
+
+    assert response.status_code == 422
+    assert "Mihomo" in response.json()["detail"]
+
+
 def test_profile_subscription_falls_back_to_last_successful_artifact(tmp_path, monkeypatch) -> None:
     upstream = {"available": True}
 
@@ -92,3 +105,28 @@ proxies:
     assert stale.status_code == 200
     assert stale.text == fresh.text
     assert stale.headers["X-Subflow-Stale"] == "true"
+
+
+def test_profiles_list_redacts_secrets(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("SUBFLOW_DB_PATH", str(tmp_path / "subflow.db"))
+    client = TestClient(app)
+
+    created = client.post(
+        "/profiles",
+        json={"subscription_url": "https://example.com/private-token", "template": "developer", "target": "mihomo"},
+    ).json()
+    response = client.get("/profiles")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "profiles": [
+            {
+                "id": created["id"],
+                "target": "mihomo",
+                "template": "developer",
+                "has_artifact": False,
+            }
+        ]
+    }
+    assert created["token"] not in response.text
+    assert "private-token" not in response.text
