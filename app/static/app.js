@@ -59,6 +59,19 @@ const els = {
   simulateForm: document.querySelector("#simulate-form"),
   simulateDestination: document.querySelector("#simulate-destination"),
   simulateTrace: document.querySelector("#simulate-trace"),
+  composerTabBadge: document.querySelector("#composer-tab-badge"),
+  composerClearButton: document.querySelector("#composer-clear-button"),
+  composerCount: document.querySelector("#composer-count"),
+  composerEnabledList: document.querySelector("#composer-enabled-list"),
+  customRuleForm: document.querySelector("#custom-rule-form"),
+  customRuleType: document.querySelector("#custom-rule-type"),
+  customRuleValue: document.querySelector("#custom-rule-value"),
+  customRuleTarget: document.querySelector("#custom-rule-target"),
+  catalogSearch: document.querySelector("#catalog-search"),
+  catalogBehaviorFilter: document.querySelector("#catalog-behavior-filter"),
+  catalogList: document.querySelector("#catalog-list"),
+  catalogCount: document.querySelector("#catalog-count"),
+  catalogMore: document.querySelector("#catalog-more"),
 };
 
 const state = {
@@ -78,6 +91,10 @@ const state = {
   graph: null,
   findings: [],
   lastPayload: null,
+  policyCatalog: null,
+  policyCatalogLoading: false,
+  policyRules: [],
+  catalogLimit: 60,
 };
 
 const CUSTOM_SUBCONVERTER_CONFIG = "__custom_subconverter_config__";
@@ -252,7 +269,15 @@ function getSelectedPolicy() {
     .filter((group) => group.source === "template")
     .map(policyGroupFromEditorGroup)
     .filter((group) => group.name);
-  return proxyGroups.length ? { proxy_groups: proxyGroups } : null;
+  const fragment = composerPolicyFragment();
+  if (!proxyGroups.length && !fragment.rules.length) return null;
+  const policy = {};
+  if (proxyGroups.length) policy.proxy_groups = proxyGroups;
+  if (fragment.rules.length) {
+    policy.rules = fragment.rules;
+    if (Object.keys(fragment.rule_providers).length) policy.rule_providers = fragment.rule_providers;
+  }
+  return policy;
 }
 
 function getPayload() {
@@ -350,7 +375,10 @@ async function createSessionUrl(payload) {
   if ((payload.custom_strategy?.proxy_groups?.length || 0) > 0) {
     sessionData.strategy = JSON.stringify(payload.custom_strategy);
   }
-  if ((payload.selected_policy?.proxy_groups?.length || 0) > 0) {
+  if (
+    (payload.selected_policy?.proxy_groups?.length || 0) > 0 ||
+    (payload.selected_policy?.rules?.length || 0) > 0
+  ) {
     sessionData.policy = JSON.stringify(payload.selected_policy);
   }
   if (payload.template === "powerfullz") {
@@ -385,7 +413,8 @@ function refreshSubscribeUrl() {
   const needsSession =
     isAdvancedMode() &&
     ((payload.custom_strategy?.proxy_groups?.length || 0) > 0 ||
-      (payload.selected_policy?.proxy_groups?.length || 0) > 0);
+      (payload.selected_policy?.proxy_groups?.length || 0) > 0 ||
+      (payload.selected_policy?.rules?.length || 0) > 0);
   if (!needsSession) {
     els.convertedUrl.value = buildSubscribeUrl(payload);
     return;
@@ -974,6 +1003,7 @@ function switchOutputPane(name) {
   });
   if (name === "graph") renderWorkspaceGraph();
   if (name === "analysis") renderWorkspaceFindings();
+  if (name === "composer") openComposerPane();
 }
 
 function updateYamlDisplay() {
@@ -997,7 +1027,7 @@ function refreshLivePreview() {
   }
   const customGroups = getCustomStrategy().proxy_groups;
   const lines = [
-    "# 策略预览：以下策略组会注入到模板中",
+    "# 策略预览：以下策略组和规则会注入到模板中",
     "# 点击「生成配置」后会用机场节点填充完整配置",
     "",
     "proxy-groups:",
@@ -1008,6 +1038,21 @@ function refreshLivePreview() {
     }
   } else {
     lines.push("  []");
+  }
+  const fragment = composerPolicyFragment();
+  if (fragment.rules.length) {
+    lines.push("", "# 规则编排（优先于模板规则）", "rules:");
+    for (const rule of fragment.rules) {
+      lines.push(`  - ${quoteYaml(rule)}`);
+    }
+    const providerNames = Object.keys(fragment.rule_providers);
+    if (providerNames.length) {
+      lines.push("", "rule-providers:");
+      for (const name of providerNames) {
+        lines.push(`  ${quoteYaml(name)}:`);
+        lines.push(...yamlValue(fragment.rule_providers[name], 4));
+      }
+    }
   }
   state.policyYaml = `${lines.join("\n")}\n`;
   updateYamlDisplay();
@@ -1383,6 +1428,261 @@ function bindCommunityBrowserEvents() {
   });
   els.communitySearch?.addEventListener("input", renderCommunityList);
   els.communityFormatFilter?.addEventListener("change", renderCommunityList);
+}
+
+// ── Rule composer ─────────────────────────────────────────────────────────
+
+const POLICY_RULES_STORAGE_KEY = "subflow.policyRules.v1";
+
+function composerTargetNames() {
+  const names = state.customGroups.map((group) => group.name.trim()).filter(Boolean);
+  return [...new Set([...names, "DIRECT", "REJECT"])];
+}
+
+function fillTargetSelect(select, current, placeholder) {
+  if (!select) return;
+  select.replaceChildren();
+  if (placeholder !== undefined) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = placeholder;
+    select.append(option);
+  }
+  for (const name of composerTargetNames()) {
+    const option = document.createElement("option");
+    option.value = name;
+    option.textContent = name;
+    select.append(option);
+  }
+  if (current && ![...select.options].some((option) => option.value === current)) {
+    const option = document.createElement("option");
+    option.value = current;
+    option.textContent = `${current}（不在当前分组中）`;
+    select.append(option);
+  }
+  if (current) select.value = current;
+}
+
+function savePolicyRules() {
+  try {
+    localStorage.setItem(POLICY_RULES_STORAGE_KEY, JSON.stringify(state.policyRules));
+  } catch (_error) {}
+}
+
+function restorePolicyRules() {
+  try {
+    const raw = localStorage.getItem(POLICY_RULES_STORAGE_KEY);
+    if (!raw) return;
+    const items = JSON.parse(raw);
+    if (Array.isArray(items)) {
+      state.policyRules = items.filter((item) => item && item.kind && item.target);
+    }
+  } catch (_error) {}
+}
+
+function policyRulesChanged() {
+  savePolicyRules();
+  renderComposerEnabled();
+  renderCatalog();
+  refreshSubscribeUrl();
+  refreshLivePreview();
+}
+
+function composerPolicyFragment() {
+  const rules = [];
+  const providers = {};
+  for (const rule of state.policyRules) {
+    if (!rule.target) continue;
+    if (rule.kind === "ruleset" && rule.name) {
+      rules.push(`RULE-SET,${rule.name},${rule.target}`);
+      if (rule.providerRaw) providers[rule.name] = rule.providerRaw;
+    } else if (rule.kind === "custom" && rule.ruleType && rule.match) {
+      rules.push(`${rule.ruleType},${rule.match},${rule.target}`);
+    }
+  }
+  return { rules, rule_providers: providers };
+}
+
+function setRulesetTarget(provider, target) {
+  const existing = state.policyRules.find((rule) => rule.kind === "ruleset" && rule.name === provider.name);
+  if (!target) {
+    if (!existing) return;
+    state.policyRules = state.policyRules.filter((rule) => rule !== existing);
+  } else if (existing) {
+    existing.target = target;
+  } else {
+    state.policyRules.push({
+      id: `ruleset:${provider.name}`,
+      kind: "ruleset",
+      name: provider.name,
+      behavior: provider.behavior || "",
+      providerRaw: provider.raw || null,
+      target,
+    });
+  }
+  policyRulesChanged();
+}
+
+function addCustomRule(type, value, target) {
+  const id = `custom:${type},${value}`;
+  if (state.policyRules.some((rule) => rule.id === id)) {
+    setStatus("该规则已存在", "");
+    return false;
+  }
+  state.policyRules.push({ id, kind: "custom", ruleType: type, match: value, target });
+  policyRulesChanged();
+  return true;
+}
+
+function submitCustomRule(event) {
+  event.preventDefault();
+  const type = els.customRuleType?.value || "DOMAIN-SUFFIX";
+  const value = (els.customRuleValue?.value || "").trim();
+  const target = els.customRuleTarget?.value || "";
+  if (!value) {
+    els.customRuleValue?.reportValidity();
+    return;
+  }
+  if (!target) {
+    setStatus("请选择目标策略组", "error");
+    return;
+  }
+  if (addCustomRule(type, value, target)) {
+    els.customRuleValue.value = "";
+    setStatus(`已添加规则：${type},${value} → ${target}`, "ok");
+  }
+}
+
+function clearComposer() {
+  if (!state.policyRules.length) return;
+  if (!window.confirm(`清空全部 ${state.policyRules.length} 条定制规则？`)) return;
+  state.policyRules = [];
+  policyRulesChanged();
+  setStatus("已清空定制规则", "ok");
+}
+
+function renderComposerEnabled() {
+  const count = state.policyRules.length;
+  if (els.composerCount) els.composerCount.textContent = String(count);
+  if (els.composerTabBadge) {
+    els.composerTabBadge.textContent = String(count);
+    els.composerTabBadge.hidden = !count;
+  }
+  if (!els.composerEnabledList) return;
+  if (!count) {
+    els.composerEnabledList.innerHTML =
+      '<div class="empty">还没有定制规则。从下方目录挑选规则集，或添加自定义规则。</div>';
+    return;
+  }
+  els.composerEnabledList.replaceChildren();
+  for (const rule of state.policyRules) {
+    const row = document.createElement("div");
+    row.className = "composer-enabled-item";
+    const label = rule.kind === "ruleset" ? rule.name : `${rule.ruleType} · ${rule.match}`;
+    row.innerHTML = `
+      <span class="pill">${rule.kind === "ruleset" ? "规则集" : "自定义"}</span>
+      <strong>${escapeHtml(label)}</strong>
+      <span class="composer-arrow">→</span>
+      <select aria-label="目标策略组"></select>
+      <button type="button" class="danger-button">移除</button>
+    `;
+    const select = row.querySelector("select");
+    fillTargetSelect(select, rule.target);
+    select.addEventListener("change", () => {
+      rule.target = select.value;
+      savePolicyRules();
+      renderCatalog();
+      refreshSubscribeUrl();
+      refreshLivePreview();
+    });
+    row.querySelector("button").addEventListener("click", () => {
+      state.policyRules = state.policyRules.filter((item) => item !== rule);
+      policyRulesChanged();
+    });
+    els.composerEnabledList.append(row);
+  }
+}
+
+async function ensurePolicyCatalog() {
+  if (state.policyCatalog || state.policyCatalogLoading) return;
+  state.policyCatalogLoading = true;
+  if (els.catalogCount) els.catalogCount.textContent = "加载中…";
+  try {
+    const response = await fetch("/policy-catalog");
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.detail || `HTTP ${response.status}`);
+    const providers = Array.isArray(body.ruleProviders) ? body.ruleProviders : [];
+    providers.sort((a, b) => String(a.name).localeCompare(String(b.name), "en", { sensitivity: "base" }));
+    state.policyCatalog = providers;
+    renderCatalog();
+  } catch (error) {
+    if (els.catalogList) {
+      els.catalogList.innerHTML = `<div class="empty">规则集目录加载失败：${escapeHtml(error.message)}</div>`;
+    }
+    if (els.catalogCount) els.catalogCount.textContent = "加载失败";
+  } finally {
+    state.policyCatalogLoading = false;
+  }
+}
+
+function filteredCatalog() {
+  const query = (els.catalogSearch?.value || "").trim().toLowerCase();
+  const behavior = els.catalogBehaviorFilter?.value || "";
+  return (state.policyCatalog || []).filter((provider) => {
+    if (behavior && (provider.behavior || "") !== behavior) return false;
+    if (!query) return true;
+    return `${provider.name} ${provider.url || ""} ${provider.author || ""} ${provider.template || ""}`
+      .toLowerCase()
+      .includes(query);
+  });
+}
+
+function renderCatalog() {
+  if (!els.catalogList || !state.policyCatalog) return;
+  const items = filteredCatalog();
+  if (els.catalogCount) els.catalogCount.textContent = `${items.length} 个规则集`;
+  const visible = items.slice(0, state.catalogLimit);
+  if (!visible.length) {
+    els.catalogList.innerHTML = '<div class="empty">没有匹配的规则集</div>';
+    if (els.catalogMore) els.catalogMore.hidden = true;
+    return;
+  }
+  els.catalogList.replaceChildren();
+  const enabled = new Map(
+    state.policyRules.filter((rule) => rule.kind === "ruleset").map((rule) => [rule.name, rule.target])
+  );
+  for (const provider of visible) {
+    const row = document.createElement("div");
+    row.className = `mrs-provider-item${enabled.has(provider.name) ? " enabled" : ""}`;
+    const meta = [provider.behavior, provider.format !== "yaml" ? provider.format : "", provider.author]
+      .filter(Boolean)
+      .join(" · ");
+    row.innerHTML = `
+      <div class="mrs-provider-main">
+        <strong>${escapeHtml(provider.name)}</strong>
+        <span class="muted">${escapeHtml(meta)}</span>
+      </div>
+      <div class="mrs-provider-actions">
+        <select aria-label="目标策略组"></select>
+      </div>
+    `;
+    const select = row.querySelector("select");
+    fillTargetSelect(select, enabled.get(provider.name) || "", "不启用");
+    select.addEventListener("change", () => setRulesetTarget(provider, select.value));
+    els.catalogList.append(row);
+  }
+  if (els.catalogMore) {
+    const remaining = items.length - state.catalogLimit;
+    els.catalogMore.hidden = remaining <= 0;
+    if (remaining > 0) els.catalogMore.textContent = `显示更多（还有 ${remaining} 个）`;
+  }
+}
+
+function openComposerPane() {
+  ensurePolicyCatalog();
+  fillTargetSelect(els.customRuleTarget, els.customRuleTarget?.value || "");
+  renderComposerEnabled();
+  renderCatalog();
 }
 
 // ── Escape helpers ────────────────────────────────────────────────────────
@@ -1786,7 +2086,8 @@ function bindEvents() {
     const needsPolicySession =
       payload.subscription_url &&
       ((payload.custom_strategy?.proxy_groups?.length || 0) > 0 ||
-        (payload.selected_policy?.proxy_groups?.length || 0) > 0);
+        (payload.selected_policy?.proxy_groups?.length || 0) > 0 ||
+        (payload.selected_policy?.rules?.length || 0) > 0);
     if (needsPolicySession) {
       await createSessionUrl(payload).catch(() => {});
     } else {
@@ -1820,6 +2121,20 @@ function bindEvents() {
       els.simulateForm?.requestSubmit();
     });
   });
+  els.customRuleForm?.addEventListener("submit", submitCustomRule);
+  els.composerClearButton?.addEventListener("click", clearComposer);
+  els.catalogSearch?.addEventListener("input", () => {
+    state.catalogLimit = 60;
+    renderCatalog();
+  });
+  els.catalogBehaviorFilter?.addEventListener("change", () => {
+    state.catalogLimit = 60;
+    renderCatalog();
+  });
+  els.catalogMore?.addEventListener("click", () => {
+    state.catalogLimit += 120;
+    renderCatalog();
+  });
   els.policyLocalQuery?.addEventListener("input", renderPolicyTable);
   els.policyLocalQuery?.addEventListener("change", renderPolicyTable);
   document.querySelector("#clear-visible-policy")?.addEventListener("click", scrollToCurrentTemplate);
@@ -1831,6 +2146,8 @@ function bindEvents() {
 
 bindEvents();
 bindCommunityBrowserEvents();
+restorePolicyRules();
+renderComposerEnabled();
 renderGroups();
 updateSelectionSummary();
 loadSubconverterTargets();

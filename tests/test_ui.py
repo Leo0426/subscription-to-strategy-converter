@@ -20,6 +20,9 @@ def test_index_page_is_served() -> None:
     assert "模板文件库" in response.text
     assert "规则分析" in response.text
     assert "流量模拟" in response.text
+    assert "规则编排" in response.text
+    assert "自定义规则" in response.text
+    assert "规则集目录" in response.text
     assert "策略组调试" in response.text
     assert "配置预览" in response.text
     assert "节点列表" in response.text

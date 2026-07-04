@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Subflow · Route Control Room</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20" />
+    <link rel="stylesheet" href="/static/styles.css?v=21" />
   </head>
   <body>
     <main class="app-shell">
@@ -161,6 +161,7 @@
         <div class="output-workspace">
           <div class="output-tabs-bar">
             <button type="button" class="output-tab active" data-output-tab="config">配置预览</button>
+            <button type="button" class="output-tab" data-output-tab="composer">规则编排<span class="tab-badge" id="composer-tab-badge" hidden>0</span></button>
             <button type="button" class="output-tab" data-output-tab="nodes">节点列表</button>
             <button type="button" class="output-tab" data-output-tab="analysis">规则分析</button>
             <button type="button" class="output-tab" data-output-tab="graph">策略图</button>
@@ -199,6 +200,63 @@
             </div>
             <div class="template-summary advanced-only" id="template-summary"></div>
             <textarea id="config-output" spellcheck="false" readonly></textarea>
+          </div>
+
+          <!-- 面板：规则编排 -->
+          <div class="output-pane" id="output-pane-composer" hidden>
+            <div class="panel-header">
+              <div>
+                <h2>规则编排</h2>
+                <p>挑选规则集或添加自定义规则，指定它走哪个策略组；点「生成配置」后生效，优先级高于模板规则。</p>
+              </div>
+              <button type="button" id="composer-clear-button" class="danger-button">清空定制</button>
+            </div>
+
+            <div class="composer-custom">
+              <h4>自定义规则</h4>
+              <form id="custom-rule-form" class="custom-rule-form">
+                <select id="custom-rule-type" aria-label="规则类型">
+                  <option value="DOMAIN-SUFFIX">DOMAIN-SUFFIX 域名后缀</option>
+                  <option value="DOMAIN">DOMAIN 完整域名</option>
+                  <option value="DOMAIN-KEYWORD">DOMAIN-KEYWORD 域名关键词</option>
+                  <option value="IP-CIDR">IP-CIDR IP 段</option>
+                  <option value="GEOIP">GEOIP 地区</option>
+                </select>
+                <input id="custom-rule-value" placeholder="example.com" required />
+                <select id="custom-rule-target" aria-label="目标策略组"></select>
+                <button type="submit">添加规则</button>
+              </form>
+            </div>
+
+            <div class="composer-enabled">
+              <h4>已启用的定制<span class="count-badge" id="composer-count">0</span></h4>
+              <div id="composer-enabled-list" class="composer-enabled-list">
+                <div class="empty">还没有定制规则。从下方目录挑选规则集，或添加自定义规则。</div>
+              </div>
+            </div>
+
+            <div class="mrs-library">
+              <div class="mrs-library-head">
+                <div>
+                  <h4>规则集目录</h4>
+                  <p>来自社区模板的去重规则集，选择目标策略组即启用。</p>
+                </div>
+                <span class="count-badge" id="catalog-count">加载中</span>
+              </div>
+              <div class="mrs-toolbar">
+                <input id="catalog-search" placeholder="搜索规则集：openai / netflix / github…" />
+                <select id="catalog-behavior-filter">
+                  <option value="">全部类型</option>
+                  <option value="domain">domain 域名</option>
+                  <option value="ipcidr">ipcidr IP 段</option>
+                  <option value="classical">classical 混合</option>
+                </select>
+              </div>
+              <div id="catalog-list" class="mrs-provider-list">
+                <div class="empty">打开面板后自动加载规则集目录</div>
+              </div>
+              <div class="mrs-more"><button type="button" id="catalog-more" hidden>显示更多</button></div>
+            </div>
           </div>
 
           <!-- 面板：节点列表 -->
@@ -327,6 +385,6 @@
       <span></span><span></span><span></span>
       <span></span><span></span><span></span>
     </div>
-    <script src="/static/app.js?v=20"></script>
+    <script src="/static/app.js?v=21"></script>
   </body>
 </html>
