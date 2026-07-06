@@ -4,7 +4,6 @@ services:
     working_dir: /app
     command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
     environment:
-      SUBCONVERTER_BASE_URL: http://subconverter:25500
       SUBFLOW_DB_PATH: /app/data/subflow.db
       UV_PROJECT_ENVIRONMENT: /tmp/subflow-venv
     volumes:
@@ -12,10 +11,3 @@ services:
       - ./data:/app/data
     ports:
       - "8000:8000"
-    depends_on:
-      - subconverter
-
-  subconverter:
-    image: tindy2013/subconverter:latest
-    ports:
-      - "25500:25500"

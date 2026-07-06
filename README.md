@@ -1,232 +1,138 @@
-# Subflow · Route Control Room
+# Subflow · 代理策略工作区
 
-Subflow 是一个面向 Mihomo 的可视化代理策略工作区。它将用户已授权的订阅源、策略模板和自定义分组合成 `PolicyWorkspace`，让配置在导出前可以被查看、分析、模拟和验证。
+把机场订阅变成可理解、可编辑、可编译的策略配置。
 
-> 这不只是一个 YAML 生成器。Subflow 的产品中心是可理解、可检查、可编译的代理策略工作区。
-
-![Subflow Route Control Room](docs/assets/route-control-room.png)
+---
 
 ## 能做什么
 
-- 通过 [tindy2013/subconverter](https://github.com/tindy2013/subconverter) 将多种订阅格式归一化为 Clash YAML。
-- 将订阅节点转换为统一的 `ProxyNode` IR，再与内置或社区模板合成 `PolicyWorkspace`。
-- 查看节点、策略组、规则、RuleProvider 与内置目标之间的关系。
-- 检测缺失 provider、缺失目标、重复规则、策略组环与不可达策略组。
-- 输入域名或 IP，模拟规则命中与策略组解析路径。
-- 编译并导出 Mihomo YAML。
-- 创建持久化 Profile，获得不暴露原始订阅地址的 token 保护型短订阅 URL。
-- 外部订阅或转换服务暂时失败时，回退到 Profile 最后一份成功产物。
+**傻瓜模式（首页 `/`）** — 粘贴订阅链接，一键获取 Mihomo 订阅 URL，直接导入客户端。
 
-Web 界面采用 **Route Control Room** 风格，将导入、编排、验证和发布收口到同一个操作台。
+**工作台（`/advanced`）** — 完整的可视化策略编辑器：
 
-## 核心流程
+- 内置模板 + 108 个社区模板内联浏览
+- 规则编排：拖拽增删规则，指定目标策略组
+- 规则集目录：296 条，分 8 个分类（AI / 流媒体 / 社交通讯 / 广告拦截 / 国内直连 / 代理规则 / 网络基础 / 其他）
+- 规则分析：自动检测缺失 provider、重复规则、策略组环
+- 流量模拟：输入域名或 IP，追踪规则命中路径
+- 编译导出：Mihomo YAML / Clash YAML / sing-box JSON / Surge conf
+- Profile 持久化 + token 保护短链接，客户端直拉，断源自动回退
 
-```text
-Subscription URL
-      ↓ subconverter
-Clash YAML
-      ↓ parse + normalize
-ProxyNode IR
-      ↓ template + custom strategy
-PolicyWorkspace
-      ├─ analyze
-      ├─ simulate
-      ├─ visualize
-      └─ compile
-            ↓
-        Mihomo YAML
-```
-
-## 能力成熟度
-
-| 能力 | 状态 | 说明 |
-|---|---|---|
-| Mihomo / Clash 编译 | MVP 质量标准 | 主路径，统一经过 `PolicyWorkspace` |
-| 规则分析 | MVP | 确定性结构检查 |
-| 流量模拟 | MVP | 支持基础域名、IP 与 `MATCH`；`RULE-SET` / `GEOIP` 尚不做真实内容匹配 |
-| 策略图 | MVP | 只读依赖视图 |
-| 持久化 Profile | MVP | SQLite、token 授权、最后成功产物回退 |
-| Surge | 实验性 | 不承诺与 Mihomo 的完整语义对等 |
-| sing-box | 实验性 | 不承诺与 Mihomo 的完整语义对等 |
+---
 
 ## 快速启动
 
-### 环境要求
-
-- Docker（推荐启动方式）
-- Python 3.12+ 与 [uv](https://docs.astral.sh/uv/)（本地开发方式）
-
-### 推荐：Docker Compose 一键启动
+### Docker（推荐）
 
 ```bash
+git clone <repo>
 docker compose up
 ```
 
-打开 [http://127.0.0.1:8000](http://127.0.0.1:8000)。
+打开 [http://127.0.0.1:8000](http://127.0.0.1:8000)。  
+Profile 数据库写入 `./data/subflow.db`（自动创建）。
 
-Compose 会同时启动 Subflow 与 subconverter，并将 Profile 数据库保存到 `./data/subflow.db`。
-
-### 本地开发：手动启动
-
-安装依赖：
+### 本地开发
 
 ```bash
 uv sync
-```
-
-启动 subconverter：
-
-```bash
-docker run --rm --name subflow-subconverter \
-  -p 25500:25500 \
-  tindy2013/subconverter:latest
-```
-
-启动 Subflow：
-
-```bash
 uv run uvicorn app.main:app --reload
 ```
 
-打开 [http://127.0.0.1:8000](http://127.0.0.1:8000)。
+---
 
-subconverter 不在默认地址时：
+## 使用教程
 
-```bash
-SUBCONVERTER_BASE_URL=http://127.0.0.1:25500 \
-uv run uvicorn app.main:app --reload
+### 傻瓜模式
+
+1. 打开首页，在"机场订阅 URL"框粘贴你的订阅地址
+2. 链接自动生成在下方，点击"复制"
+3. 把这个链接填入 Mihomo / Clash Verge 的订阅管理
+
+这是无状态的实时转换，节点信息不落库。
+
+---
+
+### 工作台：完整策略编辑
+
+打开 `/advanced`。
+
+**① 加载节点**  
+在顶部"订阅 URL"框填入你的订阅地址，点击"测试订阅"确认节点可用，再点"生成配置"。
+
+**② 选择模板**  
+在"内置预设"下拉中选择起点：
+
+| 模板 | 说明 |
+|------|------|
+| `minimal` | 仅节点，无规则，适合测试连通性 |
+| `powerfullz` | 完整分流，含 AI / 流媒体 / 广告拦截等策略组 |
+| `community:…` | 从社区浏览器搜索并应用 |
+
+社区浏览器直接内联在"内置预设"模块下方，支持关键词搜索，点击预览策略组结构后一键应用。
+
+**③ 编排规则**（可选）  
+切换到"规则编排"面板：
+- 右侧规则集目录按分类展示所有规则，点击即追加
+- 为每条规则指定目标策略组
+- "自定义规则"区支持直接输入原始规则行
+
+**④ 验证**
+
+- **规则分析**：列出缺失 provider、重复规则、策略组环等问题
+- **流量模拟**：输入 `openai.com` 等域名，查看具体命中哪条规则、解析到哪个策略组
+
+**⑤ 选择目标，导出**
+
+| 格式 | 状态 |
+|------|------|
+| Mihomo YAML | ✅ 稳定 |
+| Clash YAML | ✅ 稳定 |
+| sing-box JSON | 🧪 实验性 |
+| Surge conf | 🧪 实验性 |
+
+右上角选择目标格式，配置实时出现在"配置预览"区，点击"复制"或"下载"。
+
+---
+
+### Profile：长期托管订阅
+
+1. 在工作台编译好配置后，点击"保存为长期订阅"
+2. Subflow 生成一个带 token 的短链接（`/subscribe/<id>?token=…`）
+3. 把这个链接填入代理客户端的订阅管理
+
+每次客户端拉取时 Subflow 自动重新编译最新配置。若上游订阅暂时不可用，自动返回最后一次成功产物。
+
+---
+
+## 环境变量
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `SUBFLOW_DB_PATH` | `./data/subflow.db` | Profile 数据库路径 |
+
+---
+
+## 项目结构
+
+```
+app/
+├── api/          # FastAPI 路由（convert, community, system, health）
+├── core/
+│   ├── policy_workspace.py   # 策略工作区 IR
+│   ├── policy_catalog.py     # 规则集目录（296 条，8 分类）
+│   ├── platforms/            # sing-box / Surge 适配器
+│   └── template_engine.py    # 模板渲染
+├── static/       # 前端（index.html / advanced.html / app.js / main.js）
+└── models/       # Pydantic 数据模型
+community_templates/          # 社区贡献的配置文件（108 个）
+tests/                        # pytest 测试套件
 ```
 
-## 基本使用
+---
 
-1. 输入你已获授权的订阅 URL。
-2. 选择目标客户端与增强能力。
-3. 配置节点过滤、重命名、Subconverter 模板或自定义策略组。
-4. 创建 Workspace，检查规则分析、策略图和流量模拟。
-5. 复制、下载或发布 Mihomo 配置。
-
-## 配置模型
-
-Subflow 将输入分为两层：
-
-- **Subconverter 转换选项**：控制源订阅如何归一化，包括 `include`、`exclude`、`rename`、`emoji`、`udp`、`tfo`、`sort`、`append_type` 和 `scv` 等。
-- **策略模板**：提供策略组、规则、RuleProvider、DNS 和 TUN 骨架。
-
-两层输入先合成 `PolicyWorkspace`，再用于分析、模拟、可视化和 Mihomo 编译。
-
-### 内置模板
-
-| ID | 用途 |
-|---|---|
-| `minimal` | Proxy / Auto / Fallback / DIRECT 最小策略 |
-| `developer` | GitHub、npm、Docker、JetBrains、Microsoft、Apple |
-| `ai-tools` | Claude、OpenAI、Gemini、Perplexity、Cursor、GitHub Copilot |
-| `streaming` | Netflix、YouTube、Disney、Spotify、Telegram |
-| `full` | AI + Developer + Streaming + HK / SG / JP / US |
-| `powerfullz` | 基于 powerfullz/override-rules 静态 YAML |
-
-服务还会扫描 `community_templates/THEYAMLS/**/*.yaml`。社区模板 ID 以 `local:` 开头。`community_templates/Overwrite/` 中的 OpenClash 片段不会被当作完整 Mihomo 模板自动加载。
-
-## 持久化 Profile
-
-临时 `/subscribe?...` 地址会携带原始订阅参数。需要长期使用时，建议创建 Profile：
-
-```bash
-curl -X POST http://127.0.0.1:8000/profiles \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "subscription_url": "https://example.com/sub",
-    "template": "developer",
-    "target": "mihomo"
-  }'
-```
-
-响应示例：
-
-```json
-{
-  "id": "<profile-id>",
-  "token": "<access-token>",
-  "subscribe_url": "/subscribe/<profile-id>?token=<access-token>"
-}
-```
-
-- Profile 默认保存到 `data/subflow.db`。
-- 使用 `SUBFLOW_DB_PATH` 可修改数据库路径。
-- Profile ID 用于定位，token 用于授权；数据库中只保存 token 哈希。
-- 数据库文件会设置为 `0600`，但其中的原始订阅 URL 未做应用层加密；请将数据库与备份视为敏感资产。
-- 外部订阅、subconverter 或远程模板暂时失败时，会返回最后成功配置，并添加 `X-Subflow-Stale: true`。
-- 认证失败、Profile 数据非法或内部编译错误不会静默回退。
-
-## API 概览
-
-| Method | Path | 用途 |
-|---|---|---|
-| `GET` | `/health` | 健康检查 |
-| `GET` | `/system/status` | App、Profile DB 与 subconverter 状态 |
-| `GET` | `/templates` | 模板列表 |
-| `GET` | `/templates/detail` | 模板详情与 YAML 预览 |
-| `GET` | `/policy-catalog` | 本地策略目录 |
-| `GET` | `/subconverter/targets` | 支持的输出目标 |
-| `POST` | `/preview` | 预览归一化节点与配置树 |
-| `POST` | `/convert` | 转换并编译配置 |
-| `POST` | `/workspace/preview` | 创建 Workspace、策略图和分析结果 |
-| `POST` | `/analyze` | 重新分析 Workspace |
-| `POST` | `/simulate` | 模拟域名或 IP 的规则路径 |
-| `POST` | `/compile/mihomo` | 将 Workspace 编译为 Mihomo YAML |
-| `POST` | `/profiles` | 创建持久化 Mihomo Profile |
-| `GET` | `/profiles` | 查看脱敏 Profile 清单 |
-| `GET` | `/subscribe/{profile_id}` | 访问 token 保护的 Profile 订阅 |
-| `GET` | `/subscribe` | 无持久化的直接订阅地址 |
-
-FastAPI 交互文档可在运行时通过 [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) 查看。
-
-## 安全边界
-
-- 只处理调用方已获得访问权限的订阅；不绕过鉴权，不破解订阅内容。
-- 只接受 `http` / `https` 订阅 URL。
-- 拒绝 localhost、回环、私有网段、链路本地地址与其他非公网解析结果。
-- 调用 subconverter 前会检查主机名与 DNS 解析结果。
-- `/preview`、`/convert` 与直接 `/subscribe` 路径不主动持久化订阅数据。
-- 只有用户显式创建的 Profile 会在 SQLite 中持久化原始订阅 URL、配置选项与最后成功产物。
-
-Subflow 的 SSRF 防护不应被视为通用的多租户安全边界。当前更适合本地或受信任的单用户环境。
-
-## 开发
-
-运行测试：
+## 运行测试
 
 ```bash
 uv run pytest
 ```
-
-项目主要目录：
-
-```text
-app/api/                 HTTP 入口
-app/core/                订阅、Workspace、分析、模拟与编译
-app/core/platforms/      实验性平台编译器
-app/models/              API 请求 / 响应模型
-app/static/              Route Control Room Web UI
-community_templates/     社区模板与上游素材
-docs/                    PRD、ADR 与架构文档
-tests/                   核心与 API 回归测试
-```
-
-## 设计与决策文档
-
-- [Domain Context](CONTEXT.md)
-- [Workspace-first Mihomo MVP ADR](docs/adr/0001-workspace-first-mihomo-mvp.md)
-- [Persistent Profiles ADR](docs/adr/0002-persistent-profiles-and-stale-fallback.md)
-- [Traffic Policy Control Plane MVP PRD](docs/prd/traffic-policy-control-plane-mvp.md)
-- [Control Plane Roadmap](docs/architecture/control-plane-roadmap.md)
-
-## 近期优先级
-
-1. 增加 Mihomo golden-output 测试与更严格的兼容性验收。
-2. 下载并缓存 RuleProvider 内容，让 `RULE-SET` 模拟与 provider 健康检查真正可用。
-3. 增加 Workspace 版本、结构化 diff 与回滚。
-4. 为 Profile 增加删除、备注、最近成功时间与备份/恢复操作。
-5. 为 Route Control Room 增加更完整的运行日志与故障排查视图。
-
-Surge、sing-box 和其他平台在达到 Mihomo 的 Workspace、Analyzer、Simulator 和 golden-output 语义要求前，仍保持实验性。
