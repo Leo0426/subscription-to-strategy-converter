@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from app.core.profiles import ProfileStore
-from app.core.subconverter import SubconverterError
+from app.core.subscription import SubscriptionError
 from app.main import app
 
 
@@ -23,7 +23,7 @@ def test_profile_store_persists_profile_without_plaintext_token(tmp_path) -> Non
 
 
 def test_created_profile_provides_stable_mihomo_subscription(tmp_path, monkeypatch) -> None:
-    async def fake_convert_subscription_to_clash(url: str, options: object | None = None) -> str:
+    async def fake_fetch_subscription(url: str) -> str:
         return """
 proxies:
   - name: HK-01
@@ -41,7 +41,7 @@ proxies:
         }
 
     monkeypatch.setenv("SUBFLOW_DB_PATH", str(tmp_path / "subflow.db"))
-    monkeypatch.setattr("app.core.subscription.convert_subscription_to_clash", fake_convert_subscription_to_clash)
+    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
     monkeypatch.setattr("app.core.template_engine.load_powerfullz_template", fake_load_powerfullz_template)
     client = TestClient(app)
 
@@ -73,9 +73,9 @@ def test_profile_creation_rejects_non_mihomo_target(tmp_path, monkeypatch) -> No
 def test_profile_subscription_falls_back_to_last_successful_artifact(tmp_path, monkeypatch) -> None:
     upstream = {"available": True}
 
-    async def fake_convert_subscription_to_clash(url: str, options: object | None = None) -> str:
+    async def fake_fetch_subscription(url: str) -> str:
         if not upstream["available"]:
-            raise SubconverterError("upstream unavailable")
+            raise SubscriptionError("upstream unavailable")
         return """
 proxies:
   - name: HK-01
@@ -90,7 +90,7 @@ proxies:
         return {"proxy-groups": [], "rules": ["MATCH,DIRECT"]}
 
     monkeypatch.setenv("SUBFLOW_DB_PATH", str(tmp_path / "subflow.db"))
-    monkeypatch.setattr("app.core.subscription.convert_subscription_to_clash", fake_convert_subscription_to_clash)
+    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
     monkeypatch.setattr("app.core.template_engine.load_powerfullz_template", fake_load_powerfullz_template)
     client = TestClient(app)
     created = client.post(

@@ -8,7 +8,6 @@ from pathlib import Path
 
 
 _YAML_ID = "community:THEYAMLS/General_Config/666OS/OneTouch_Config.yaml"
-_OPENCLASH_ID = "community:Overwrite/THENEWOPENCLASH/Official_Examples/Metacubex/rule-set_config.yaml"
 
 
 @pytest.fixture
@@ -45,13 +44,6 @@ def test_list_item_has_required_fields(client: TestClient) -> None:
     assert isinstance(item["surge_compatible"], bool)
     assert "source_path" in item
     assert item["source_path"].startswith("community_templates/")
-
-
-def test_list_openclash_item_has_openclash_format(client: TestClient) -> None:
-    response = client.get("/community/templates")
-    oc_items = [item for item in response.json() if item["id"] == _OPENCLASH_ID]
-    assert oc_items, "OpenClash template not found in list"
-    assert oc_items[0]["format"] == "openclash"
 
 
 def test_list_excludes_md_and_list_files(client: TestClient) -> None:
@@ -129,18 +121,6 @@ def test_detect_format_yaml_without_proxy_groups_is_unknown() -> None:
     assert _detect_format(path, loaded) == "unknown"
 
 
-def test_detect_format_openclash_by_directory() -> None:
-    path = Path("/project/community_templates/Overwrite/THEOPENCLASH/General_Config/config.yaml")
-    loaded = {"rules": ["MATCH,DIRECT"]}
-    assert _detect_format(path, loaded) == "openclash"
-
-
-def test_detect_format_thenewopenclash_by_directory() -> None:
-    path = Path("/project/community_templates/Overwrite/THENEWOPENCLASH/config.yaml")
-    loaded = {}
-    assert _detect_format(path, loaded) == "openclash"
-
-
 def test_detect_format_none_loaded_yaml_is_unknown() -> None:
     path = Path("/project/community_templates/THEYAMLS/bad.yaml")
     assert _detect_format(path, None) == "unknown"
@@ -170,6 +150,3 @@ def test_surge_compatible_false_for_mrs_provider() -> None:
     assert _is_surge_compatible(loaded, "yaml") is False
 
 
-def test_surge_compatible_false_for_openclash_format() -> None:
-    loaded = {"proxy-groups": [{"name": "P", "type": "select"}]}
-    assert _is_surge_compatible(loaded, "openclash") is False

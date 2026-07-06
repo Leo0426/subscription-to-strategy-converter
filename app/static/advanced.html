@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Subflow · 高级工作台</title>
+    <link rel="stylesheet" href="/static/styles.css?v=23" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <div class="station-mark" aria-hidden="true"><span>RC</span><strong>01</strong></div>
+          <div>
+            <p class="eyebrow">SUBFLOW OPERATIONS · ROUTE CONTROL ROOM</p>
+            <h1>ROUTE CONTROL <span>/ 策略指挥室</span></h1>
+            <p>导入订阅、检修策略、模拟流量，并发布可信的 Mihomo 运行配置。</p>
+            <a href="/" class="back-to-simple">← 简单模式</a>
+          </div>
+        </div>
+        <div class="system-cluster">
+          <span class="system-clock">CONTROL PLANE / ONLINE</span>
+          <div class="status" id="status" role="status">就绪</div>
+        </div>
+      </header>
+
+      <div class="line-legend" aria-label="操作阶段">
+        <span><i class="line-dot line-cyan"></i><b>INTAKE</b> 订阅接入</span>
+        <span><i class="line-dot line-pink"></i><b>BUILD</b> 策略编排</span>
+        <span><i class="line-dot line-yellow"></i><b>VERIFY</b> 规则验证</span>
+        <span><i class="line-dot line-green"></i><b>DEPLOY</b> 配置发布</span>
+      </div>
+
+      <section class="hero-panel">
+        <form id="convert-form" class="convert-form">
+          <label class="field url-field">
+            <span>机场订阅 URL</span>
+            <textarea id="subscription-url" name="subscription_url" placeholder="https://example.com/sub" required></textarea>
+          </label>
+          <label class="field">
+            <span>目标客户端</span>
+            <select id="target" name="target"></select>
+          </label>
+          <div class="actions">
+            <button type="button" id="preview-button">测试订阅</button>
+            <button type="submit" class="primary">生成配置</button>
+          </div>
+        </form>
+        <section class="subscribe-box" aria-label="Mihomo 订阅链接" id="subscribe-box">
+          <label class="field">
+            <span>Mihomo 订阅链接</span>
+            <input id="converted-url" type="url" readonly placeholder="粘贴订阅地址后自动生成，可直接导入 Mihomo / Clash 客户端" />
+          </label>
+          <div class="publish-actions">
+            <button type="button" id="copy-url-button">复制链接</button>
+            <button type="button" id="save-profile-button" class="primary">保存为长期订阅</button>
+          </div>
+        </section>
+        <section class="profile-result" id="profile-result" hidden aria-live="polite">
+          <div>
+            <span class="micro-label">Profile 已发布</span>
+            <strong id="profile-id">-</strong>
+            <p>token 只展示一次；请立即复制长期订阅 URL。</p>
+          </div>
+          <label class="field">
+            <span>长期订阅 URL</span>
+            <input id="profile-url" type="url" readonly />
+          </label>
+          <button type="button" id="copy-profile-url-button">复制长期链接</button>
+        </section>
+      </section>
+
+      <section class="system-status-panel" aria-label="系统状态">
+        <div class="section-title">
+          <h2>系统状态</h2>
+          <p>Route Control Room 运行依赖检查。</p>
+        </div>
+        <div class="system-status-grid">
+          <div class="system-status-card" data-system-card="app">
+            <span>APP</span>
+            <strong id="system-app-status">检测中</strong>
+          </div>
+          <div class="system-status-card" data-system-card="profile_db">
+            <span>PROFILE DB</span>
+            <strong id="system-profile-db-status">检测中</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="saved-profiles-panel" aria-label="已保存订阅">
+        <div class="section-title">
+          <h2>已保存订阅</h2>
+          <p>本地 Profile 清单不会回显 token 或原始订阅 URL。</p>
+        </div>
+        <div id="profiles-list" class="profiles-list">
+          <div class="empty-state">等待 Profile 数据…</div>
+        </div>
+      </section>
+
+      <section class="powerfullz-panel" id="powerfullz-panel" hidden>
+        <div class="section-title">
+          <h2>Powerfullz 选项</h2>
+          <p>仅在选择 powerfullz 模板时生效。</p>
+        </div>
+        <div class="toggle-grid">
+          <label><input type="checkbox" id="powerfullz-loadbalance" /> loadbalance</label>
+          <label><input type="checkbox" id="powerfullz-landing" /> landing</label>
+          <label><input type="checkbox" id="powerfullz-ipv6" /> ipv6</label>
+          <label><input type="checkbox" id="powerfullz-full" checked /> full</label>
+          <label><input type="checkbox" id="powerfullz-keepalive" /> keepalive</label>
+          <label><input type="checkbox" id="powerfullz-fakeip" checked /> fakeip</label>
+          <label><input type="checkbox" id="powerfullz-quic" /> quic</label>
+          <label><input type="checkbox" id="powerfullz-tun" /> tun</label>
+        </div>
+      </section>
+
+      <section class="powerfullz-panel cb-inline" id="enhancement-panel">
+        <div class="cb-inline-head">
+          <label class="preset-select-label">
+            <span>内置预设</span>
+            <select id="template" name="template" aria-live="polite"></select>
+          </label>
+          <input id="community-search" placeholder="搜索社区配置…" />
+          <select id="community-format-filter">
+            <option value="">全部格式</option>
+            <option value="yaml">YAML</option>
+          </select>
+        </div>
+        <p class="template-description" id="template-description"></p>
+        <div class="cb-body">
+          <div class="cb-list-panel">
+            <div id="community-list" class="cb-list">
+              <div class="empty">加载中…</div>
+            </div>
+          </div>
+          <div class="cb-preview-panel" id="community-preview">
+            <div class="empty">选择一个模板查看详情</div>
+          </div>
+        </div>
+      </section>
+
+      <div class="stats-strip" id="result-stats">
+        <div class="stat-card"><span>节点</span><strong id="stat-nodes">-</strong></div>
+        <div class="stat-card"><span>策略组</span><strong id="stat-groups">-</strong></div>
+        <div class="stat-card"><span>规则集</span><strong id="stat-providers">-</strong></div>
+        <div class="stat-card"><span>规则</span><strong id="stat-rules">-</strong></div>
+      </div>
+
+      <section class="workspace-section">
+        <!-- 内部模板库：保留给自动预设加载和调试，不作为页面入口展示 -->
+        <section class="panel policy-workspace advanced-only" hidden>
+          <div class="preset-intro">
+            <h2>模板文件库</h2>
+            <p>内部模板库，仅供调试自动预设加载状态。</p>
+          </div>
+          <div class="policy-toolbar">
+            <input id="policy-local-query" placeholder="搜索模板…" />
+            <span class="selection-label">当前：<strong id="selected-package-count">—</strong></span>
+            <button type="button" id="clear-visible-policy">定位当前</button>
+          </div>
+          <div class="table-wrap policy-table-wrap" id="policy-table"></div>
+        </section>
+
+        <!-- 右侧：工作区 -->
+        <div class="output-workspace">
+          <div class="output-tabs-bar">
+            <button type="button" class="output-tab active" data-output-tab="config">配置预览</button>
+            <button type="button" class="output-tab" data-output-tab="composer">规则编排<span class="tab-badge" id="composer-tab-badge" hidden>0</span></button>
+            <button type="button" class="output-tab" data-output-tab="nodes">节点列表</button>
+            <button type="button" class="output-tab" data-output-tab="analysis">规则分析</button>
+            <button type="button" class="output-tab" data-output-tab="graph">策略图</button>
+            <button type="button" class="output-tab" data-output-tab="simulate">流量模拟</button>
+            <button type="button" class="output-tab advanced-only" data-output-tab="groups">策略组调试</button>
+          </div>
+
+          <!-- 面板：策略组调试 -->
+          <div class="output-pane advanced-only" id="output-pane-groups" hidden>
+            <div class="panel-header">
+              <div>
+                <h2>策略组调试</h2>
+                <p>查看自动预设生成的策略组；必要时再手动追加覆盖分组。</p>
+              </div>
+              <button type="button" id="add-group-button">新增分组</button>
+            </div>
+            <div class="groups-list" id="groups-list"></div>
+          </div>
+
+          <!-- 面板：配置预览 -->
+          <div class="output-pane" id="output-pane-config">
+            <div class="panel-header">
+              <div>
+                <h2 id="config-output-title">配置预览</h2>
+                <p id="template-meta">等待生成配置</p>
+              </div>
+              <div class="button-row">
+                <button type="button" id="download-button">下载</button>
+                <button type="button" id="copy-button">复制</button>
+              </div>
+            </div>
+            <div class="yaml-view-tabs">
+              <button type="button" class="yaml-tab active" data-yaml-tab="full">完整输出</button>
+              <button type="button" class="yaml-tab advanced-only" data-yaml-tab="policy">策略片段</button>
+              <button type="button" class="yaml-tab advanced-only" data-yaml-tab="template">自动预设源</button>
+            </div>
+            <div class="template-summary advanced-only" id="template-summary"></div>
+            <textarea id="config-output" spellcheck="false" readonly></textarea>
+          </div>
+
+          <!-- 面板：规则编排 -->
+          <div class="output-pane" id="output-pane-composer" hidden>
+            <div class="panel-header">
+              <div>
+                <h2>规则编排</h2>
+                <p>挑选规则集或添加自定义规则，指定它走哪个策略组；点「生成配置」后生效，优先级高于模板规则。</p>
+              </div>
+              <button type="button" id="composer-clear-button" class="danger-button">清空定制</button>
+            </div>
+
+            <div class="composer-custom">
+              <h4>自定义规则</h4>
+              <form id="custom-rule-form" class="custom-rule-form">
+                <select id="custom-rule-type" aria-label="规则类型">
+                  <option value="DOMAIN-SUFFIX">DOMAIN-SUFFIX 域名后缀</option>
+                  <option value="DOMAIN">DOMAIN 完整域名</option>
+                  <option value="DOMAIN-KEYWORD">DOMAIN-KEYWORD 域名关键词</option>
+                  <option value="IP-CIDR">IP-CIDR IP 段</option>
+                  <option value="GEOIP">GEOIP 地区</option>
+                </select>
+                <input id="custom-rule-value" placeholder="example.com" required />
+                <select id="custom-rule-target" aria-label="目标策略组"></select>
+                <button type="submit">添加规则</button>
+              </form>
+            </div>
+
+            <div class="composer-enabled">
+              <h4>已启用的定制<span class="count-badge" id="composer-count">0</span></h4>
+              <div id="composer-enabled-list" class="composer-enabled-list">
+                <div class="empty">还没有定制规则。从下方目录挑选规则集，或添加自定义规则。</div>
+              </div>
+            </div>
+
+            <div class="mrs-library">
+              <div class="mrs-library-head">
+                <div>
+                  <h4>规则集目录</h4>
+                  <p>来自社区模板的去重规则集，选择目标策略组即启用。</p>
+                </div>
+                <span class="count-badge" id="catalog-count">加载中</span>
+              </div>
+              <div class="catalog-chips" id="catalog-category-bar"></div>
+              <div class="mrs-toolbar">
+                <input id="catalog-search" placeholder="搜索规则集：claude / openai / netflix…" />
+                <select id="catalog-behavior-filter">
+                  <option value="">全部类型</option>
+                  <option value="domain">domain 域名</option>
+                  <option value="ipcidr">ipcidr IP 段</option>
+                  <option value="classical">classical 混合</option>
+                </select>
+              </div>
+              <div id="catalog-list" class="mrs-provider-list">
+                <div class="empty">打开面板后自动加载规则集目录</div>
+              </div>
+              <div class="mrs-more"><button type="button" id="catalog-more" hidden>显示更多</button></div>
+            </div>
+          </div>
+
+          <!-- 面板：节点列表 -->
+          <div class="output-pane" id="output-pane-nodes" hidden>
+            <div class="panel-header">
+              <h2>节点列表</h2>
+              <div class="nodes-toolbar">
+                <input id="node-filter" placeholder="搜索节点…" />
+                <span id="node-count" class="count-badge">0</span>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>名称</th>
+                    <th>类型</th>
+                    <th>服务器</th>
+                    <th>端口</th>
+                  </tr>
+                </thead>
+                <tbody id="nodes-body">
+                  <tr><td colspan="4" class="empty">暂无节点</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 面板：规则分析 -->
+          <div class="output-pane" id="output-pane-analysis" hidden>
+            <div class="panel-header">
+              <div>
+                <h2>规则分析</h2>
+                <p>检查缺失规则集、缺失目标、重复规则和策略组循环。</p>
+              </div>
+            </div>
+            <div id="findings-container" class="findings-container">
+              <div class="empty">生成配置后查看分析结果</div>
+            </div>
+          </div>
+
+          <!-- 面板：策略图 -->
+          <div class="output-pane" id="output-pane-graph" hidden>
+            <div class="panel-header">
+              <div>
+                <h2>策略图</h2>
+                <p>策略组、规则集与流量目标的依赖关系（聚合视图）</p>
+              </div>
+              <button type="button" id="load-graph-button">刷新策略图</button>
+            </div>
+            <div id="policy-graph-container" class="policy-graph-container">
+              <div class="empty">生成配置后查看策略依赖关系</div>
+            </div>
+          </div>
+
+          <!-- 面板：流量模拟 -->
+          <div class="output-pane" id="output-pane-simulate" hidden>
+            <div class="panel-header">
+              <div>
+                <h2>流量模拟</h2>
+                <p>输入域名或 IP，查看命中规则和最终策略目标。</p>
+              </div>
+            </div>
+            <form id="simulate-form" class="simulate-form">
+              <input id="simulate-destination" placeholder="chat.openai.com 或 8.8.8.8" required />
+              <button type="submit">模拟</button>
+            </form>
+            <div class="sim-examples" aria-label="快速示例">
+              <span>试一试：</span>
+              <button type="button" class="sim-example" data-destination="chat.openai.com">chat.openai.com</button>
+              <button type="button" class="sim-example" data-destination="github.com">github.com</button>
+              <button type="button" class="sim-example" data-destination="www.youtube.com">www.youtube.com</button>
+              <button type="button" class="sim-example" data-destination="8.8.8.8">8.8.8.8</button>
+            </div>
+            <div id="simulate-trace" class="trace-list">
+              <div class="empty">生成配置后输入目的地进行模拟</div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+    </main>
+
+
+    <div class="control-atmosphere" aria-hidden="true">
+      <span></span><span></span><span></span>
+      <span></span><span></span><span></span>
+    </div>
+    <script src="/static/app.js?v=23"></script>
+  </body>
+</html>

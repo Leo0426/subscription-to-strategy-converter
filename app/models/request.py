@@ -2,7 +2,6 @@ from pydantic import AnyHttpUrl, BaseModel, Field
 
 from app.models.powerfullz import PowerfullzOptions
 from app.models.strategy import CustomStrategy, SelectedPolicy
-from app.models.subconverter import SubconverterOptions
 
 
 class ConvertRequest(BaseModel):
@@ -12,4 +11,3 @@ class ConvertRequest(BaseModel):
     custom_strategy: CustomStrategy | None = None
     selected_policy: SelectedPolicy | None = None
     powerfullz: PowerfullzOptions | None = None
-    subconverter: SubconverterOptions | None = None

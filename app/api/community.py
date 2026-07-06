@@ -21,9 +21,6 @@ _PROJECT_DIR = _APP_DIR.parent
 _COMMUNITY_DIR = _PROJECT_DIR / "community_templates"
 _COMMUNITY_DIR_RESOLVED = _COMMUNITY_DIR.resolve()
 
-# Directory name fragments that identify OpenClash-specific directories
-_OPENCLASH_DIR_MARKERS: frozenset[str] = frozenset({"theopenclash", "thenewopenclash"})
-
 # File extensions that are definitely not templates — skip without inspection
 _SKIP_EXTENSIONS: frozenset[str] = frozenset({
     ".md", ".sh", ".list", ".txt", ".json", ".gitignore", ".lock", ".ini", ".conf",
@@ -52,11 +49,6 @@ def _detect_format(path: Path, loaded: dict | None) -> str:
     suffix = path.suffix.lower()
     if suffix not in {".yaml", ".yml"}:
         return "unknown"
-    # Directory-based OpenClash detection
-    path_parts_lower = {p.lower() for p in path.parts}
-    if path_parts_lower & _OPENCLASH_DIR_MARKERS:
-        return "openclash"
-    # Content-based Clash YAML detection
     if isinstance(loaded, dict) and isinstance(loaded.get("proxy-groups"), list):
         return "yaml"
     return "unknown"
@@ -190,11 +182,3 @@ def preview_community_template(
     }
 
 
-@router.get("/templates/raw", response_class=PlainTextResponse)
-def raw_community_template(
-    id: str = Query(..., description="Community template id (community:path/to/file)"),
-) -> PlainTextResponse:
-    path = _path_from_id(id)
-    if path.suffix.lower() not in {".yaml", ".yml"}:
-        raise HTTPException(status_code=422, detail="raw template format is not supported")
-    return PlainTextResponse(path.read_text(encoding="utf-8"), media_type="text/yaml; charset=utf-8")

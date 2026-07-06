@@ -234,30 +234,30 @@ _SIMPLE_TEMPLATE = {
 
 
 def test_convert_singbox_target(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    async def fake_convert(url: str, options: object | None = None) -> str:
+    async def fake_convert(url: str) -> str:
         return CLASH_SUBSCRIPTION
 
     async def fake_load_powerfullz_template(options: object) -> dict:
         return _SIMPLE_TEMPLATE
 
-    monkeypatch.setattr("app.core.subscription.convert_subscription_to_clash", fake_convert)
+    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_convert)
     monkeypatch.setattr("app.core.template_engine.load_powerfullz_template", fake_load_powerfullz_template)
 
-    response = client.post(
-        "/convert",
+    preview = client.post(
+        "/workspace/preview",
         json={
             "subscription_url": "https://example.com/sub",
             "template": "powerfullz",
             "target": "singbox",
         },
-    )
+    ).json()
+
+    assert preview["node_count"] == 2
+
+    response = client.post("/compile", json={"workspace": preview["workspace"], "target": "singbox"})
 
     assert response.status_code == 200
-    body = response.json()
-    assert body["target"] == "singbox"
-    assert body["node_count"] == 2
-
-    sb = json.loads(body["config"])
+    sb = response.json()
     assert "outbounds" in sb
     assert "route" in sb
     tags = [ob["tag"] for ob in sb["outbounds"]]
@@ -266,13 +266,13 @@ def test_convert_singbox_target(client: TestClient, monkeypatch: pytest.MonkeyPa
 
 
 def test_subscribe_singbox_returns_json(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    async def fake_convert(url: str, options: object | None = None) -> str:
+    async def fake_convert(url: str) -> str:
         return CLASH_SUBSCRIPTION
 
     async def fake_load_powerfullz_template(options: object) -> dict:
         return _SIMPLE_TEMPLATE
 
-    monkeypatch.setattr("app.core.subscription.convert_subscription_to_clash", fake_convert)
+    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_convert)
     monkeypatch.setattr("app.core.template_engine.load_powerfullz_template", fake_load_powerfullz_template)
 
     response = client.get(
@@ -290,19 +290,10 @@ def test_subscribe_singbox_returns_json(client: TestClient, monkeypatch: pytest.
     assert "outbounds" in sb
 
 
-def test_unsupported_target_returns_400(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    async def fake_convert(url: str, options: object | None = None) -> str:
-        return CLASH_SUBSCRIPTION
-
-    monkeypatch.setattr("app.core.subscription.convert_subscription_to_clash", fake_convert)
-
+def test_unsupported_target_returns_400(client: TestClient) -> None:
     response = client.post(
-        "/convert",
-        json={
-            "subscription_url": "https://example.com/sub",
-            "template": "powerfullz",
-            "target": "quantumult",
-        },
+        "/compile",
+        json={"workspace": {}, "target": "quantumult"},
     )
     assert response.status_code == 400
     assert "unsupported target" in response.json()["detail"]

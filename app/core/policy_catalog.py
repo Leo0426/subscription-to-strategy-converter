@@ -4,6 +4,7 @@ from collections import defaultdict
 from functools import lru_cache
 from pathlib import Path
 import json
+import re
 import warnings
 from typing import Any, Iterable
 
@@ -146,6 +147,157 @@ def _group_refs(group: Any) -> list[str]:
     return refs
 
 
+# ── Service / category classification ─────────────────────────────────────
+
+CATEGORY_ORDER = [
+    "AI",
+    "流媒体",
+    "社交通讯",
+    "广告拦截",
+    "国内直连",
+    "代理规则",
+    "网络基础",
+    "其他",
+]
+
+# First match wins, so specific services must come before generic buckets
+# (e.g. "Meta AI" before Meta/Facebook, "Apple TV" before Apple, CN buckets
+# before the generic media catch-all).
+_SERVICE_PATTERNS: list[tuple[str, str, str]] = [
+    # AI
+    (r"claude|anthropic", "Claude", "AI"),
+    (r"openai|chatgpt", "OpenAI", "AI"),
+    (r"gemini|\bbard\b", "Gemini", "AI"),
+    (r"copilot", "Copilot", "AI"),
+    (r"grok", "Grok", "AI"),
+    (r"groq", "Groq", "AI"),
+    (r"perplexity", "Perplexity", "AI"),
+    (r"meta[ _-]?ai", "Meta AI", "AI"),
+    (r"aigc|^aiip$|^ai$|^ai[_\-! ]|category-ai", "AI 通用", "AI"),
+    # 流媒体 / 音乐（具体服务）
+    (r"netflix", "Netflix", "流媒体"),
+    (r"disney", "Disney+", "流媒体"),
+    (r"youtube[ _-]?music", "YouTube Music", "流媒体"),
+    (r"youtube", "YouTube", "流媒体"),
+    (r"hbo|^max$", "HBO Max", "流媒体"),
+    (r"emby", "Emby", "流媒体"),
+    (r"tiktok", "TikTok", "流媒体"),
+    (r"douyin|抖音", "抖音", "流媒体"),
+    (r"bili", "哔哩哔哩", "流媒体"),
+    (r"iqiyi|^iq$", "爱奇艺", "流媒体"),
+    (r"youku", "优酷", "流媒体"),
+    (r"letv", "乐视", "流媒体"),
+    (r"tencent ?video|wetv", "腾讯视频", "流媒体"),
+    (r"apple ?tv", "Apple TV", "流媒体"),
+    (r"apple ?music", "Apple Music", "流媒体"),
+    (r"prime ?video", "Prime Video", "流媒体"),
+    (r"bahamut", "巴哈姆特", "流媒体"),
+    (r"abema", "Abema", "流媒体"),
+    (r"hulu", "Hulu", "流媒体"),
+    (r"crunchyroll", "Crunchyroll", "流媒体"),
+    (r"niconico", "Niconico", "流媒体"),
+    (r"twitch", "Twitch", "流媒体"),
+    (r"spotify", "Spotify", "流媒体"),
+    (r"soundcloud", "SoundCloud", "流媒体"),
+    (r"netease ?music", "网易云音乐", "流媒体"),
+    (r"encoretvb|mytv|viutv|tvb", "港台媒体", "流媒体"),
+    (r"dazn|dmm|discovery|bbc|fox|pbs|popcorn", "国际媒体", "流媒体"),
+    (r"joox|kkbox|pandora", "音乐服务", "流媒体"),
+    # 社交通讯
+    (r"telegram", "Telegram", "社交通讯"),
+    (r"twitter|^x_domain$", "Twitter / X", "社交通讯"),
+    (r"facebook|instagram|threads|^meta$|meta_domain", "Meta", "社交通讯"),
+    (r"whatsapp", "WhatsApp", "社交通讯"),
+    (r"discord", "Discord", "社交通讯"),
+    (r"signal", "Signal", "社交通讯"),
+    (r"line ?tv|^line[_ ]|line_domain", "Line", "社交通讯"),
+    (r"reddit", "Reddit", "社交通讯"),
+    (r"tumblr", "Tumblr", "社交通讯"),
+    (r"wechat|微信", "微信", "社交通讯"),
+    (r"xiaohongshu|小红书", "小红书", "社交通讯"),
+    (r"talkatone", "Talkatone", "社交通讯"),
+    (r"socialmedia|communication", "社交通用", "社交通讯"),
+    # 科技 / 游戏 / 开发 / 金融（归入其他）
+    (r"steam", "Steam", "其他"),
+    (r"epic", "Epic", "其他"),
+    (r"blizzard", "Blizzard", "其他"),
+    (r"^ea$|^ea[ _/]|ea_domain|origin", "EA / Origin", "其他"),
+    (r"ubi", "Ubisoft", "其他"),
+    (r"gog", "GOG", "其他"),
+    (r"nintend", "Nintendo", "其他"),
+    (r"playstation", "PlayStation", "其他"),
+    (r"xbox", "Xbox", "其他"),
+    (r"mihoyo|米哈游", "米哈游", "其他"),
+    (r"wildrift", "Wild Rift", "其他"),
+    (r"game", "游戏通用", "其他"),
+    (r"google|^fcm|_fcm|googlefcm", "Google", "其他"),
+    (r"microsoft|onedrive|bing|msn|teams|win-update|windows", "Microsoft", "其他"),
+    (r"apple|icloud|app ?store|testflight", "Apple", "其他"),
+    (r"amazon", "Amazon", "其他"),
+    (r"alibaba|aliyun|taobao", "阿里巴巴", "其他"),
+    (r"tencent", "腾讯", "其他"),
+    (r"xiaomi|小米", "小米", "其他"),
+    (r"sony", "Sony", "其他"),
+    (r"nvidia", "NVIDIA", "其他"),
+    (r"github", "GitHub", "其他"),
+    (r"docker", "Docker", "其他"),
+    (r"gitbook", "GitBook", "其他"),
+    (r"scholar|学术", "学术", "其他"),
+    (r"paypal", "PayPal", "其他"),
+    (r"wise", "Wise", "其他"),
+    (r"binance|okx|bybit|crypto", "加密货币", "其他"),
+    (r"bank|银行", "银行", "其他"),
+    (r"ebay|shopee|shopify|ecommerce", "电商", "其他"),
+    # 广告拦截（PT/BT tracker 不算广告，先排除）
+    (r"privatetracker|publictracker|public-tracker|trackerslist|pt_cn", "PT / BT", "其他"),
+    (r"download|xunlei|迅雷|^115", "下载", "其他"),
+    (
+        r"(^|[_\-. ])ads?([_\-. ]|$)|advert|adblock|banad|banprogram|awavenue"
+        r"|no-ads|category-ads|秋风|reject|^block|tracking|^trackers|unban",
+        "",
+        "广告拦截",
+    ),
+    (r"porn|hentai|japonx", "", "其他"),
+    # 国内直连（'!cn' 表示非国内，交给后面的规则）
+    (
+        r"(^|[_\-. ])cn([_\-. ]|$)|^cn|china|domestic|中国|国内|直连"
+        r"|dnsmasq|direct|cnip",
+        "",
+        "国内直连",
+    ),
+    # 代理规则
+    (
+        r"proxy|gfw|global|geolocation|geo-!cn|greatfire|外网|自定义代理"
+        r"|accelerator|foreign",
+        "",
+        "代理规则",
+    ),
+    # 网络基础
+    (
+        r"private|私有|^lan|lan_ip|fake.?ip|dns|httpdns|webrtc|stun|ntp|cdn"
+        r"|cloudflare|cloudfront|fastly|speedtest|networktest|captcha|doh",
+        "",
+        "网络基础",
+    ),
+    # 通用流媒体兜底
+    (r"media|stream|iptv|xptv|\btv\b|tv$|音乐|music", "", "流媒体"),
+]
+
+_COMPILED_SERVICE_PATTERNS = [
+    (re.compile(pattern), service, category)
+    for pattern, service, category in _SERVICE_PATTERNS
+]
+
+
+def classify_provider_name(name: str) -> tuple[str, str]:
+    """Return (category, service) for a rule-provider name. Service may be ''."""
+    lowered = name.strip().lower()
+    for pattern, service, category in _COMPILED_SERVICE_PATTERNS:
+        if pattern.search(lowered):
+            return category, service
+    return "其他", ""
+
+
 # ── Deduplication pass 1: rule-providers by URL ────────────────────────────
 
 def _normalize_provider_url(url: str) -> str:
@@ -232,6 +384,68 @@ def _deduplicate_providers(
         alias_map[(p["template"], p["name"])] = p["id"]
 
     return canonical, alias_map
+
+
+def _deduplicate_providers_by_name(
+    providers: list[dict[str, Any]],
+    alias_map: dict[tuple[str, str], str],
+) -> tuple[list[dict[str, Any]], dict[tuple[str, str], str]]:
+    """Keep only the highest-quality provider per case-insensitive name."""
+    name_groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for p in providers:
+        name_groups[p.get("name", "").strip().lower()].append(p)
+
+    result: list[dict[str, Any]] = []
+    for group in name_groups.values():
+        best = max(group, key=_provider_quality)
+        merged_sources: list[list[str]] = []
+        seen_src: set[tuple[str, str]] = set()
+        for p in group:
+            for src in p.get("sources", []):
+                key = (src[0], src[1])
+                if key not in seen_src:
+                    seen_src.add(key)
+                    merged_sources.append(src)
+            if p is not best:
+                for src in p.get("sources", []):
+                    alias_map[(src[0], src[1])] = best["id"]
+        result.append({**best, "sources": merged_sources})
+    return result, alias_map
+
+
+def _deduplicate_providers_by_service(
+    providers: list[dict[str, Any]],
+    alias_map: dict[tuple[str, str], str],
+) -> tuple[list[dict[str, Any]], dict[tuple[str, str], str]]:
+    """Keep one best entry per (category, service, behavior) for named services."""
+    groups: dict[tuple[str, str, str], list[dict[str, Any]]] = defaultdict(list)
+    no_service: list[dict[str, Any]] = []
+
+    for p in providers:
+        svc = p.get("service", "").strip()
+        if svc:
+            key = (p.get("category", ""), svc, p.get("behavior", ""))
+            groups[key].append(p)
+        else:
+            no_service.append(p)
+
+    result: list[dict[str, Any]] = list(no_service)
+    for group in groups.values():
+        best = max(group, key=_provider_quality)
+        merged_sources: list[list[str]] = []
+        seen_src: set[tuple[str, str]] = set()
+        for p in group:
+            for src in p.get("sources", []):
+                key = (src[0], src[1])
+                if key not in seen_src:
+                    seen_src.add(key)
+                    merged_sources.append(src)
+            if p is not best:
+                for src in p.get("sources", []):
+                    alias_map[(src[0], src[1])] = best["id"]
+        result.append({**best, "sources": merged_sources})
+
+    return result, alias_map
 
 
 # ── Deduplication pass 2: rules by (raw_text, target) ─────────────────────
@@ -459,6 +673,12 @@ def load_policy_catalog() -> dict[str, Any]:
     raw_totals = (len(rule_providers), len(rules), len(proxy_groups))
 
     rule_providers, provider_alias_map = _deduplicate_providers(rule_providers)
+    rule_providers, provider_alias_map = _deduplicate_providers_by_name(rule_providers, provider_alias_map)
+    for provider in rule_providers:
+        category, service = classify_provider_name(provider["name"])
+        provider["category"] = category
+        provider["service"] = service
+    rule_providers, provider_alias_map = _deduplicate_providers_by_service(rule_providers, provider_alias_map)
     rules = _deduplicate_rules(rules, provider_alias_map)
     proxy_groups = _deduplicate_groups(proxy_groups)
 
@@ -483,6 +703,11 @@ def load_policy_catalog() -> dict[str, Any]:
             "groupTypes": sorted({item["type"] for item in proxy_groups if item["type"]}),
             "ruleTypes": sorted({item["type"] for item in rules if item["type"]}),
             "ruleTargets": sorted({item["target"] for item in rules if item["target"]}),
+            "providerCategories": [
+                category
+                for category in CATEGORY_ORDER
+                if any(item["category"] == category for item in rule_providers)
+            ],
         },
         "templates": templates,
         "proxyGroups": proxy_groups,

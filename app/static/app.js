@@ -21,32 +21,18 @@ const els = {
   templateSelect: document.querySelector("#template"),
   targetSelect: document.querySelector("#target"),
   subscriptionUrl: document.querySelector("#subscription-url"),
-  activePresetLabel: document.querySelector("#active-preset-label"),
   templateDescription: document.querySelector("#template-description"),
   powerfullzPanel: document.querySelector("#powerfullz-panel"),
-  subconverterPanel: document.querySelector("#subconverter-panel"),
-  subconverterInclude: document.querySelector("#subconverter-include"),
-  subconverterExclude: document.querySelector("#subconverter-exclude"),
-  subconverterRename: document.querySelector("#subconverter-rename"),
   templateMeta: document.querySelector("#template-meta"),
   templateSummary: document.querySelector("#template-summary"),
   policyTable: document.querySelector("#policy-table"),
   policyLocalQuery: document.querySelector("#policy-local-query"),
   selectedPackageCount: document.querySelector("#selected-package-count"),
   configOutputTitle: document.querySelector("#config-output-title"),
-  openCommunityBrowserButton: document.querySelector("#open-community-browser"),
-  closeCommunityBrowserButton: document.querySelector("#close-community-browser"),
-  communityBrowser: document.querySelector("#community-browser"),
   communitySearch: document.querySelector("#community-search"),
   communityFormatFilter: document.querySelector("#community-format-filter"),
   communityList: document.querySelector("#community-list"),
   communityPreview: document.querySelector("#community-preview"),
-  enhanceAi: document.querySelector("#enhance-ai"),
-  enhanceDev: document.querySelector("#enhance-dev"),
-  enhanceStreaming: document.querySelector("#enhance-streaming"),
-  enhanceAdblock: document.querySelector("#enhance-adblock"),
-  enhanceTun: document.querySelector("#enhance-tun"),
-  enhanceFakeip: document.querySelector("#enhance-fakeip"),
   statNodes: document.querySelector("#stat-nodes"),
   statGroups: document.querySelector("#stat-groups"),
   statProviders: document.querySelector("#stat-providers"),
@@ -65,18 +51,17 @@ const els = {
   customRuleValue: document.querySelector("#custom-rule-value"),
   customRuleTarget: document.querySelector("#custom-rule-target"),
   catalogSearch: document.querySelector("#catalog-search"),
+  catalogCategoryBar: document.querySelector("#catalog-category-bar"),
   catalogBehaviorFilter: document.querySelector("#catalog-behavior-filter"),
   catalogList: document.querySelector("#catalog-list"),
   catalogCount: document.querySelector("#catalog-count"),
   catalogMore: document.querySelector("#catalog-more"),
   systemAppStatus: document.querySelector("#system-app-status"),
   systemProfileDbStatus: document.querySelector("#system-profile-db-status"),
-  systemSubconverterStatus: document.querySelector("#system-subconverter-status"),
 };
 
 const state = {
   templates: [],
-  subconverterTargets: [],
   communityTemplates: [],
   communityMeta: new Map(),
   customGroups: [],
@@ -94,15 +79,14 @@ const state = {
   policyCatalogLoading: false,
   policyRules: [],
   catalogLimit: 60,
+  catalogCategory: "",
+  catalogCategoryOrder: [],
 };
 
 function absoluteUrl(path) {
   return new URL(path, window.location.origin).toString();
 }
 
-function isAdvancedMode() {
-  return true;
-}
 
 function setStatus(message, type = "") {
   els.status.textContent = message;
@@ -162,26 +146,12 @@ function getPowerfullzOptions() {
     ipv6: document.querySelector("#powerfullz-ipv6").checked,
     full: document.querySelector("#powerfullz-full").checked,
     keepalive: document.querySelector("#powerfullz-keepalive").checked,
-    fakeip: els.enhanceFakeip?.checked ?? document.querySelector("#powerfullz-fakeip").checked,
+    fakeip: document.querySelector("#powerfullz-fakeip").checked,
     quic: document.querySelector("#powerfullz-quic").checked,
-    tun: els.enhanceTun?.checked ?? document.querySelector("#powerfullz-tun").checked,
+    tun: document.querySelector("#powerfullz-tun").checked,
   };
 }
 
-function getSubconverterOptions() {
-  const options = {
-    include: els.subconverterInclude?.value.trim() || undefined,
-    exclude: els.subconverterExclude?.value.trim() || undefined,
-    rename: els.subconverterRename?.value.trim() || undefined,
-    emoji: document.querySelector("#subconverter-emoji")?.checked || undefined,
-    udp: document.querySelector("#subconverter-udp")?.checked || undefined,
-    tfo: document.querySelector("#subconverter-tfo")?.checked || undefined,
-    sort: document.querySelector("#subconverter-sort")?.checked || undefined,
-    append_type: document.querySelector("#subconverter-append-type")?.checked || undefined,
-    scv: document.querySelector("#subconverter-scv")?.checked || undefined,
-  };
-  return Object.fromEntries(Object.entries(options).filter(([, value]) => value !== undefined && value !== ""));
-}
 
 function getCustomStrategy() {
   return {
@@ -260,7 +230,6 @@ function policyGroupFromEditorGroup(group) {
 }
 
 function getSelectedPolicy() {
-  if (!isAdvancedMode()) return null;
   const proxyGroups = state.customGroups
     .filter((group) => group.source === "template")
     .map(policyGroupFromEditorGroup)
@@ -282,7 +251,7 @@ function getPayload() {
     template: els.templateSelect.value,
     target: els.targetSelect.value,
   };
-  if (isAdvancedMode()) {
+  {
     const strategy = getCustomStrategy();
     if (strategy.proxy_groups.length) {
       payload.custom_strategy = strategy;
@@ -295,57 +264,33 @@ function getPayload() {
       payload.powerfullz = getPowerfullzOptions();
     }
   }
-  const subconverter = getSubconverterOptions();
-  if (Object.keys(subconverter).length) {
-    payload.subconverter = subconverter;
-  }
   return payload;
 }
 
-function targetActualName(target) {
-  return target?.startsWith("subconverter:") ? target.replace(/^subconverter:/, "") : target;
-}
-
-async function loadSubconverterTargets() {
-  try {
-    const response = await fetch("/subconverter/targets");
-    const body = await response.json();
-    if (!response.ok) throw new Error(body.detail || `HTTP ${response.status}`);
-    state.subconverterTargets = body.targets || [];
-  } catch (_error) {
-    state.subconverterTargets = [
-      { id: "surge", label: "Surge", kind: "app" },
-      { id: "mihomo", label: "Mihomo", kind: "app" },
-      { id: "clash", label: "Clash", kind: "app" },
-      { id: "openclash", label: "OpenClash", kind: "app" },
-      { id: "singbox", label: "sing-box", kind: "app" },
-    ];
-  }
-  renderTargetOptions();
-}
+const APP_TARGETS = [
+  { id: "surge", label: "Surge" },
+  { id: "mihomo", label: "Mihomo" },
+  { id: "clash", label: "Clash" },
+  { id: "singbox", label: "sing-box" },
+];
 
 function renderTargetOptions() {
   const previous = els.targetSelect.value || "mihomo";
-  const groups = [["app", "目标客户端"]];
   els.targetSelect.replaceChildren();
-  for (const [kind, label] of groups) {
-    const items = state.subconverterTargets.filter((item) => item.kind === kind);
-    if (!items.length) continue;
-    const optgroup = document.createElement("optgroup");
-    optgroup.label = label;
-    for (const item of items) {
-      const option = document.createElement("option");
-      option.value = item.id;
-      option.textContent =
-        item.id === "mihomo"
-          ? `${item.label}（推荐）`
-          : ["surge", "singbox"].includes(item.id)
-            ? `${item.label}（实验）`
-            : item.label;
-      optgroup.append(option);
-    }
-    els.targetSelect.append(optgroup);
+  const optgroup = document.createElement("optgroup");
+  optgroup.label = "目标客户端";
+  for (const item of APP_TARGETS) {
+    const option = document.createElement("option");
+    option.value = item.id;
+    option.textContent =
+      item.id === "mihomo"
+        ? `${item.label}（推荐）`
+        : ["surge", "singbox"].includes(item.id)
+          ? `${item.label}（实验）`
+          : item.label;
+    optgroup.append(option);
   }
+  els.targetSelect.append(optgroup);
   const hasPrevious = [...els.targetSelect.options].some((option) => option.value === previous);
   els.targetSelect.value = hasPrevious ? previous : "mihomo";
   updateConfigOutputTitle();
@@ -360,9 +305,6 @@ function buildSubscribeUrl(payload) {
   url.searchParams.set("target", "mihomo");
   if (payload.template === "powerfullz") {
     url.searchParams.set("powerfullz", JSON.stringify(payload.powerfullz));
-  }
-  if (payload.subconverter) {
-    url.searchParams.set("subconverter", JSON.stringify(payload.subconverter));
   }
   return url.toString();
 }
@@ -380,9 +322,6 @@ async function createSessionUrl(payload) {
   }
   if (payload.template === "powerfullz") {
     sessionData.powerfullz = JSON.stringify(payload.powerfullz);
-  }
-  if (payload.subconverter) {
-    sessionData.subconverter = JSON.stringify(payload.subconverter);
   }
   const resp = await fetch("/session", {
     method: "POST",
@@ -409,7 +348,6 @@ function refreshSubscribeUrl() {
     return;
   }
   const needsSession =
-    isAdvancedMode() &&
     ((payload.custom_strategy?.proxy_groups?.length || 0) > 0 ||
       (payload.selected_policy?.proxy_groups?.length || 0) > 0 ||
       (payload.selected_policy?.rules?.length || 0) > 0);
@@ -476,18 +414,12 @@ async function loadSystemStatus() {
     if (!response.ok) throw new Error(body.detail || `HTTP ${response.status}`);
     const appStatus = systemStatusText(body.app);
     const dbStatus = systemStatusText(body.profile_db);
-    const subconverterStatus = systemStatusText(body.subconverter);
     if (els.systemAppStatus) els.systemAppStatus.textContent = appStatus;
     if (els.systemProfileDbStatus) els.systemProfileDbStatus.textContent = dbStatus;
-    if (els.systemSubconverterStatus) els.systemSubconverterStatus.textContent = subconverterStatus;
     markSystemCard("app", appStatus);
     markSystemCard("profile_db", dbStatus);
-    markSystemCard("subconverter", subconverterStatus);
-    if (subconverterStatus !== "ok") {
-      setStatus("转换依赖不可用：subconverter 离线", "error");
-    }
   } catch (error) {
-    ["app", "profile_db", "subconverter"].forEach((kind) => markSystemCard(kind, "error"));
+    ["app", "profile_db"].forEach((kind) => markSystemCard(kind, "error"));
     setStatus(`系统状态检测失败：${error.message}`, "error");
   }
 }
@@ -654,11 +586,8 @@ function refreshTemplateOptions() {
   const option = els.templateSelect.options[els.templateSelect.selectedIndex];
   const desc = option?.dataset.description || "";
   els.templateDescription.textContent = desc;
-  els.templateDescription.hidden = !isAdvancedMode() || !desc;
-  if (els.activePresetLabel) {
-    els.activePresetLabel.textContent = option?.textContent || els.templateSelect.value || "-";
-  }
-  els.powerfullzPanel.hidden = !isAdvancedMode() || els.templateSelect.value !== "powerfullz";
+  els.templateDescription.hidden = !desc;
+  els.powerfullzPanel.hidden = els.templateSelect.value !== "powerfullz";
   loadTemplateDetail();
   updateSelectionSummary();
   refreshSubscribeUrl();
@@ -690,7 +619,6 @@ async function loadTemplates() {
     renderPolicyTable();
     refreshTemplateOptions();
     loadTemplateGroupsForTemplate(els.templateSelect.value);
-    applyEnhancementPreset();
   } catch (error) {
     setStatus(`模板列表加载失败：${error.message}`, "error");
   }
@@ -708,6 +636,7 @@ async function loadCommunityMeta() {
       items.map((item) => [communityIdToLocalId(item.id), item])
     );
     renderPolicyTable();
+    renderCommunityList();
   } catch (_e) {}
 }
 
@@ -766,12 +695,11 @@ function templateFormatBadge(item) {
   const cm = state.communityMeta.get(item.id);
   if (!cm) return "";
   const fmt = cm.format || "yaml";
-  const label = fmt === "openclash" ? "OpenClash" : "YAML";
-  return `<span class="format-pill fmt-${escapeAttr(fmt)}">${escapeHtml(label)}</span>`;
+  return `<span class="format-pill fmt-${escapeAttr(fmt)}">YAML</span>`;
 }
 
 function templateSurgeWarningBadge(item) {
-  if (targetActualName(els.targetSelect.value) !== "surge") return "";
+  if (els.targetSelect.value !== "surge") return "";
   const cm = state.communityMeta.get(item.id);
   if (!cm || cm.surge_compatible !== false) return "";
   return `<span class="surge-warning-badge" title="此模板含 MRS 格式规则集，Surge 模式下可能不兼容">Surge ⚠</span>`;
@@ -858,24 +786,6 @@ function updateSelectionSummary() {
   els.selectedPackageCount.textContent = currentTemplate ? currentTemplate.label : els.templateSelect.value || "—";
 }
 
-function applyEnhancementPreset() {
-  if (!els.templateSelect?.options.length) return;
-  const ai = !!els.enhanceAi?.checked;
-  const dev = !!els.enhanceDev?.checked;
-  const streaming = !!els.enhanceStreaming?.checked;
-  let template = "minimal";
-  const enabledCount = [ai, dev, streaming].filter(Boolean).length;
-  if (enabledCount > 1) template = "full";
-  else if (ai) template = "ai-tools";
-  else if (dev) template = "developer";
-  else if (streaming) template = "streaming";
-  if ([...els.templateSelect.options].some((option) => option.value === template)) {
-    els.templateSelect.value = template;
-    refreshTemplateOptions();
-    renderPolicyTable();
-    loadTemplateGroupsForTemplate(template);
-  }
-}
 
 function scrollToCurrentTemplate() {
   els.policyLocalQuery.value = "";
@@ -977,31 +887,11 @@ function removeGroup(id) {
 
 function updateConfigOutputTitle() {
   if (!els.configOutputTitle) return;
-  const target = els.targetSelect.value;
-  const actualTarget = targetActualName(target);
-  if (target?.startsWith("subconverter:")) els.configOutputTitle.textContent = `${actualTarget} 订阅预览`;
-  else els.configOutputTitle.textContent = "Mihomo YAML 预览";
+  els.configOutputTitle.textContent = "Mihomo YAML 预览";
 }
 
-function applyConversionMode() {
-  document.body.classList.remove("quick-mode");
-  refreshTemplateOptions();
-  if (document.querySelector("#output-pane-config")?.hidden === false && state.yamlView === "full") {
-    updateYamlDisplay();
-  }
-  const descEl = document.querySelector("#subconverter-panel-desc");
-  if (descEl) {
-    descEl.textContent = "按目标客户端生成策略组、规则和节点清洗参数。";
-  }
-  renderTargetOptions();
-  updateConfigOutputTitle();
-  refreshSubscribeUrl();
-}
 
 function switchYamlView(view) {
-  if (!isAdvancedMode() && view !== "full") {
-    view = "full";
-  }
   state.yamlView = view;
   document.querySelectorAll(".yaml-tab").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.yamlTab === view);
@@ -1010,9 +900,6 @@ function switchYamlView(view) {
 }
 
 function switchOutputPane(name) {
-  if (!isAdvancedMode() && ["groups", "graph"].includes(name)) {
-    name = "config";
-  }
   document.querySelectorAll(".output-tab").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.outputTab === name);
   });
@@ -1025,9 +912,6 @@ function switchOutputPane(name) {
 }
 
 function updateYamlDisplay() {
-  if (!isAdvancedMode() && state.yamlView !== "full") {
-    state.yamlView = "full";
-  }
   if (state.yamlView === "policy") {
     els.configOutput.value = state.policyYaml;
   } else if (state.yamlView === "full") {
@@ -1038,11 +922,6 @@ function updateYamlDisplay() {
 }
 
 function refreshLivePreview() {
-  if (!isAdvancedMode()) {
-    state.policyYaml = "";
-    if (state.yamlView === "policy") switchYamlView("full");
-    return;
-  }
   const customGroups = getCustomStrategy().proxy_groups;
   const lines = [
     "# 策略预览：以下策略组和规则会注入到模板中",
@@ -1079,11 +958,6 @@ function refreshLivePreview() {
 function outputFilename() {
   const target = els.targetSelect.value;
   if (state.yamlView === "full") {
-    if (target?.startsWith("subconverter:")) {
-      const actual = targetActualName(target);
-      if (["clash", "clashr"].includes(actual)) return `${actual}.yaml`;
-      return `${actual}.conf`;
-    }
     if (target === "surge") return "surge.conf";
     if (target === "singbox") return "singbox.json";
     return "mihomo.yaml";
@@ -1191,15 +1065,16 @@ function renderWorkspacePreview(body) {
 
 async function compileWorkspaceYaml() {
   if (!state.workspace) return;
+  const target = els.targetSelect.value;
   try {
-    const yaml = await postText("/compile/mihomo", { workspace: state.workspace });
-    state.compiledYaml = yaml;
-    state.generatedYaml = yaml;
+    const result = await postText("/compile", { workspace: state.workspace, target });
+    state.compiledYaml = result;
+    state.generatedYaml = result;
     updateConfigOutputTitle();
     switchYamlView("full");
   } catch (error) {
     state.compiledYaml = "";
-    state.generatedYaml = `# Mihomo 编译失败\n# ${error.message}\n`;
+    state.generatedYaml = `# 编译失败\n# ${error.message}\n`;
     switchYamlView("full");
     throw error;
   }
@@ -1308,18 +1183,8 @@ function filteredCommunityTemplates() {
   });
 }
 
-function communityFormatLabel(fmt) {
-  if (fmt === "openclash") return "OpenClash";
+function communityFormatLabel() {
   return "YAML";
-}
-
-function openCommunityBrowser() {
-  renderCommunityList();
-  els.communityBrowser?.showModal();
-}
-
-function closeCommunityBrowser() {
-  els.communityBrowser?.close();
 }
 
 function renderCommunityList() {
@@ -1330,7 +1195,7 @@ function renderCommunityList() {
     return;
   }
   els.communityList.replaceChildren();
-  const isSurge = targetActualName(els.targetSelect.value) === "surge";
+  const isSurge = els.targetSelect.value === "surge";
   for (const item of items) {
     const row = document.createElement("div");
     row.className = "cb-list-item";
@@ -1359,14 +1224,12 @@ function renderCommunityList() {
 
 async function renderCommunityPreview(item) {
   if (!els.communityPreview) return;
-  const isSurge = targetActualName(els.targetSelect.value) === "surge";
+  const isSurge = els.targetSelect.value === "surge";
   const localId = communityIdToLocalId(item.id);
   const canApply = item.format === "yaml" && state.templates.some((t) => t.id === localId);
 
   let compatNote = "";
-  if (item.format === "openclash") {
-    compatNote = `<div class="cb-compat-note">OpenClash 覆写片段，无法直接作为当前 YAML 预设使用。</div>`;
-  } else if (isSurge && item.surge_compatible === false) {
+  if (isSurge && item.surge_compatible === false) {
     compatNote = `<div class="cb-compat-note cb-compat-warn">该模板含 MRS 格式规则集，Surge 模式下部分规则可能无法直接使用。可以应用并手动替换规则集 URL。</div>`;
   }
 
@@ -1386,11 +1249,9 @@ async function renderCommunityPreview(item) {
     <div id="cb-groups-area" class="cb-groups-area"><div class="empty">加载策略组中…</div></div>
     <div class="cb-actions">
       <button type="button" id="cb-apply-button" ${canApply ? "" : "disabled"} title="${canApply ? "" : "只有 YAML 模板可以应用"}">应用到工作区</button>
-      <button type="button" id="cb-cancel-button">取消</button>
     </div>
   `;
 
-  document.querySelector("#cb-cancel-button")?.addEventListener("click", closeCommunityBrowser);
   document.querySelector("#cb-apply-button")?.addEventListener("click", () => applyCommunityTemplate(item, localId));
 
   if (item.format !== "yaml") return;
@@ -1423,17 +1284,11 @@ async function renderCommunityPreview(item) {
 }
 
 function applyCommunityTemplate(item, localId) {
-  closeCommunityBrowser();
   selectTemplateFile(localId);
   setStatus(`已应用社区模板：${item.name}`, "ok");
 }
 
 function bindCommunityBrowserEvents() {
-  els.openCommunityBrowserButton?.addEventListener("click", openCommunityBrowser);
-  els.closeCommunityBrowserButton?.addEventListener("click", closeCommunityBrowser);
-  els.communityBrowser?.addEventListener("click", (e) => {
-    if (e.target === els.communityBrowser) closeCommunityBrowser();
-  });
   els.communitySearch?.addEventListener("input", renderCommunityList);
   els.communityFormatFilter?.addEventListener("change", renderCommunityList);
 }
@@ -1620,8 +1475,25 @@ async function ensurePolicyCatalog() {
     const body = await response.json();
     if (!response.ok) throw new Error(body.detail || `HTTP ${response.status}`);
     const providers = Array.isArray(body.ruleProviders) ? body.ruleProviders : [];
-    providers.sort((a, b) => String(a.name).localeCompare(String(b.name), "en", { sensitivity: "base" }));
+    state.catalogCategoryOrder = Array.isArray(body.facets?.providerCategories)
+      ? body.facets.providerCategories
+      : [];
+    const catIndex = (category) => {
+      const index = state.catalogCategoryOrder.indexOf(category || "其他");
+      return index === -1 ? state.catalogCategoryOrder.length : index;
+    };
+    // 具体服务（Claude、Netflix…）排前面，「xx 通用」等兜底组排最后
+    const serviceRank = (provider) =>
+      provider.service && !provider.service.includes("通用") ? 0 : 1;
+    providers.sort(
+      (a, b) =>
+        catIndex(a.category) - catIndex(b.category) ||
+        serviceRank(a) - serviceRank(b) ||
+        String(a.service || "").localeCompare(String(b.service || ""), "zh-Hans-CN", { sensitivity: "base" }) ||
+        String(a.name).localeCompare(String(b.name), "en", { sensitivity: "base" })
+    );
     state.policyCatalog = providers;
+    renderCatalogCategories();
     renderCatalog();
   } catch (error) {
     if (els.catalogList) {
@@ -1637,12 +1509,41 @@ function filteredCatalog() {
   const query = (els.catalogSearch?.value || "").trim().toLowerCase();
   const behavior = els.catalogBehaviorFilter?.value || "";
   return (state.policyCatalog || []).filter((provider) => {
+    if (state.catalogCategory && (provider.category || "其他") !== state.catalogCategory) return false;
     if (behavior && (provider.behavior || "") !== behavior) return false;
-    if (!query) return true;
-    return `${provider.name} ${provider.url || ""} ${provider.author || ""} ${provider.template || ""}`
-      .toLowerCase()
-      .includes(query);
+    if (query && !`${provider.name} ${provider.service || ""} ${provider.url || ""} ${provider.author || ""} ${provider.template || ""}`.toLowerCase().includes(query)) return false;
+    return true;
   });
+}
+
+function renderCatalogCategories() {
+  if (!els.catalogCategoryBar || !state.policyCatalog) return;
+  const counts = new Map();
+  for (const provider of state.policyCatalog) {
+    const category = provider.category || "其他";
+    counts.set(category, (counts.get(category) || 0) + 1);
+  }
+  const categories = state.catalogCategoryOrder.filter((category) => counts.has(category));
+  els.catalogCategoryBar.replaceChildren();
+  const chips = [["", "全部", state.policyCatalog.length], ...categories.map((c) => [c, c, counts.get(c)])];
+  for (const [value, label, count] of chips) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = `catalog-chip${state.catalogCategory === value ? " active" : ""}`;
+    chip.innerHTML = `${escapeHtml(label)}<span class="chip-count">${count}</span>`;
+    chip.addEventListener("click", () => {
+      state.catalogCategory = value;
+      state.catalogLimit = 60;
+      renderCatalogCategories();
+      renderCatalog();
+    });
+    els.catalogCategoryBar.append(chip);
+  }
+}
+
+function catalogGroupKey(provider) {
+  if (state.catalogCategory) return provider.service || "其他规则集";
+  return provider.category || "其他";
 }
 
 function renderCatalog() {
@@ -1659,10 +1560,29 @@ function renderCatalog() {
   const enabled = new Map(
     state.policyRules.filter((rule) => rule.kind === "ruleset").map((rule) => [rule.name, rule.target])
   );
+  const groupTotals = new Map();
+  for (const provider of items) {
+    const key = catalogGroupKey(provider);
+    groupTotals.set(key, (groupTotals.get(key) || 0) + 1);
+  }
+  let lastGroup = null;
   for (const provider of visible) {
+    const groupKey = catalogGroupKey(provider);
+    if (groupKey !== lastGroup) {
+      const header = document.createElement("div");
+      header.className = "mrs-group-header";
+      header.innerHTML = `<strong>${escapeHtml(groupKey)}</strong><span>${groupTotals.get(groupKey)}</span>`;
+      els.catalogList.append(header);
+      lastGroup = groupKey;
+    }
     const row = document.createElement("div");
     row.className = `mrs-provider-item${enabled.has(provider.name) ? " enabled" : ""}`;
-    const meta = [provider.behavior, provider.format !== "yaml" ? provider.format : "", provider.author]
+    const meta = [
+      state.catalogCategory ? "" : provider.service,
+      provider.behavior,
+      provider.format !== "yaml" ? provider.format : "",
+      provider.author,
+    ]
       .filter(Boolean)
       .join(" · ");
     row.innerHTML = `
@@ -2054,20 +1974,12 @@ function bindEvents() {
   els.form.addEventListener("submit", convertConfig);
   els.form.addEventListener("input", refreshSubscribeUrl);
   els.form.addEventListener("change", refreshSubscribeUrl);
-  els.subconverterPanel?.addEventListener("input", refreshSubscribeUrl);
-  els.subconverterPanel?.addEventListener("change", refreshSubscribeUrl);
   els.templateSelect.addEventListener("change", refreshTemplateOptions);
   els.targetSelect.addEventListener("change", () => {
     renderPolicyTable();
     updateConfigOutputTitle();
     refreshSubscribeUrl();
     updateProfilePublishState();
-  });
-  [els.enhanceAi, els.enhanceDev, els.enhanceStreaming].forEach((input) => {
-    input?.addEventListener("change", applyEnhancementPreset);
-  });
-  [els.enhanceAdblock, els.enhanceTun, els.enhanceFakeip].forEach((input) => {
-    input?.addEventListener("change", refreshSubscribeUrl);
   });
   els.powerfullzPanel.addEventListener("change", () => {
     refreshSubscribeUrl();
@@ -2150,11 +2062,13 @@ restorePolicyRules();
 renderComposerEnabled();
 renderGroups();
 updateSelectionSummary();
-loadSubconverterTargets();
+renderTargetOptions();
 loadSystemStatus();
 loadProfiles();
 loadTemplates();
 loadCommunityMeta();
-applyConversionMode();
+refreshTemplateOptions();
+renderTargetOptions();
+updateConfigOutputTitle();
 refreshSubscribeUrl();
 refreshLivePreview();

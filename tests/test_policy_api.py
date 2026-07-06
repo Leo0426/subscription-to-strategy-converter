@@ -30,13 +30,13 @@ AI_TEMPLATE = {
 
 
 def test_workspace_preview_returns_workspace_graph_and_findings(monkeypatch) -> None:
-    async def fake_convert_subscription_to_clash(url: str, options: object | None = None) -> str:
+    async def fake_fetch_subscription(url: str) -> str:
         return CLASH_SUBSCRIPTION
 
     async def fake_load_powerfullz_template(options: object) -> dict:
         return SIMPLE_TEMPLATE
 
-    monkeypatch.setattr("app.core.subscription.convert_subscription_to_clash", fake_convert_subscription_to_clash)
+    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
     monkeypatch.setattr("app.core.template_engine.load_powerfullz_template", fake_load_powerfullz_template)
     client = TestClient(app)
 
@@ -54,33 +54,14 @@ def test_workspace_preview_returns_workspace_graph_and_findings(monkeypatch) -> 
     assert isinstance(body["findings"], list)
 
 
-def test_analyze_endpoint_accepts_workspace_json() -> None:
-    client = TestClient(app)
-
-    response = client.post(
-        "/analyze",
-        json={
-            "target": "mihomo",
-            "proxies": [],
-            "proxy_groups": [],
-            "rule_providers": [],
-            "rules": [{"type": "RULE-SET", "match": "missing", "target": "DIRECT", "provider": "missing", "raw": "RULE-SET,missing,DIRECT"}],
-        },
-    )
-
-    assert response.status_code == 200
-    codes = {finding["code"] for finding in response.json()["findings"]}
-    assert "missing_provider" in codes
-
-
 def test_simulate_endpoint_traces_openai_rule(monkeypatch) -> None:
-    async def fake_convert_subscription_to_clash(url: str, options: object | None = None) -> str:
+    async def fake_fetch_subscription(url: str) -> str:
         return CLASH_SUBSCRIPTION
 
     async def fake_load_powerfullz_template(options: object) -> dict:
         return AI_TEMPLATE
 
-    monkeypatch.setattr("app.core.subscription.convert_subscription_to_clash", fake_convert_subscription_to_clash)
+    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
     monkeypatch.setattr("app.core.template_engine.load_powerfullz_template", fake_load_powerfullz_template)
     client = TestClient(app)
     preview = client.post(
@@ -101,13 +82,13 @@ def test_simulate_endpoint_traces_openai_rule(monkeypatch) -> None:
 
 
 def test_compile_mihomo_endpoint_returns_yaml(monkeypatch) -> None:
-    async def fake_convert_subscription_to_clash(url: str, options: object | None = None) -> str:
+    async def fake_fetch_subscription(url: str) -> str:
         return CLASH_SUBSCRIPTION
 
     async def fake_load_powerfullz_template(options: object) -> dict:
         return SIMPLE_TEMPLATE
 
-    monkeypatch.setattr("app.core.subscription.convert_subscription_to_clash", fake_convert_subscription_to_clash)
+    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
     monkeypatch.setattr("app.core.template_engine.load_powerfullz_template", fake_load_powerfullz_template)
     client = TestClient(app)
     preview = client.post(
@@ -115,7 +96,7 @@ def test_compile_mihomo_endpoint_returns_yaml(monkeypatch) -> None:
         json={"subscription_url": "https://example.com/sub", "template": "powerfullz", "target": "mihomo"},
     ).json()
 
-    response = client.post("/compile/mihomo", json={"workspace": preview["workspace"]})
+    response = client.post("/compile", json={"workspace": preview["workspace"], "target": "mihomo"})
 
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/yaml")

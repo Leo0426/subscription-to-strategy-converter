@@ -3,17 +3,26 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 
-def test_index_page_is_served() -> None:
+def test_simple_index_page_is_served() -> None:
     client = TestClient(app)
-
     response = client.get("/")
+    assert response.status_code == 200
+    assert "Subflow" in response.text
+    assert "/static/main.js" in response.text
+    assert "sub-url" in response.text
+    assert "result-url" in response.text
+    assert "copy-btn" in response.text
+    assert "/advanced" in response.text
 
+
+def test_advanced_page_is_served() -> None:
+    client = TestClient(app)
+    response = client.get("/advanced")
     assert response.status_code == 200
     assert "Subflow" in response.text
     assert "/static/app.js" in response.text
     assert "策略指挥室" in response.text
     assert "生成配置" in response.text
-    assert "高级选项" in response.text
     assert "Mihomo 订阅链接" in response.text
     assert "保存为长期订阅" in response.text
     assert "系统状态" in response.text
@@ -29,6 +38,6 @@ def test_index_page_is_served() -> None:
     assert "策略组调试" in response.text
     assert "配置预览" in response.text
     assert "节点列表" in response.text
-    assert "浏览社区配置" in response.text
-    assert "community-browser" in response.text
+    assert "community-list" in response.text
+    assert "community-preview" in response.text
     assert "subconverter-config" not in response.text

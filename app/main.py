@@ -27,3 +27,8 @@ app.include_router(system_router)
 @app.get("/", include_in_schema=False)
 async def index() -> FileResponse:
     return FileResponse(BASE_DIR / "static" / "index.html")
+
+
+@app.get("/advanced", include_in_schema=False)
+async def advanced() -> FileResponse:
+    return FileResponse(BASE_DIR / "static" / "advanced.html")
