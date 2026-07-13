@@ -2,7 +2,7 @@
 
 ## Mission
 
-A visual proxy policy workspace builder that replaces manual YAML editing with a structured workspace. Users subscribe once, inspect and simulate policy behavior, then compile a trusted Mihomo configuration.
+A guided proxy Profile publisher that replaces manual YAML editing with an auditable conversion flow. Users import one subscription, choose target-specific templates, validate policy behavior through a shared workspace model, and publish durable client subscription URLs.
 
 ## 10 Pain Points (Design Compass)
 
@@ -27,9 +27,11 @@ New issues should state which pain points they address.
 |------|---------|
 | **ProxyNode** | A single proxy server entry (SS, Trojan, VMess, etc.) — the canonical IR type |
 | **PolicyWorkspace** | Product core for the MVP: an in-memory policy workspace holding nodes, groups, rules, providers, settings, graph data, analyzer findings, simulator traces, and compile output |
-| **Profile** | A durable saved conversion input that owns a stable token-protected Subscription URL and its last successful compile artifact |
+| **Profile** | A durable conversion intent containing one source subscription, one Claude Egress, target-specific Clash/Surge templates, token-protected Subscription URLs, and a last successful compile artifact per target |
 | **ProxyGroup** | A named group of nodes or groups with a dispatch strategy (select / url-test / fallback / load-balance) |
 | **RuleProvider** | An external rule-set URL referenced by name in rules (Clash: `rule-providers`) |
+| **TemplatePolicyTransform** | A structure-aware operation that preserves a selected template and changes only a recognized service-policy subgraph |
+| **Claude Egress** | The explicit node or policy group placed first in the template's dedicated Claude policy group |
 | **Template** | A community-contributed or built-in YAML skeleton providing proxy-groups, rules, rule-providers — loaded via `load_any_template()` |
 | **Compiler** | A platform-specific module (`surge.py`, `singbox.py`) that takes (nodes, groups, rules, providers) → formatted config string |
 | **Subscription URL** | The stable `/subscribe?...` endpoint URL users paste into their proxy client |
@@ -70,6 +72,7 @@ Mihomo YAML
 | `app/core/policy_analyzer.py` | `analyze_workspace()` → `list[AnalyzerFinding]` |
 | `app/core/policy_simulator.py` | `simulate_destination()` → `SimulationTrace` |
 | `app/core/policy_catalog.py` | Extracts and deduplicates policy entries across community templates |
+| `app/core/template_policy_transform.py` | Claude template analysis, compatibility reporting, and policy-subgraph transformation boundary |
 | `app/core/profiles.py` | Persistent Profile store with token authorization and last-successful artifact caching |
 | `app/core/renderer.py` | `render_yaml()` — serializes a dict to YAML string |
 | `app/core/platforms/surge.py` | Experimental Surge compiler |
@@ -110,13 +113,16 @@ Community templates are auto-scanned from `community_templates/THEYAMLS/**/*.yam
 | POST | `/preview` | Parse subscription → node list + config tree |
 | POST | `/convert` | Full conversion → rendered config string |
 | POST | `/workspace/preview` | Build workspace + graph + analyzer findings |
+| GET | `/claude/templates` | List templates containing Claude policy with target-specific compatibility metadata |
 | POST | `/analyze` | Re-analyze an existing workspace dict |
 | POST | `/simulate` | Simulate a destination through workspace rules |
 | POST | `/compile/mihomo` | Compile workspace dict → Mihomo YAML |
 | POST | `/session` | Store large policy payload, return session ID |
-| POST | `/profiles` | Persist a Mihomo Profile and return its token-protected Subscription URL |
+| POST | `/profiles` | Persist one platform-neutral Profile and return token-protected Clash and Surge Subscription URLs |
 | GET | `/profiles` | List redacted local Profile summaries without token or source subscription URL |
-| GET | `/subscribe/{profile_id}` | Compile a persisted Profile or return its stale last-successful artifact on an external dependency failure |
+| GET | `/profiles/{profile_id}/draft` | Read an editable Profile conversion intent with token authorization |
+| PUT | `/profiles/{profile_id}` | Replace a Profile conversion intent with token authorization and invalidate old artifacts |
+| GET | `/subscribe/{profile_id}` | Compile a persisted Profile for `target=clash|surge` or return that target's stale artifact on an external dependency failure |
 | GET | `/subscribe` | Stable URL for proxy clients — returns config directly |
 
 ## Platform Support
@@ -124,7 +130,7 @@ Community templates are auto-scanned from `community_templates/THEYAMLS/**/*.yam
 | Platform | Priority | Compiler |
 |----------|----------|---------|
 | Mihomo / Clash | MVP quality bar | `app/core/policy_workspace.py` → `workspace_to_mihomo_config()` + `app/core/renderer.py` |
-| Surge (macOS) | Experimental | `app/core/platforms/surge.py` |
+| Surge (macOS) | Compatible Claude-template flow supported; general parity experimental | `app/core/platforms/surge.py` |
 | sing-box | Experimental | `app/core/platforms/singbox.py` |
 
 ## Key Invariants
@@ -138,9 +144,17 @@ Community templates are auto-scanned from `community_templates/THEYAMLS/**/*.yam
 - All template IDs from the community are prefixed `local:` (e.g. `local:community_templates/THEYAMLS/...`)
 - Sessions in `app/core/sessions.py` are in-memory only; they do not persist across restarts
 - Profiles persist in SQLite; access requires both the profile ID and an independent token whose hash is stored in the database
-- A Profile may serve its last successful artifact only for an external source dependency failure and must mark it with `X-Subflow-Stale: true`
+- A Profile shares one source subscription and Claude Egress, selects templates independently for Clash and Surge, and caches artifacts by target
+- A Profile may serve a target's last successful artifact only for an external source dependency failure and must mark it with `X-Subflow-Stale: true`
+- Updating a Profile invalidates all previously compiled artifacts before the new intent can be served
+- A TemplatePolicyTransform must preserve provider URLs, rule order, DNS/TUN settings, and every non-Claude policy edge
+- Claude customization requires a recognizable Claude rule/provider in the selected template; it never injects an application-owned domain list
+- Surge template compilation fails closed when the complete rule/provider graph or node protocols cannot be represented without substitution
 
 ## ADRs
 
 - [ADR 0001: Workspace-first Mihomo MVP](docs/adr/0001-workspace-first-mihomo-mvp.md)
 - [ADR 0002: Persistent profiles and stale fallback](docs/adr/0002-persistent-profiles-and-stale-fallback.md)
+- [ADR 0003: Versioned Claude rules with multi-target profiles](docs/adr/0003-versioned-claude-rules-with-multi-target-profiles.md)
+- [ADR 0004: Template-driven Claude policy transforms](docs/adr/0004-template-driven-claude-policy-transforms.md)
+- [ADR 0005: Guided Profile publishing experience](docs/adr/0005-guided-profile-publishing-experience.md)

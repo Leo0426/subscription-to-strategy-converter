@@ -31,4 +31,4 @@ async def index() -> FileResponse:
 
 @app.get("/advanced", include_in_schema=False)
 async def advanced() -> FileResponse:
-    return FileResponse(BASE_DIR / "static" / "advanced.html")
+    return FileResponse(BASE_DIR / "static" / "index.html")

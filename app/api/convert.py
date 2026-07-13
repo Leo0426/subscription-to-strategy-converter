@@ -1,9 +1,10 @@
+from functools import lru_cache
+import json
+import os
+
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from pydantic import AnyHttpUrl, TypeAdapter, ValidationError
-
-import json
-import os
 
 from app.core.config_tree import build_config_tree
 from app.core.parsers.clash import ir_to_clash_dict
@@ -23,23 +24,62 @@ from app.core.policy_workspace import (
 from app.core.renderer import render_yaml
 from app.core.policy_catalog import load_policy_catalog, selected_policy_from_ids
 from app.core.sessions import create_session, get_session
+from app.core.template_policy_transform import (
+    TemplatePolicyTransformError,
+    analyze_claude_template,
+    transform_claude_policy,
+)
 from app.core.subscription import SubscriptionError, load_subscription
-from app.core.template_engine import TemplateError, apply_template, list_templates, load_any_template
+from app.core.template_engine import (
+    TemplateError,
+    apply_template,
+    list_templates,
+    load_any_template,
+    load_template,
+)
 from app.ir import ProxyNode
 from app.models.powerfullz import PowerfullzOptions
 from app.models.request import ConvertRequest
-from app.models.strategy import CustomStrategy, SelectedPolicy
+from app.models.strategy import ClaudePolicy, CustomStrategy, SelectedPolicy
 
 router = APIRouter()
 http_url_adapter = TypeAdapter(AnyHttpUrl)
 custom_strategy_adapter = TypeAdapter(CustomStrategy)
 selected_policy_adapter = TypeAdapter(SelectedPolicy)
 powerfullz_options_adapter = TypeAdapter(PowerfullzOptions)
+claude_policy_adapter = TypeAdapter(ClaudePolicy)
 
 
 @router.get("/templates")
 async def templates() -> dict[str, list[dict]]:
-    return {"templates": list_templates()}
+    return {"templates": _templates_with_claude_capability()}
+
+
+@lru_cache(maxsize=1)
+def _templates_with_claude_capability() -> list[dict]:
+    result: list[dict] = []
+    for meta in list_templates():
+        enriched = dict(meta)
+        try:
+            loaded = load_template(str(meta["id"]))
+        except TemplateError:
+            capability = None
+        else:
+            capability = analyze_claude_template(loaded).to_dict()
+        enriched["claude"] = capability
+        result.append(enriched)
+    return result
+
+
+@router.get("/claude/templates")
+async def claude_templates() -> dict[str, list[dict]]:
+    return {
+        "templates": [
+            template
+            for template in _templates_with_claude_capability()
+            if (template.get("claude") or {}).get("contains_claude")
+        ]
+    }
 
 
 def _template_meta(template_name: str) -> dict:
@@ -101,6 +141,7 @@ async def _build_config(
     custom_strategy: CustomStrategy | None = None,
     selected_policy: SelectedPolicy | None = None,
     powerfullz: PowerfullzOptions | None = None,
+    claude_policy: ClaudePolicy | None = None,
 ) -> tuple[list[ProxyNode], dict, dict]:
     if target not in _SUPPORTED_TARGETS:
         raise HTTPException(
@@ -121,7 +162,8 @@ async def _build_config(
     try:
         template = await load_any_template(template_name, powerfullz)
         config = apply_template(template, nodes, custom_strategy, selected_policy)
-    except TemplateError as exc:
+        config = transform_claude_policy(config, nodes, claude_policy, target=target)
+    except (TemplateError, TemplatePolicyTransformError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return nodes, config, raw_config
@@ -158,6 +200,7 @@ async def _render_config(
     custom_strategy: CustomStrategy | None = None,
     selected_policy: SelectedPolicy | None = None,
     powerfullz: PowerfullzOptions | None = None,
+    claude_policy: ClaudePolicy | None = None,
 ) -> tuple[int, str, list[dict]]:
     nodes, config, _ = await _build_config(
         subscription_url,
@@ -166,9 +209,36 @@ async def _render_config(
         custom_strategy,
         selected_policy,
         powerfullz,
+        claude_policy,
     )
     output, warnings = _render_output(target, nodes, config)
+    if target == "surge" and claude_policy and claude_policy.enabled and warnings:
+        protocols = sorted(
+            {str(warning.get("value")) for warning in warnings if warning.get("code") == "unsupported_protocol"}
+        )
+        if protocols:
+            raise HTTPException(
+                status_code=400,
+                detail="Surge Claude generation has unsupported node protocols: "
+                + ", ".join(protocols),
+            )
     return len(nodes), output, warnings
+
+
+@router.post("/preview")
+async def preview_subscription(request: ConvertRequest) -> dict:
+    try:
+        nodes, raw_config = await load_subscription(str(request.subscription_url))
+    except SubscriptionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    preview_config = dict(raw_config)
+    preview_config["proxies"] = _serialize_nodes(nodes)
+    return {
+        "node_count": len(nodes),
+        "nodes": _serialize_nodes(nodes),
+        "tree": build_config_tree(preview_config),
+    }
 
 
 @router.post("/workspace/preview")
@@ -180,6 +250,7 @@ async def workspace_preview(request: ConvertRequest) -> dict:
         request.custom_strategy,
         request.selected_policy,
         request.powerfullz,
+        request.claude_policy,
     )
     workspace = config_to_workspace(config, nodes, request.target)
     return {
@@ -223,16 +294,32 @@ def _profile_store() -> ProfileStore:
     return ProfileStore(os.environ.get("SUBFLOW_DB_PATH", "data/subflow.db"))
 
 
-@router.post("/profiles", status_code=201)
-async def create_profile(request: ConvertRequest) -> dict[str, str]:
-    if request.target != "mihomo":
-        raise HTTPException(status_code=422, detail="persistent profiles currently support Mihomo only")
-    created = _profile_store().create(request.model_dump(mode="json"))
+def _profile_urls(profile_id: str, token: str) -> dict[str, object]:
+    base_url = f"/subscribe/{profile_id}?token={token}"
     return {
-        "id": created.id,
-        "token": created.token,
-        "subscribe_url": f"/subscribe/{created.id}?token={created.token}",
+        "id": profile_id,
+        "subscribe_url": base_url,
+        "subscribe_urls": {
+            "clash": f"{base_url}&target=clash",
+            "surge": f"{base_url}&target=surge",
+        },
     }
+
+
+@router.post("/profiles", status_code=201)
+async def create_profile(request: ConvertRequest) -> dict[str, object]:
+    if request.target not in {"mihomo", "clash", "surge"}:
+        raise HTTPException(status_code=422, detail="persistent profiles support Clash/Mihomo and Surge")
+    if request.claude_policy and request.claude_policy.enabled:
+        _validate_profile_claude_templates(request)
+    stored_request = request.model_copy(
+        update={
+            "clash_template": request.clash_template or request.template,
+            "surge_template": request.surge_template or request.template,
+        }
+    )
+    created = _profile_store().create(stored_request.model_dump(mode="json"))
+    return {**_profile_urls(created.id, created.token), "token": created.token}
 
 
 @router.get("/profiles")
@@ -243,6 +330,8 @@ async def list_profiles() -> dict[str, list[dict[str, object]]]:
                 "id": profile.id,
                 "target": profile.target,
                 "template": profile.template,
+                "clash_template": profile.clash_template,
+                "surge_template": profile.surge_template,
                 "has_artifact": profile.has_artifact,
             }
             for profile in _profile_store().list()
@@ -250,40 +339,126 @@ async def list_profiles() -> dict[str, list[dict[str, object]]]:
     }
 
 
+@router.get("/profiles/{profile_id}/draft")
+async def get_profile_draft(profile_id: str, token: str = Query(...)) -> dict[str, object]:
+    profile = _profile_store().get(profile_id, token)
+    if profile is None:
+        raise HTTPException(status_code=404, detail="profile not found")
+    return {"id": profile.id, "request": profile.request}
+
+
+@router.put("/profiles/{profile_id}")
+async def update_profile(
+    profile_id: str,
+    request: ConvertRequest,
+    token: str = Query(...),
+) -> dict[str, object]:
+    if request.target not in {"mihomo", "clash", "surge"}:
+        raise HTTPException(status_code=422, detail="persistent profiles support Clash/Mihomo and Surge")
+    if request.claude_policy and request.claude_policy.enabled:
+        _validate_profile_claude_templates(request)
+    stored_request = request.model_copy(
+        update={
+            "clash_template": request.clash_template or request.template,
+            "surge_template": request.surge_template or request.template,
+        }
+    )
+    if not _profile_store().update(
+        profile_id,
+        token,
+        stored_request.model_dump(mode="json"),
+    ):
+        raise HTTPException(status_code=404, detail="profile not found")
+    return _profile_urls(profile_id, token)
+
+
 @router.get("/subscribe/{profile_id}", response_class=PlainTextResponse)
-async def subscribe_profile(profile_id: str, token: str = Query(...)) -> PlainTextResponse:
+async def subscribe_profile(
+    profile_id: str,
+    token: str = Query(...),
+    target: str | None = Query(default=None),
+) -> PlainTextResponse:
     store = _profile_store()
     profile = store.get(profile_id, token)
     if profile is None:
         raise HTTPException(status_code=404, detail="profile not found")
 
     request = ConvertRequest.model_validate(profile.request)
+    render_target = target or request.target
+    if render_target not in {"mihomo", "clash", "surge"}:
+        raise HTTPException(status_code=400, detail=f"unsupported profile target: {render_target}")
+    template_name = _profile_template(request, render_target)
     try:
         _, config, warnings = await _render_config(
             str(request.subscription_url),
-            request.template,
-            request.target,
+            template_name,
+            render_target,
             request.custom_strategy,
             request.selected_policy,
             request.powerfullz,
+            request.claude_policy,
         )
     except HTTPException as exc:
         external_failures = (SubscriptionError, TemplateError)
-        if profile.artifact is None or not isinstance(exc.__cause__, external_failures):
+        artifact_target = _TARGET_ALIASES.get(render_target, render_target)
+        artifact = profile.artifacts.get(artifact_target)
+        if artifact is None or not isinstance(exc.__cause__, external_failures):
             raise
         return PlainTextResponse(
-            profile.artifact,
-            media_type="text/yaml; charset=utf-8",
+            artifact,
+            media_type=_target_media_type(render_target),
             headers={
-                "Content-Disposition": 'inline; filename="mihomo.yaml"',
+                "Content-Disposition": f'inline; filename="{_target_filename(render_target)}"',
                 "X-Subflow-Stale": "true",
             },
         )
-    store.save_artifact(profile.id, config)
-    headers = {"Content-Disposition": 'inline; filename="mihomo.yaml"'}
+    store.save_artifact(profile.id, render_target, config)
+    headers = {"Content-Disposition": f'inline; filename="{_target_filename(render_target)}"'}
     if warnings:
         headers["X-Compile-Warnings"] = json.dumps(warnings, ensure_ascii=True)
-    return PlainTextResponse(config, media_type="text/yaml; charset=utf-8", headers=headers)
+    return PlainTextResponse(config, media_type=_target_media_type(render_target), headers=headers)
+
+
+def _profile_template(request: ConvertRequest, target: str) -> str:
+    if target == "surge":
+        return request.surge_template or request.template
+    return request.clash_template or request.template
+
+
+def _validate_profile_claude_templates(request: ConvertRequest) -> None:
+    selected = {
+        "Clash": request.clash_template or request.template,
+        "Surge": request.surge_template or request.template,
+    }
+    for target, template_name in selected.items():
+        try:
+            template = load_template(template_name)
+        except TemplateError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        capability = analyze_claude_template(template)
+        if not capability.contains_claude:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{target} template does not contain a recognizable Claude policy",
+            )
+        if target == "Surge" and not capability.surge_compatible:
+            raise HTTPException(
+                status_code=400,
+                detail="Surge template is incompatible: "
+                + "; ".join(capability.surge_incompatibility_reasons),
+            )
+
+
+def _target_filename(target: str) -> str:
+    if target == "surge":
+        return "surge.conf"
+    if target == "clash":
+        return "clash.yaml"
+    return "mihomo.yaml"
+
+
+def _target_media_type(target: str) -> str:
+    return "text/plain; charset=utf-8" if target == "surge" else "text/yaml; charset=utf-8"
 
 
 @router.get("/subscribe", response_class=PlainTextResponse)
@@ -296,6 +471,7 @@ async def subscribe(
     policy: str | None = Query(default=None),
     policy_ids: str | None = Query(default=None),
     powerfullz: str | None = Query(default=None),
+    claude: str | None = Query(default=None),
 ) -> PlainTextResponse:
     if session_id:
         session_data = get_session(session_id)
@@ -304,6 +480,7 @@ async def subscribe(
             policy = session_data.get("policy") or policy
             policy_ids = session_data.get("policy_ids") or policy_ids
             powerfullz = session_data.get("powerfullz") or powerfullz
+            claude = session_data.get("claude") or claude
     custom_strategy = None
     if strategy:
         try:
@@ -338,6 +515,13 @@ async def subscribe(
         except ValidationError as exc:
             raise HTTPException(status_code=422, detail="invalid powerfullz options") from exc
 
+    claude_policy = None
+    if claude:
+        try:
+            claude_policy = claude_policy_adapter.validate_json(claude)
+        except ValidationError as exc:
+            raise HTTPException(status_code=422, detail="invalid Claude policy") from exc
+
     _, config, warnings = await _render_config(
         subscription_url,
         template,
@@ -345,6 +529,7 @@ async def subscribe(
         custom_strategy,
         selected_policy,
         powerfullz_options,
+        claude_policy,
     )
     if target == "singbox":
         media_type = "application/json; charset=utf-8"

@@ -57,7 +57,7 @@ proxies:
     assert "name: HK-01" in response.text
 
 
-def test_profile_creation_rejects_non_mihomo_target(tmp_path, monkeypatch) -> None:
+def test_profile_creation_accepts_surge_and_returns_both_target_urls(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("SUBFLOW_DB_PATH", str(tmp_path / "subflow.db"))
     client = TestClient(app)
 
@@ -66,8 +66,8 @@ def test_profile_creation_rejects_non_mihomo_target(tmp_path, monkeypatch) -> No
         json={"subscription_url": "https://example.com/sub", "template": "developer", "target": "surge"},
     )
 
-    assert response.status_code == 422
-    assert "Mihomo" in response.json()["detail"]
+    assert response.status_code == 201
+    assert set(response.json()["subscribe_urls"]) == {"clash", "surge"}
 
 
 def test_profile_subscription_falls_back_to_last_successful_artifact(tmp_path, monkeypatch) -> None:
@@ -122,11 +122,54 @@ def test_profiles_list_redacts_secrets(tmp_path, monkeypatch) -> None:
         "profiles": [
             {
                 "id": created["id"],
-                "target": "mihomo",
-                "template": "developer",
-                "has_artifact": False,
+                    "target": "mihomo",
+                    "template": "developer",
+                    "clash_template": "developer",
+                    "surge_template": "developer",
+                    "has_artifact": False,
             }
         ]
     }
     assert created["token"] not in response.text
     assert "private-token" not in response.text
+
+
+def test_profile_draft_can_be_read_and_updated_with_its_token(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("SUBFLOW_DB_PATH", str(tmp_path / "subflow.db"))
+    client = TestClient(app)
+    created = client.post(
+        "/profiles",
+        json={
+            "subscription_url": "https://example.com/private-token",
+            "template": "developer",
+            "target": "mihomo",
+        },
+    ).json()
+
+    denied = client.get(f"/profiles/{created['id']}/draft", params={"token": "wrong"})
+    draft = client.get(
+        f"/profiles/{created['id']}/draft",
+        params={"token": created["token"]},
+    )
+    updated = client.put(
+        f"/profiles/{created['id']}",
+        params={"token": created["token"]},
+        json={
+            "subscription_url": "https://example.com/private-token",
+            "template": "streaming",
+            "clash_template": "streaming",
+            "surge_template": "streaming",
+            "target": "clash",
+        },
+    )
+    refreshed = client.get(
+        f"/profiles/{created['id']}/draft",
+        params={"token": created["token"]},
+    )
+
+    assert denied.status_code == 404
+    assert draft.status_code == 200
+    assert draft.json()["request"]["subscription_url"] == "https://example.com/private-token"
+    assert updated.status_code == 200
+    assert updated.json()["subscribe_urls"]["clash"].endswith("&target=clash")
+    assert refreshed.json()["request"]["template"] == "streaming"

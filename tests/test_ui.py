@@ -3,41 +3,39 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 
-def test_simple_index_page_is_served() -> None:
+def test_root_and_legacy_advanced_route_serve_one_guided_product() -> None:
     client = TestClient(app)
-    response = client.get("/")
-    assert response.status_code == 200
-    assert "Subflow" in response.text
-    assert "/static/main.js" in response.text
-    assert "sub-url" in response.text
-    assert "result-url" in response.text
-    assert "copy-btn" in response.text
-    assert "/advanced" in response.text
+
+    root = client.get("/")
+    advanced = client.get("/advanced")
+
+    assert root.status_code == 200
+    assert advanced.status_code == 200
+    assert root.text == advanced.text
+    assert "/static/flow.js" in root.text
+    assert "/static/flow.css" in root.text
+    assert "/static/assets/subflow-logo.png" in root.text
 
 
-def test_advanced_page_is_served() -> None:
-    client = TestClient(app)
-    response = client.get("/advanced")
-    assert response.status_code == 200
-    assert "Subflow" in response.text
-    assert "/static/app.js" in response.text
-    assert "策略指挥室" in response.text
-    assert "生成配置" in response.text
-    assert "Mihomo 订阅链接" in response.text
-    assert "保存为长期订阅" in response.text
-    assert "系统状态" in response.text
-    assert "已保存订阅" in response.text
-    assert "yaml-view-tabs" in response.text
-    assert "新增分组" in response.text
-    assert "模板文件库" in response.text
-    assert "规则分析" in response.text
-    assert "流量模拟" in response.text
-    assert "规则编排" in response.text
-    assert "自定义规则" in response.text
-    assert "规则集目录" in response.text
-    assert "策略组调试" in response.text
-    assert "配置预览" in response.text
-    assert "节点列表" in response.text
-    assert "community-list" in response.text
-    assert "community-preview" in response.text
-    assert "subconverter-config" not in response.text
+def test_guided_product_exposes_profile_home_four_steps_and_inspector() -> None:
+    response = TestClient(app).get("/")
+
+    assert 'id="profile-home"' in response.text
+    assert 'id="new-profile-button"' in response.text
+    assert 'data-step="source"' in response.text
+    assert 'data-step="targets"' in response.text
+    assert 'data-step="routing"' in response.text
+    assert 'data-step="publish"' in response.text
+    assert 'id="context-inspector"' in response.text
+    assert 'id="publish-profile-button"' in response.text
+
+
+def test_expert_tools_are_progressively_disclosed() -> None:
+    response = TestClient(app).get("/")
+
+    assert 'data-inspector-view="overview"' in response.text
+    assert 'data-inspector-view="findings"' in response.text
+    assert 'data-inspector-view="test"' in response.text
+    assert 'data-inspector-view="source"' in response.text
+    assert "策略组调试" not in response.text
+    assert "自动预设源" not in response.text

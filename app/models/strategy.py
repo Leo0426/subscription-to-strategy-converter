@@ -41,3 +41,16 @@ class SelectedPolicy(BaseModel):
     proxy_groups: list[dict[str, Any]] = Field(default_factory=list)
     rules: list[Any] = Field(default_factory=list)
     rule_providers: dict[str, Any] = Field(default_factory=dict)
+
+
+class ClaudePolicy(BaseModel):
+    enabled: bool = True
+    egress: str | None = Field(default=None, max_length=160)
+
+    @field_validator("egress")
+    @classmethod
+    def clean_egress(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = " ".join(value.split())
+        return cleaned or None

@@ -3,50 +3,133 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Subflow · 订阅转换</title>
-    <link rel="stylesheet" href="/static/styles.css?v=24" />
+    <meta name="color-scheme" content="light" />
+    <title>Subflow · 发布可靠的代理订阅</title>
+    <link rel="icon" type="image/png" href="/static/assets/subflow-logo.png" />
+    <link rel="stylesheet" href="/static/flow.css?v=1" />
   </head>
-  <body class="simple-page">
-    <div class="simple-shell">
-      <header class="simple-header">
-        <span class="simple-brand">Subflow</span>
-        <a href="/advanced" class="simple-advanced-link">高级工作台 →</a>
-      </header>
+  <body>
+    <div class="page-grain" aria-hidden="true"></div>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Subflow 首页">
+        <span class="brand-logo-crop"><img src="/static/assets/subflow-logo.png" alt="" /></span>
+        <span><strong>Subflow</strong><small>策略订阅发布器</small></span>
+      </a>
+      <div class="header-actions">
+        <span class="health-chip" id="health-chip"><i></i><span>正在检查服务</span></span>
+        <button class="button button-dark" id="new-profile-button" type="button">新建订阅</button>
+      </div>
+    </header>
 
-      <main class="simple-main">
-        <div class="simple-hero">
-          <h1>粘贴订阅，一键生成 Mihomo 配置</h1>
-          <p>自动添加 AI、开发者分流规则，支持 Clash / V2Ray / Trojan 等格式</p>
+    <div class="global-notice" id="global-notice" hidden role="alert"></div>
+
+    <main class="product-shell">
+      <section id="profile-home" class="profile-home" aria-labelledby="home-title">
+        <div class="home-hero">
+          <p class="kicker">YOUR ROUTES, EXPLAINED</p>
+          <h1 id="home-title">把一条机场订阅，<br />发布成可靠的客户端策略。</h1>
+          <p>选择使用目标，Subflow 推荐兼容模板、定制 Claude 出口、验证规则并生成长期订阅地址。</p>
+          <button class="button button-primary button-large" id="hero-new-profile-button" type="button">创建第一个订阅 <span>→</span></button>
+        </div>
+        <div class="home-rule" aria-hidden="true"><span>01</span><span>IMPORT</span><i></i><span>04</span><span>PUBLISH</span></div>
+        <section class="profiles-section" aria-labelledby="profiles-title">
+          <div class="section-heading">
+            <div><p class="kicker">PUBLISHED PROFILES</p><h2 id="profiles-title">已发布订阅</h2></div>
+            <span class="count-label" id="profile-count">0 个</span>
+          </div>
+          <div id="profiles-list" class="profile-grid"><div class="loading-card">正在读取本地 Profile…</div></div>
+        </section>
+      </section>
+
+      <section id="flow-view" class="flow-view" hidden aria-labelledby="flow-title">
+        <div class="flow-topline">
+          <button class="text-button" id="back-home-button" type="button">← 返回订阅列表</button>
+          <span id="draft-status">新建 Profile</span>
+          <button class="inspector-trigger" id="open-inspector-button" type="button">检查器 <b id="finding-badge" hidden>0</b></button>
         </div>
 
-        <div class="simple-card">
-          <label class="simple-label" for="sub-url">机场订阅 URL</label>
-          <textarea
-            id="sub-url"
-            class="simple-textarea"
-            placeholder="https://example.com/sub?token=xxx"
-            rows="3"
-            autofocus
-          ></textarea>
+        <div class="flow-heading">
+          <p class="kicker">GUIDED PUBLISHING</p>
+          <h1 id="flow-title">创建一个可靠订阅</h1>
+          <p id="flow-subtitle">先连接你的订阅源，后续选择会基于真实节点和客户端能力。</p>
+        </div>
 
-          <div class="simple-output" id="simple-output">
-            <label class="simple-label" for="result-url">订阅链接（直接导入 Mihomo / Clash Meta）</label>
-            <div class="simple-result-row">
-              <input id="result-url" class="simple-input" type="url" readonly placeholder="粘贴订阅地址后自动生成" />
-              <button id="copy-btn" class="simple-copy-btn" disabled>复制</button>
-            </div>
+        <nav class="step-rail" aria-label="创建进度">
+          <button class="step-tab is-active" data-step-target="source" type="button"><span>01</span><strong>导入订阅</strong><small>连接并读取节点</small></button>
+          <button class="step-tab" data-step-target="targets" type="button" disabled><span>02</span><strong>目标与模板</strong><small>获取兼容推荐</small></button>
+          <button class="step-tab" data-step-target="routing" type="button" disabled><span>03</span><strong>Claude 路由</strong><small>指定稳定出口</small></button>
+          <button class="step-tab" data-step-target="publish" type="button" disabled><span>04</span><strong>验证并发布</strong><small>生成长期订阅</small></button>
+        </nav>
+
+        <div class="flow-layout">
+          <div class="step-stage">
+            <section class="flow-step is-active" data-step="source">
+              <div class="step-copy"><span class="step-number">01</span><div><h2>导入机场订阅</h2><p>地址只保存在本机 Profile 数据库中，不会展示在订阅列表。</p></div></div>
+              <label class="field source-field" for="subscription-url"><span>订阅 URL</span><textarea id="subscription-url" rows="4" placeholder="https://example.com/sub?token=…" autocomplete="off"></textarea></label>
+              <div id="source-result" class="source-result" hidden></div>
+              <div class="step-actions"><span class="action-hint">Subflow 会先解析节点，不会立即发布。</span><button class="button button-primary" id="validate-source-button" type="button">连接订阅 <span>→</span></button></div>
+            </section>
+
+            <section class="flow-step" data-step="targets" hidden>
+              <div class="step-copy"><span class="step-number">02</span><div><h2>确认客户端与模板</h2><p>我们根据 Claude 策略完整性与客户端兼容性推荐组合，你仍可随时替换。</p></div></div>
+              <div class="target-grid">
+                <article class="target-card is-selected"><div class="target-icon">C</div><div><span class="target-label">CLASH / MIHOMO</span><h3>日常主配置</h3><p>支持全部已识别的 Claude 模板。</p></div><span class="selected-mark">已选择</span></article>
+                <article class="target-card is-selected"><div class="target-icon surge">S</div><div><span class="target-label">SURGE</span><h3>macOS 客户端</h3><p>只使用可原样编译的模板。</p></div><span class="selected-mark">已选择</span></article>
+              </div>
+              <div class="recommendation-block">
+                <div class="recommendation-head"><div><span class="recommendation-badge">RECOMMENDED</span><h3>推荐模板组合</h3></div><button class="text-button" id="toggle-template-picker" type="button">更换模板</button></div>
+                <div class="template-choice"><div><span>Clash / Mihomo</span><strong id="clash-template-name">正在分析…</strong><small id="clash-template-reason"></small></div><select id="clash-template" aria-label="Clash 模板"></select></div>
+                <div class="template-choice"><div><span>Surge</span><strong id="surge-template-name">正在分析…</strong><small id="surge-template-reason"></small></div><select id="surge-template" aria-label="Surge 模板"></select></div>
+              </div>
+              <div class="step-actions"><button class="button button-quiet" data-go-step="source" type="button">返回</button><button class="button button-primary" id="confirm-targets-button" type="button">使用此组合 <span>→</span></button></div>
+            </section>
+
+            <section class="flow-step" data-step="routing" hidden>
+              <div class="step-copy"><span class="step-number">03</span><div><h2>指定 Claude 稳定出口</h2><p>只变换模板中的 Claude 策略子图，原有规则源、顺序和其他服务保持不变。</p></div></div>
+              <div class="routing-card">
+                <div class="route-line"><span class="route-node source">CLAUDE</span><i></i><span class="route-node policy">模板策略</span><i></i><span class="route-node exit" id="route-preview-egress">等待选择</span></div>
+                <label class="field" for="claude-egress"><span>稳定出口节点或策略组</span><select id="claude-egress"><option value="">请选择一个出口</option></select><small>建议选择你已确认能够稳定访问 Claude 的固定节点，避免会话 IP 漂移。</small></label>
+                <div class="preserve-note"><strong>保持不变</strong><span>provider URL</span><span>规则顺序</span><span>DNS / TUN</span><span>非 Claude 策略</span></div>
+              </div>
+              <div class="step-actions"><button class="button button-quiet" data-go-step="targets" type="button">返回</button><button class="button button-primary" id="confirm-routing-button" type="button" disabled>继续验证 <span>→</span></button></div>
+            </section>
+
+            <section class="flow-step" data-step="publish" hidden>
+              <div class="step-copy"><span class="step-number">04</span><div><h2>验证并发布</h2><p>Subflow 会分别验证 Clash 与 Surge 产物，只有可安全发布时才创建 Profile。</p></div></div>
+              <div id="validation-state" class="validation-state is-running"><span class="validation-orbit"></span><div><strong>正在构建并检查策略…</strong><p>检查模板引用、Claude 路由和目标兼容性。</p></div></div>
+              <div class="publish-summary">
+                <dl><div><dt>源节点</dt><dd id="summary-nodes">—</dd></div><div><dt>Clash 模板</dt><dd id="summary-clash">—</dd></div><div><dt>Surge 模板</dt><dd id="summary-surge">—</dd></div><div><dt>Claude 出口</dt><dd id="summary-egress">—</dd></div></dl>
+              </div>
+              <div id="publish-result" class="publish-result" hidden><div class="success-seal">✓</div><div><span class="recommendation-badge">PROFILE PUBLISHED</span><h3>订阅已经可以使用</h3><p>Token 只在本机浏览器保存，请立即复制客户端链接。</p></div><div class="published-links"><label><span>Clash / Mihomo</span><input id="published-clash-url" readonly /></label><button type="button" data-copy-output="clash">复制</button><label><span>Surge</span><input id="published-surge-url" readonly /></label><button type="button" data-copy-output="surge">复制</button></div></div>
+              <div class="step-actions publish-actions"><button class="button button-quiet" id="preview-config-button" type="button">在检查器中预览</button><button class="button button-primary button-large" id="publish-profile-button" type="button" disabled>发布 Profile <span>→</span></button></div>
+            </section>
           </div>
 
-          <p class="simple-hint" id="simple-hint"></p>
+          <aside class="flow-summary" aria-label="当前选择摘要">
+            <span class="summary-label">CURRENT DRAFT</span>
+            <h3>当前配置</h3>
+            <ol><li><span>订阅源</span><strong id="aside-source">未连接</strong></li><li><span>目标</span><strong>Clash + Surge</strong></li><li><span>模板组合</span><strong id="aside-templates">等待推荐</strong></li><li><span>Claude 出口</span><strong id="aside-egress">未选择</strong></li></ol>
+            <button class="summary-inspect" id="summary-inspector-button" type="button">打开配置检查器 <span>↗</span></button>
+          </aside>
         </div>
-      </main>
+      </section>
+    </main>
 
-      <footer class="simple-footer">
-        <a href="/advanced">高级工作台</a>
-        <span>·</span>
-        <span>target: Mihomo · template: powerfullz</span>
-      </footer>
-    </div>
-    <script src="/static/main.js?v=24"></script>
+    <aside id="context-inspector" class="context-inspector" aria-label="配置检查器" aria-hidden="true">
+      <div class="inspector-backdrop" data-close-inspector></div>
+      <div class="inspector-panel">
+        <header><div><p class="kicker">CONTEXT INSPECTOR</p><h2>配置检查器</h2></div><button type="button" data-close-inspector aria-label="关闭检查器">×</button></header>
+        <nav><button class="is-active" data-inspector-target="overview" type="button">概览</button><button data-inspector-target="findings" type="button">问题 <b id="inspector-finding-count">0</b></button><button data-inspector-target="test" type="button">测试</button><button data-inspector-target="source" type="button">源码</button></nav>
+        <div class="inspector-body">
+          <section class="inspector-view is-active" data-inspector-view="overview"><div id="inspector-overview" class="inspector-empty">连接订阅后，这里会显示节点与策略统计。</div></section>
+          <section class="inspector-view" data-inspector-view="findings" hidden><div id="inspector-findings" class="inspector-empty">尚未执行策略验证。</div></section>
+          <section class="inspector-view" data-inspector-view="test" hidden><form id="simulate-form"><label class="field"><span>测试域名或 IP</span><div class="inline-control"><input id="simulate-destination" placeholder="claude.ai" /><button class="button button-dark" type="submit">模拟</button></div></label></form><div id="simulate-result" class="inspector-empty">发布前可验证请求将命中哪个策略。</div></section>
+          <section class="inspector-view" data-inspector-view="source" hidden><div class="source-toolbar"><select id="source-target"><option value="clash">Clash / Mihomo</option><option value="surge">Surge</option></select><button type="button" id="copy-source-button">复制</button></div><pre id="source-output"># 验证后显示最终配置</pre></section>
+        </div>
+      </div>
+    </aside>
+
+    <div class="toast" id="toast" hidden role="status"></div>
+    <script src="/static/flow.js?v=1"></script>
   </body>
 </html>
