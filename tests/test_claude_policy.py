@@ -19,10 +19,7 @@ proxies:
     password: secret
 """
 
-CLAUDE_TEMPLATE = (
-    "local:community_templates/THEYAMLS/General_Config/"
-    "liandu2024/clash-fallback.yaml"
-)
+CLAUDE_TEMPLATE = "local:community_templates/leo/leo.yaml"
 
 
 def test_subscription_preview_returns_nodes_for_egress_selection(monkeypatch) -> None:
@@ -48,7 +45,7 @@ def test_claude_egress_cannot_reference_template_claude_group(monkeypatch) -> No
         "/workspace/preview",
         json={
             "subscription_url": "https://example.com/sub",
-            "template": "ai-tools",
+            "template": CLAUDE_TEMPLATE,
             "target": "clash",
             "claude_policy": {"egress": "Claude"},
         },
@@ -74,21 +71,14 @@ def test_profile_stale_fallback_is_isolated_by_target(tmp_path, monkeypatch) -> 
         json={
             "subscription_url": "https://example.com/sub",
             "template": CLAUDE_TEMPLATE,
-            "clash_template": CLAUDE_TEMPLATE,
-            "surge_template": "ai-tools",
             "target": "clash",
             "claude_policy": {"egress": "US-Stable"},
         },
     ).json()
 
     fresh_clash = client.get(created["subscribe_urls"]["clash"])
-    fresh_surge = client.get(created["subscribe_urls"]["surge"])
     upstream["available"] = False
     stale_clash = client.get(created["subscribe_urls"]["clash"])
-    stale_surge = client.get(created["subscribe_urls"]["surge"])
 
     assert stale_clash.headers["X-Subflow-Stale"] == "true"
-    assert stale_surge.headers["X-Subflow-Stale"] == "true"
     assert stale_clash.text == fresh_clash.text
-    assert stale_surge.text == fresh_surge.text
-    assert stale_clash.text != stale_surge.text

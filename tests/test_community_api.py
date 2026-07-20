@@ -7,7 +7,7 @@ from app.api.community import _build_meta, _detect_format, _is_surge_compatible
 from pathlib import Path
 
 
-_YAML_ID = "community:THEYAMLS/General_Config/666OS/OneTouch_Config.yaml"
+_YAML_ID = "community:leo/leo.yaml"
 
 
 @pytest.fixture
@@ -57,6 +57,36 @@ def test_list_excludes_md_and_list_files(client: TestClient) -> None:
         assert not item["source_path"].endswith(".conf")
 
 
+def test_rule_catalog_exposes_every_parseable_community_rule_with_its_source(client: TestClient) -> None:
+    response = client.get("/community/rules")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["summary"]["files_scanned"] >= 1
+    assert body["summary"]["template_count"] >= 1
+    assert body["summary"]["rule_count"] >= body["summary"]["unique_rule_count"] >= 1
+    assert body["templates"]
+    assert all(template["source_path"].startswith("community_templates/") for template in body["templates"])
+    assert all(template["rules"] for template in body["templates"])
+    assert any(
+        rule == "RULE-SET,Tracking,REJECT"
+        for template in body["templates"]
+        for rule in template["rules"]
+    )
+
+
+def test_rule_catalog_uses_the_consolidated_template(client: TestClient) -> None:
+    body = client.get("/community/rules").json()
+    leo = next(
+        template
+        for template in body["templates"]
+        if template["source_path"].endswith("leo/leo.yaml")
+    )
+
+    assert leo["extraction"] == "yaml"
+    assert "RULE-SET,Tracking,REJECT" in leo["rules"]
+
+
 # ── Preview endpoint ───────────────────────────────────────────────────────
 
 
@@ -85,7 +115,7 @@ def test_preview_proxy_group_shape(client: TestClient) -> None:
 def test_preview_nonexistent_returns_404(client: TestClient) -> None:
     response = client.get(
         "/community/templates/preview",
-        params={"id": "community:THEYAMLS/does_not_exist.yaml"},
+        params={"id": "community:leo/does_not_exist.yaml"},
     )
     assert response.status_code == 404
 
@@ -93,7 +123,7 @@ def test_preview_nonexistent_returns_404(client: TestClient) -> None:
 def test_preview_invalid_id_prefix_returns_400(client: TestClient) -> None:
     response = client.get(
         "/community/templates/preview",
-        params={"id": "local:THEYAMLS/General_Config/666OS/OneTouch_Config.yaml"},
+        params={"id": "local:community_templates/leo/leo.yaml"},
     )
     assert response.status_code == 400
 
@@ -110,19 +140,19 @@ def test_preview_path_traversal_blocked(client: TestClient) -> None:
 
 
 def test_detect_format_yaml_with_proxy_groups() -> None:
-    path = Path("/project/community_templates/THEYAMLS/config.yaml")
+    path = Path("/project/community_templates/leo/config.yaml")
     loaded = {"proxy-groups": [{"name": "PROXY", "type": "select"}]}
     assert _detect_format(path, loaded) == "yaml"
 
 
 def test_detect_format_yaml_without_proxy_groups_is_unknown() -> None:
-    path = Path("/project/community_templates/THEYAMLS/config.yaml")
+    path = Path("/project/community_templates/leo/config.yaml")
     loaded = {"rules": ["MATCH,DIRECT"]}
     assert _detect_format(path, loaded) == "unknown"
 
 
 def test_detect_format_none_loaded_yaml_is_unknown() -> None:
-    path = Path("/project/community_templates/THEYAMLS/bad.yaml")
+    path = Path("/project/community_templates/leo/bad.yaml")
     assert _detect_format(path, None) == "unknown"
 
 
@@ -148,5 +178,3 @@ def test_surge_compatible_false_for_mrs_provider() -> None:
         },
     }
     assert _is_surge_compatible(loaded, "yaml") is False
-
-

@@ -209,6 +209,12 @@ def ir_to_clash_dict(node: ProxyNode) -> dict[str, Any]:
             d["plugin"] = node.extra["plugin"]
             if "plugin_opts" in node.extra:
                 d["plugin-opts"] = node.extra["plugin_opts"]
+        elif node.extra.get("obfs"):
+            d["plugin"] = "obfs"
+            plugin_opts = {"mode": node.extra["obfs"]}
+            if node.extra.get("obfs_host"):
+                plugin_opts["host"] = node.extra["obfs_host"]
+            d["plugin-opts"] = plugin_opts
         if node.extra.get("udp"):
             d["udp"] = True
 

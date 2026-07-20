@@ -4,6 +4,7 @@ from copy import deepcopy
 from functools import lru_cache
 import json
 from pathlib import Path
+import re
 import warnings
 from typing import Any
 
@@ -23,6 +24,8 @@ class TemplateError(ValueError):
 
 _APP_DIR = Path(__file__).resolve().parent.parent
 _PROJECT_DIR = _APP_DIR.parent
+
+LEO_TEMPLATE_ID = "local:community_templates/leo/leo.yaml"
 
 LOCAL_TEMPLATE_ROOTS = (
     _PROJECT_DIR / "community_templates",
@@ -247,6 +250,8 @@ def _local_template_path(template_id: str) -> Path:
 
 
 def load_template(name: str) -> dict:
+    if name == "canonical":
+        return deepcopy(PRESET_TEMPLATES["minimal"]["config"])
     if name in PRESET_TEMPLATES:
         return deepcopy(PRESET_TEMPLATES[name]["config"])
     if name.startswith("local:"):
@@ -332,7 +337,11 @@ def list_templates() -> list[dict[str, Any]]:
     return templates
 
 
-def _expand_members(members: list[str], node_names: list[str]) -> list[str]:
+def _expand_members(
+    members: list[str],
+    node_names: list[str],
+    selector_matches: dict[str, list[str]] | None = None,
+) -> list[str]:
     if not members:
         return list(node_names)
 
@@ -340,6 +349,11 @@ def _expand_members(members: list[str], node_names: list[str]) -> list[str]:
     for member in members:
         if member == "__ALL_NODES__":
             expanded.extend(node_names)
+        elif member.startswith("selector:"):
+            selector_id = member.removeprefix("selector:")
+            if selector_matches is None or selector_id not in selector_matches:
+                raise TemplateError(f"unknown node selector: {selector_id}")
+            expanded.extend(selector_matches[selector_id])
         else:
             expanded.append(member)
     return list(dict.fromkeys(expanded))
@@ -387,19 +401,50 @@ def _apply_custom_strategy(config: dict, node_names: list[str], custom_strategy:
             group["proxies"] = list(dict.fromkeys(custom_group_names + existing))
 
 
-def _expand_selected_group(group: dict, node_names: list[str]) -> dict:
+def _expand_selected_group(
+    group: dict,
+    node_names: list[str],
+    selector_matches: dict[str, list[str]],
+) -> dict:
     expanded = deepcopy(group)
     proxies = expanded.get("proxies")
     if isinstance(proxies, list):
-        expanded["proxies"] = _expand_members([str(item) for item in proxies], node_names)
+        expanded["proxies"] = _expand_members(
+            [str(item) for item in proxies], node_names, selector_matches
+        )
     return expanded
 
 
-def _apply_selected_policy(config: dict, selected_policy: SelectedPolicy, node_names: list[str]) -> None:
+def _selector_matches(selected_policy: SelectedPolicy, nodes: list[ProxyNode]) -> dict[str, list[str]]:
+    matches: dict[str, list[str]] = {}
+    for selector in selected_policy.node_selectors:
+        include = re.compile(selector.name_regex)
+        exclude = re.compile(selector.exclude_regex) if selector.exclude_regex else None
+        protocols = set(selector.protocols)
+        matches[selector.id] = [
+            node.name
+            for node in nodes
+            if include.search(node.name)
+            and (exclude is None or not exclude.search(node.name))
+            and (not protocols or node.protocol.lower() in protocols)
+        ]
+    return matches
+
+
+def _apply_selected_policy(config: dict, selected_policy: SelectedPolicy, nodes: list[ProxyNode]) -> None:
+    node_names = [node.name for node in nodes]
+    selector_matches = _selector_matches(selected_policy, nodes)
+    if selected_policy.mode == "replace":
+        config["proxy-groups"] = []
+        config["rule-providers"] = {}
+        config["rules"] = []
     groups = config["proxy-groups"]
     for group in selected_policy.proxy_groups:
         if isinstance(group, dict) and group.get("name"):
-            _upsert_group(groups, _expand_selected_group(group, node_names))
+            _upsert_group(
+                groups,
+                _expand_selected_group(group, node_names, selector_matches),
+            )
 
     if selected_policy.rule_providers:
         providers = config.setdefault("rule-providers", {})
@@ -476,7 +521,7 @@ def apply_template(
         _apply_custom_strategy(config, node_names, custom_strategy)
 
     if selected_policy is not None:
-        _apply_selected_policy(config, selected_policy, node_names)
+        _apply_selected_policy(config, selected_policy, nodes)
 
     return config
 

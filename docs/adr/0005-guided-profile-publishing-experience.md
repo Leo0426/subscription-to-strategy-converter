@@ -1,6 +1,6 @@
 # Guided Profile publishing experience
 
-Status: accepted
+Status: superseded by 0010
 
 Subflow's current split between a simple converter and a dense policy workspace gives equal visual weight to creation, debugging, compilation, system status, and persistence. We will replace that split with one task-oriented product experience: existing users land on Profile management, first-time users enter a four-step guided publishing flow, and expert workspace capabilities remain available through a contextual inspector. This supersedes ADR 0001's workspace-first product presentation while retaining `PolicyWorkspace` as the internal analysis and compilation model.
 

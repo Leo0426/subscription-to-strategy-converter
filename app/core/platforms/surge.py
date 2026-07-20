@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from ipaddress import ip_address
 from typing import Any
 
 from app.ir import ProxyNode
@@ -108,7 +109,7 @@ _SS_CIPHER_MAP: dict[str, str] = {
 
 # Rule types Surge 5 natively supports (MATCH → FINAL handled separately)
 _SURGE_RULE_TYPES: frozenset[str] = frozenset({
-    "DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD", "DOMAIN-REGEX",
+    "DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD",
     "IP-CIDR", "IP-CIDR6", "GEOIP",
     "PROCESS-NAME", "USER-AGENT", "URL-REGEX",
     "DEST-PORT", "RULE-SET", "FINAL",
@@ -132,6 +133,10 @@ def _ss_line(node: ProxyNode) -> str:
     parts = [f"ss, {node.server}, {node.port}"]
     parts.append(f"encrypt-method={cipher}")
     parts.append(f"password={password}")
+    if node.extra.get("obfs"):
+        parts.append(f"obfs={node.extra['obfs']}")
+    if node.extra.get("obfs_host"):
+        parts.append(f"obfs-host={node.extra['obfs_host']}")
     if node.extra.get("udp"):
         parts.append("udp-relay=true")
     return f"{node.name} = {', '.join(parts)}"
@@ -237,9 +242,23 @@ def _group_to_surge_line(
     raw_members = [str(m) for m in (group.get("proxies") or []) if m is not None]
 
     known = set(node_names) | group_names | _BUILTIN_TARGETS
-    members = [m for m in raw_members if m in known]
+    if raw_members:
+        members = [m for m in raw_members if m in known]
+    else:
+        members = node_names[:]
+
+    filter_expression = str(group.get("filter") or "").strip()
+    if filter_expression and not raw_members:
+        pattern = re.compile(filter_expression)
+        members = [member for member in members if pattern.search(member)]
+
+    exclude_expression = str(group.get("exclude-filter") or "").strip()
+    if exclude_expression and not raw_members:
+        pattern = re.compile(exclude_expression)
+        members = [member for member in members if not pattern.search(member)]
+
     if not members:
-        members = node_names[:] or ["DIRECT"]
+        members = ["DIRECT"]
 
     member_str = ", ".join(members)
     url = str(group.get("url") or "http://www.gstatic.com/generate_204")
@@ -308,17 +327,44 @@ def _rule_to_surge_line(
 # ── [General] section ──────────────────────────────────────────────────────
 
 
+def _proxy_hostnames(nodes: list[ProxyNode]) -> list[str]:
+    proxy_hostnames: list[str] = []
+    for node in nodes:
+        server = node.server.strip()
+        if not server:
+            continue
+        try:
+            ip_address(server.strip("[]"))
+        except ValueError:
+            if server not in proxy_hostnames:
+                proxy_hostnames.append(server)
+    return proxy_hostnames
+
+
 def _general_section() -> str:
     lines = [
         "[General]",
         "loglevel = notify",
-        "dns-server = 8.8.8.8, 1.1.1.1, system",
+        "dns-server = 223.5.5.5, 119.29.29.29",
+        "proxy-test-url = http://www.apple.com/library/test/success.html",
         (
             "skip-proxy = 127.0.0.1, 192.168.0.0/16, 10.0.0.0/8, "
             "172.16.0.0/12, 100.64.0.0/10, localhost, *.local"
         ),
         "bypass-system = true",
     ]
+    return "\n".join(lines)
+
+
+def _host_section(nodes: list[ProxyNode]) -> str | None:
+    proxy_hostnames = _proxy_hostnames(nodes)
+    if not proxy_hostnames:
+        return None
+    lines = ["[Host]"]
+    lines.extend(
+        f"{hostname} = server:https://dns.alidns.com/dns-query"
+        for hostname in proxy_hostnames
+    )
     return "\n".join(lines)
 
 
@@ -333,9 +379,8 @@ def build_surge_config(
 ) -> tuple[str, list[dict]]:
     """Compile a complete Surge .conf string.
 
-    Returns ``(conf, warnings)`` where *warnings* is a list of
-    ``UnsupportedProtocolError.to_dict()`` entries for nodes whose protocol
-    Surge cannot process.  Those nodes are skipped but compilation continues.
+    Returns ``(conf, warnings)``. Unsupported node protocols and rule-set URLs
+    are reported and skipped while compilation continues.
     """
     group_names = {
         str(g.get("name"))
@@ -360,15 +405,21 @@ def build_surge_config(
 
     providers = rule_providers if isinstance(rule_providers, dict) else {}
     rule_lines: list[str] = []
+    unsupported_rule_set_urls: list[str] = []
+    unsupported_rule_types: list[str] = []
     has_final = False
     for rule in (rules if isinstance(rules, list) else []):
         if not isinstance(rule, str):
             continue
         try:
             line = _rule_to_surge_line(rule, providers)
-        except UnsupportedRuleTypeError:
+        except UnsupportedRuleTypeError as exc:
+            unsupported_rule_set_urls.append(exc.value)
             continue
         if line is None:
+            rule_type = rule.split(",", 1)[0].strip().upper()
+            if rule_type and rule_type not in _SURGE_RULE_TYPES and rule_type != "MATCH":
+                unsupported_rule_types.append(rule_type)
             continue
         if line.startswith("FINAL,"):
             has_final = True
@@ -376,9 +427,32 @@ def build_surge_config(
 
     if not has_final:
         rule_lines.append("FINAL,DIRECT")
+    if unsupported_rule_set_urls:
+        unique_urls = list(dict.fromkeys(unsupported_rule_set_urls))
+        warnings.append(
+            {
+                "code": "unsupported_rule_sets",
+                "count": len(unique_urls),
+                "examples": unique_urls[:5],
+                "suggestion": "Surge 不支持这些 MRS 规则源，已跳过对应规则",
+            }
+        )
+    if unsupported_rule_types:
+        unique_types = list(dict.fromkeys(unsupported_rule_types))
+        warnings.append(
+            {
+                "code": "unsupported_rule_types",
+                "count": len(unique_types),
+                "types": unique_types,
+                "suggestion": "Surge 不支持这些 Mihomo 规则类型，已跳过对应规则",
+            }
+        )
 
-    sections: list[str] = [
-        _general_section(),
+    sections: list[str] = [_general_section()]
+    host_section = _host_section(nodes)
+    if host_section:
+        sections.extend(["", host_section])
+    sections.extend([
         "",
         "[Proxy]",
         *proxy_lines,
@@ -388,5 +462,5 @@ def build_surge_config(
         "",
         "[Rule]",
         *rule_lines,
-    ]
+    ])
     return "\n".join(sections) + "\n", warnings

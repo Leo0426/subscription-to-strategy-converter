@@ -57,12 +57,81 @@ POWERFULLZ_TEMPLATE = {
 }
 
 # A local community template present in the repository
-_LOCAL_TEMPLATE = "local:community_templates/THEYAMLS/General_Config/666OS/OneTouch_Config.yaml"
+_LOCAL_TEMPLATE = "local:community_templates/leo/leo.yaml"
+
+
+def test_templates_endpoint_exposes_only_leo_template(client: TestClient) -> None:
+    response = client.get("/templates")
+
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json()["templates"]] == [_LOCAL_TEMPLATE]
+
+
+def test_template_detail_defaults_to_leo_and_rejects_other_templates(client: TestClient) -> None:
+    default_response = client.get("/templates/detail")
+    rejected_response = client.get("/templates/detail", params={"template": "minimal"})
+
+    assert default_response.status_code == 200
+    assert default_response.json()["template"]["id"] == _LOCAL_TEMPLATE
+    assert rejected_response.status_code == 400
+    assert rejected_response.json()["detail"] == "only leo.yaml template is supported"
 
 
 @pytest.fixture
 def client() -> TestClient:
     return TestClient(app)
+
+
+def test_preview_accepts_surge_subscription(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    surge_subscription = """
+#!MANAGED-CONFIG https://example.com/surge interval=86400
+
+[General]
+loglevel = notify
+
+[Proxy]
+HK-SS = ss, hk.example.com, 443, encrypt-method=aes-128-gcm, password=secret
+JP-Trojan = trojan, jp.example.com, 443, password=secret, tls=true, sni=jp.example.com
+"""
+
+    async def fake_fetch_subscription(url: str) -> str:
+        return surge_subscription
+
+    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
+
+    response = client.post(
+        "/preview",
+        json={"subscription_url": "https://example.com/subscribe/surge/"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["node_count"] == 2
+    assert [(node["name"], node["type"]) for node in body["nodes"]] == [
+        ("HK-SS", "ss"),
+        ("JP-Trojan", "trojan"),
+    ]
+
+
+def test_preview_does_not_misclassify_arbitrary_non_yaml_as_surge(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_fetch_subscription(url: str) -> str:
+        return "an upstream HTML or plain-text error"
+
+    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
+
+    response = client.post(
+        "/preview",
+        json={"subscription_url": "https://example.com/subscribe/surge/"},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"].startswith("subscription returned unexpected content:")
 
 
 def test_subscribe_returns_yaml(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -79,7 +148,7 @@ def test_subscribe_returns_yaml(client: TestClient, monkeypatch: pytest.MonkeyPa
         "/subscribe",
         params={
             "subscription_url": "https://example.com/sub",
-            "template": "powerfullz",
+            "template": _LOCAL_TEMPLATE,
             "target": "mihomo",
         },
     )
@@ -87,7 +156,7 @@ def test_subscribe_returns_yaml(client: TestClient, monkeypatch: pytest.MonkeyPa
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/yaml")
     assert "mixed-port: 7890" in response.text
-    assert "RULE-SET,ai,AI服务" in response.text
+    assert "RULE-SET,Claude / Domain,AI 服务" in response.text
     assert "name: 香港 01" in response.text
 
 
@@ -97,8 +166,7 @@ def test_templates_endpoint_lists_local_templates(client: TestClient) -> None:
     assert response.status_code == 200
     templates = response.json()["templates"]
     template_ids = {template["id"] for template in templates}
-    assert "powerfullz" in template_ids
-    assert "local:community_templates/THEYAMLS/General_Config/666OS/OneTouch_Config.yaml" in template_ids
+    assert template_ids == {_LOCAL_TEMPLATE}
 
 
 def test_templates_endpoint_includes_proxy_group_count(client: TestClient) -> None:
@@ -107,7 +175,7 @@ def test_templates_endpoint_includes_proxy_group_count(client: TestClient) -> No
     assert response.status_code == 200
     local_templates = [
         t for t in response.json()["templates"]
-        if t["id"] == "local:community_templates/THEYAMLS/General_Config/666OS/OneTouch_Config.yaml"
+        if t["id"] == _LOCAL_TEMPLATE
     ]
     assert local_templates
     assert local_templates[0]["proxy_group_count"] > 0
@@ -144,7 +212,7 @@ def test_local_template_detail_returns_source_path(client: TestClient) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["template"]["source"] == "local"
-    assert body["template"]["path"] == "community_templates/THEYAMLS/General_Config/666OS/OneTouch_Config.yaml"
+    assert body["template"]["path"] == "community_templates/leo/leo.yaml"
     assert body["summary"]["proxy_group_count"] > 0
     assert "proxy-groups:" in body["yaml"]
 
@@ -177,7 +245,7 @@ def test_subscribe_accepts_encoded_custom_strategy(
         "/subscribe",
         params={
             "subscription_url": "https://example.com/sub",
-            "template": "powerfullz",
+            "template": _LOCAL_TEMPLATE,
             "target": "mihomo",
             "strategy": strategy,
         },
@@ -189,7 +257,7 @@ def test_subscribe_accepts_encoded_custom_strategy(
     assert "  - DIRECT" in response.text
 
 
-def test_subscribe_accepts_powerfullz_options(
+def test_subscribe_rejects_powerfullz_options(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -208,15 +276,14 @@ def test_subscribe_accepts_powerfullz_options(
         "/subscribe",
         params={
             "subscription_url": "https://example.com/sub",
-            "template": "powerfullz",
+            "template": _LOCAL_TEMPLATE,
             "target": "mihomo",
             "powerfullz": json.dumps({"loadbalance": True, "quic": True}),
         },
     )
 
-    assert response.status_code == 200
-    assert "name: 选择代理" in response.text
-    assert "MATCH,选择代理" in response.text
+    assert response.status_code == 400
+    assert response.json()["detail"] == "powerfullz options are not supported with leo.yaml"
 
 
 _MIXED_SUBSCRIPTION = """
@@ -242,7 +309,7 @@ _SIMPLE_SURGE_TEMPLATE = {
 }
 
 
-def test_surge_unsupported_protocol_header_in_subscribe(
+def test_subscribe_returns_surge_conf_for_leo(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -257,12 +324,75 @@ def test_surge_unsupported_protocol_header_in_subscribe(
 
     response = client.get(
         "/subscribe",
-        params={"subscription_url": "https://example.com/sub", "template": "powerfullz", "target": "surge"},
+        params={"subscription_url": "https://example.com/sub", "template": _LOCAL_TEMPLATE, "target": "surge"},
     )
 
     assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/plain")
+    assert response.headers["content-disposition"] == 'inline; filename="surge.conf"'
+    assert "[General]" in response.text
+    assert "[Host]" in response.text
+    assert "hk.example.com = server:https://dns.alidns.com/dns-query" in response.text
+    assert "[Proxy]" in response.text
     assert "HK-SS = ss" in response.text
-    assert "TUIC-NODE" not in response.text
-    assert "X-Compile-Warnings" in response.headers
-    warnings = json.loads(response.headers["X-Compile-Warnings"])
-    assert warnings[0]["code"] == "unsupported_protocol"
+    assert "wificalling.list" not in response.text
+    assert "wildrift.yaml" not in response.text
+    assert "qichiyuhub/rule/refs/heads/main/proxy.list" not in response.text
+    assert "geo/geosite/claude.yaml" not in response.text
+
+
+def test_surge_subscription_preserves_ss_obfuscation_in_surge_output(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    surge_subscription = """
+[Proxy]
+TW01 = ss, tw.example.com, 443, encrypt-method=aes-128-gcm, password=secret, obfs=http, obfs-host=cdn.example.com
+"""
+
+    async def fake_fetch_subscription(url: str) -> str:
+        return surge_subscription
+
+    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
+
+    response = client.get(
+        "/subscribe",
+        params={
+            "subscription_url": "https://example.com/subscribe/surge/",
+            "template": _LOCAL_TEMPLATE,
+            "target": "surge",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "obfs=http" in response.text
+    assert "obfs-host=cdn.example.com" in response.text
+
+
+def test_surge_subscription_maps_ss_obfuscation_to_mihomo_plugin(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    surge_subscription = """
+[Proxy]
+TW01 = ss, tw.example.com, 443, encrypt-method=aes-128-gcm, password=secret, obfs=http, obfs-host=cdn.example.com
+"""
+
+    async def fake_fetch_subscription(url: str) -> str:
+        return surge_subscription
+
+    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
+
+    response = client.get(
+        "/subscribe",
+        params={
+            "subscription_url": "https://example.com/subscribe/surge/",
+            "template": _LOCAL_TEMPLATE,
+            "target": "mihomo",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "plugin: obfs" in response.text
+    assert "mode: http" in response.text
+    assert "host: cdn.example.com" in response.text

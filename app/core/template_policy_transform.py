@@ -8,7 +8,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from app.ir import ProxyNode
-from app.models.strategy import ClaudePolicy
+from app.models.strategy import ClaudePolicy, ServiceRoute
 
 
 class TemplatePolicyTransformError(ValueError):
@@ -18,10 +18,38 @@ class TemplatePolicyTransformError(ValueError):
 _CLAUDE_RE = re.compile(r"claude|anthropic", re.IGNORECASE)
 _SURGE_RULE_EXTENSIONS = {".list", ".txt", ".conf"}
 _SURGE_RULE_TYPES = {
-    "DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD", "DOMAIN-REGEX",
+    "DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD",
     "IP-CIDR", "IP-CIDR6", "GEOIP", "PROCESS-NAME", "USER-AGENT",
     "URL-REGEX", "DEST-PORT", "RULE-SET", "MATCH", "FINAL",
 }
+
+
+def transform_service_routes(
+    config: dict[str, Any],
+    nodes: list[ProxyNode],
+    routes: list[ServiceRoute],
+    *,
+    target: str = "clash",
+) -> dict[str, Any]:
+    result = config
+    for route in routes:
+        if not route.enabled:
+            continue
+        if route.service != "claude":
+            raise TemplatePolicyTransformError(
+                f"unsupported service route: {route.service}"
+            )
+        result = transform_claude_policy(
+            result,
+            nodes,
+            ClaudePolicy(
+                enabled=True,
+                egress=route.egress,
+                fallback=route.fallback,
+            ),
+            target=target,
+        )
+    return result
 
 
 @dataclass(frozen=True)
@@ -153,6 +181,12 @@ def transform_claude_policy(
         raise TemplatePolicyTransformError("Claude egress cannot reference a Claude policy group")
     if egress not in available:
         raise TemplatePolicyTransformError(f"Claude egress not found: {egress}")
+    fallback = policy.fallback
+    if fallback is not None:
+        if _is_claude(fallback):
+            raise TemplatePolicyTransformError("Claude fallback cannot reference a Claude policy group")
+        if fallback not in available:
+            raise TemplatePolicyTransformError(f"Claude fallback not found: {fallback}")
 
     dedicated_name = capability.dedicated_group
     if dedicated_name:
@@ -160,7 +194,8 @@ def transform_claude_policy(
         members = group.get("proxies", [])
         if not isinstance(members, list):
             raise TemplatePolicyTransformError(f"Claude group '{dedicated_name}' proxies must be a list")
-        group["proxies"] = list(dict.fromkeys([egress, *(str(item) for item in members)]))
+        preferred = [egress, *([fallback] if fallback else [])]
+        group["proxies"] = list(dict.fromkeys([*preferred, *(str(item) for item in members)]))
         result["rules"] = [
             _retarget_rule(rule, dedicated_name) if isinstance(rule, str) else rule
             for rule in rules
@@ -168,7 +203,7 @@ def transform_claude_policy(
         return result
 
     group_name = _unique_group_name("Claude", set(group_by_name))
-    original_targets = list(capability.current_targets)
+    original_targets = [fallback] if fallback else list(capability.current_targets)
     groups.append(
         {
             "name": group_name,

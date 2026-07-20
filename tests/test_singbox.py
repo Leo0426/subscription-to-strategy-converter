@@ -233,7 +233,7 @@ _SIMPLE_TEMPLATE = {
 }
 
 
-def test_convert_singbox_target(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_workspace_preview_rejects_singbox_for_leo(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     async def fake_convert(url: str) -> str:
         return CLASH_SUBSCRIPTION
 
@@ -247,25 +247,16 @@ def test_convert_singbox_target(client: TestClient, monkeypatch: pytest.MonkeyPa
         "/workspace/preview",
         json={
             "subscription_url": "https://example.com/sub",
-            "template": "powerfullz",
+            "template": "local:community_templates/leo/leo.yaml",
             "target": "singbox",
         },
-    ).json()
+    )
 
-    assert preview["node_count"] == 2
-
-    response = client.post("/compile", json={"workspace": preview["workspace"], "target": "singbox"})
-
-    assert response.status_code == 200
-    sb = response.json()
-    assert "outbounds" in sb
-    assert "route" in sb
-    tags = [ob["tag"] for ob in sb["outbounds"]]
-    assert "香港 01" in tags
-    assert "日本" in tags
+    assert preview.status_code == 422
+    assert "leo.yaml only supports Clash/Mihomo and Surge" in preview.text
 
 
-def test_subscribe_singbox_returns_json(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_subscribe_rejects_singbox_for_leo(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     async def fake_convert(url: str) -> str:
         return CLASH_SUBSCRIPTION
 
@@ -279,15 +270,13 @@ def test_subscribe_singbox_returns_json(client: TestClient, monkeypatch: pytest.
         "/subscribe",
         params={
             "subscription_url": "https://example.com/sub",
-            "template": "powerfullz",
+            "template": "local:community_templates/leo/leo.yaml",
             "target": "singbox",
         },
     )
 
-    assert response.status_code == 200
-    assert "json" in response.headers["content-type"]
-    sb = json.loads(response.text)
-    assert "outbounds" in sb
+    assert response.status_code == 400
+    assert response.json()["detail"] == "leo.yaml only supports Clash/Mihomo and Surge targets"
 
 
 def test_unsupported_target_returns_400(client: TestClient) -> None:

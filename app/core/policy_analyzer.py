@@ -42,6 +42,16 @@ def analyze_workspace(workspace: PolicyWorkspace) -> list[AnalyzerFinding]:
             )
 
     for group_index, group in enumerate(workspace.proxy_groups):
+        if not group.members and not group.raw.get("include-all") and not group.raw.get("use"):
+            findings.append(
+                AnalyzerFinding(
+                    severity="error",
+                    code="empty_group",
+                    message=f"Group '{group.name}' has no available members.",
+                    path=f"proxy_groups[{group_index}].members",
+                    ref=group.name,
+                )
+            )
         for member_index, member in enumerate(group.members):
             if member not in valid_targets:
                 findings.append(
@@ -69,6 +79,26 @@ def analyze_workspace(workspace: PolicyWorkspace) -> list[AnalyzerFinding]:
 
     findings.extend(_cycle_findings(workspace))
     findings.extend(_unreachable_group_findings(workspace))
+    findings.extend(_unreachable_rule_findings(workspace))
+    return findings
+
+
+def _unreachable_rule_findings(workspace: PolicyWorkspace) -> list[AnalyzerFinding]:
+    findings: list[AnalyzerFinding] = []
+    terminal_index: int | None = None
+    for rule in workspace.rules:
+        if terminal_index is not None:
+            findings.append(
+                AnalyzerFinding(
+                    severity="warning",
+                    code="unreachable_rule",
+                    message=f"Rule at index {rule.index} is unreachable after terminal rule {terminal_index}.",
+                    path=f"rules[{rule.index}]",
+                    ref=rule.id,
+                )
+            )
+        elif rule.type in {"MATCH", "FINAL"}:
+            terminal_index = rule.index
     return findings
 
 

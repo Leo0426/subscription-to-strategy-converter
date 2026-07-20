@@ -14,7 +14,7 @@ from ruamel.yaml.error import ReusedAnchorWarning
 
 APP_DIR = Path(__file__).resolve().parent.parent
 PROJECT_DIR = APP_DIR.parent
-COMMUNITY_TEMPLATE_ROOT = PROJECT_DIR / "community_templates"
+COMMUNITY_TEMPLATE_ROOT = PROJECT_DIR / "community_templates" / "leo"
 
 # Known mirror proxy prefixes — strip these to find the canonical URL
 _MIRROR_PREFIXES = (

@@ -271,6 +271,26 @@ def test_empty_proxies_injects_all_nodes() -> None:
     assert "TR" in line
 
 
+def test_use_group_filters_nodes_by_name() -> None:
+    group = {
+        "name": "美国自动",
+        "type": "url-test",
+        "use": ["Leo订阅"],
+        "filter": "(?i)(美|🇺🇸|US|USA|United States|LAX|SJC|SFO)",
+    }
+
+    line = _group_to_surge_line(
+        group,
+        ["TW01", "JP01", "US01", "香港01", "美国02"],
+        {"美国自动"},
+    )
+
+    assert line.startswith("美国自动 = url-test, US01, 美国02,")
+    assert "TW01" not in line
+    assert "JP01" not in line
+    assert "香港01" not in line
+
+
 # ── Rule mapping ───────────────────────────────────────────────────────────
 
 
@@ -403,9 +423,24 @@ def test_config_vmess_node_compiled() -> None:
 def test_general_section_fields() -> None:
     result = _compile([], [], [], {})
     assert "loglevel" in result
-    assert "dns-server" in result
+    assert "dns-server = 223.5.5.5, 119.29.29.29" in result
     assert "skip-proxy" in result
     assert "bypass-system" in result
+    assert "proxy-test-url = http://www.apple.com/library/test/success.html" in result
+
+
+def test_host_section_assigns_proxy_hostnames_to_real_dns() -> None:
+    result = _compile(
+        [_ss(), _ss(name="HK-2"), _trojan(), _ss(name="IP", server="203.0.113.8")],
+        [],
+        [],
+        {},
+    )
+
+    assert "[Host]" in result
+    assert result.count("hk.example.com = server:https://dns.alidns.com/dns-query") == 1
+    assert "tr.example.com = server:https://dns.alidns.com/dns-query" in result
+    assert "203.0.113.8 = server:" not in result
 
 
 # ── MRS URL substitution ───────────────────────────────────────────────────
@@ -480,9 +515,42 @@ def test_mrs_error_to_dict() -> None:
 
 
 def test_build_surge_config_skips_unknown_mrs() -> None:
-    result = _compile([], [], ["RULE-SET,custom,DIRECT"], _UNKNOWN_MRS_PROVIDERS)
+    result, warnings = build_surge_config(
+        [], [], ["RULE-SET,custom,DIRECT"], _UNKNOWN_MRS_PROVIDERS
+    )
     assert "custom.mrs" not in result
     assert "FINAL," in result
+    assert warnings == [
+        {
+            "code": "unsupported_rule_sets",
+            "count": 1,
+            "examples": ["https://example.com/rules/custom.mrs"],
+            "suggestion": "Surge 不支持这些 MRS 规则源，已跳过对应规则",
+        }
+    ]
+
+
+def test_build_surge_config_skips_domain_regex_and_reports_rule_type() -> None:
+    conf, warnings = build_surge_config(
+        [],
+        [],
+        [
+            r"DOMAIN-REGEX,^dl-[A-Za-z0-9-]+\.mypikpak\.com$,DIRECT",
+            "MATCH,DIRECT",
+        ],
+        {},
+    )
+
+    assert "DOMAIN-REGEX" not in conf
+    assert "FINAL,DIRECT" in conf
+    assert warnings == [
+        {
+            "code": "unsupported_rule_types",
+            "count": 1,
+            "types": ["DOMAIN-REGEX"],
+            "suggestion": "Surge 不支持这些 Mihomo 规则类型，已跳过对应规则",
+        }
+    ]
 
 
 def test_build_surge_config_substitutes_known_mrs() -> None:
