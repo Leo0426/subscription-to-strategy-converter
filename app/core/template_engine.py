@@ -501,6 +501,47 @@ def _fill_node_groups(groups: list[dict], node_names: list[str]) -> None:
             group["proxies"] = list(dict.fromkeys(node_names + existing))
 
 
+def _materialize_include_all_groups(groups: list[dict], node_names: list[str]) -> set[str]:
+    """Resolve dynamic node selectors into a self-contained generated profile."""
+    empty_filtered_groups: set[str] = set()
+    for group in groups:
+        if not isinstance(group, dict) or not group.get("include-all"):
+            continue
+        members = list(node_names)
+        include_expression = str(group.get("filter") or "").strip()
+        exclude_expression = str(group.get("exclude-filter") or "").strip()
+        if include_expression:
+            include = re.compile(include_expression)
+            members = [name for name in members if include.search(name)]
+        if exclude_expression:
+            exclude = re.compile(exclude_expression)
+            members = [name for name in members if not exclude.search(name)]
+        group["proxies"] = members
+        if include_expression and not members and group.get("name"):
+            empty_filtered_groups.add(str(group["name"]))
+        group.pop("include-all", None)
+        group.pop("use", None)
+        group.pop("filter", None)
+        group.pop("exclude-filter", None)
+    return empty_filtered_groups
+
+
+def _prune_groups(groups: list[dict], removed_names: set[str]) -> None:
+    if not removed_names:
+        return
+    groups[:] = [
+        group
+        for group in groups
+        if not isinstance(group, dict) or str(group.get("name")) not in removed_names
+    ]
+    for group in groups:
+        if not isinstance(group, dict) or not isinstance(group.get("proxies"), list):
+            continue
+        group["proxies"] = [
+            member for member in group["proxies"] if str(member) not in removed_names
+        ]
+
+
 def apply_template(
     template: dict,
     nodes: list[ProxyNode],
@@ -516,6 +557,7 @@ def apply_template(
         raise TemplateError("template must contain proxy-groups")
 
     _fill_node_groups(groups, node_names)
+    _prune_groups(groups, _materialize_include_all_groups(groups, node_names))
 
     if custom_strategy is not None:
         _apply_custom_strategy(config, node_names, custom_strategy)
