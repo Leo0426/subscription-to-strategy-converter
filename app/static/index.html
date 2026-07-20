@@ -6,7 +6,7 @@
     <meta name="color-scheme" content="light" />
     <title>Subflow · Leo 订阅生成器</title>
     <link rel="icon" type="image/png" href="/static/assets/subflow-logo.png" />
-    <link rel="stylesheet" href="/static/flow.css?v=15" />
+    <link rel="stylesheet" href="/static/flow.css?v=17" />
   </head>
   <body>
     <header class="simple-header">
@@ -18,41 +18,54 @@
     </header>
 
     <main class="simple-shell">
-      <header class="simple-intro">
-        <p>LEO.YAML</p>
-        <h1>生成代理订阅</h1>
-        <span>填入订阅地址，按服务选择出口，然后生成链接。</span>
-      </header>
+      <div class="workspace-grid">
+        <aside class="leo-reference-panel" aria-labelledby="leo-reference-title">
+          <header class="reference-header">
+            <p>LEO / BLUEPRINT</p>
+            <h2 id="leo-reference-title">模板参考</h2>
+            <span>先看清 Leo 已经提供什么，再决定右侧需要覆盖什么。</span>
+          </header>
+          <div id="leo-reference" class="leo-reference"><div class="simple-loading">正在读取 Leo 模板…</div></div>
+        </aside>
 
-      <div id="global-notice" class="simple-notice" hidden role="alert"></div>
+        <div class="config-workbench">
+          <header class="simple-intro">
+            <p>LEO.YAML</p>
+            <h1>生成代理订阅</h1>
+            <span>填入订阅地址，按服务选择出口，然后生成链接。</span>
+          </header>
 
-      <section class="simple-section" aria-labelledby="source-title">
-        <div class="simple-section-title"><b>1</b><div><h2 id="source-title">订阅地址</h2><p>地址只在本机使用。</p></div></div>
-        <div class="source-line">
-          <label for="subscription-url"><span>订阅 URL</span><input id="subscription-url" type="url" placeholder="https://example.com/sub?token=…" autocomplete="off" /></label>
-          <button class="simple-button secondary" id="validate-source-button" type="button">读取节点</button>
+          <div id="global-notice" class="simple-notice" hidden role="alert"></div>
+
+          <section class="simple-section" aria-labelledby="source-title">
+            <div class="simple-section-title"><b>1</b><div><h2 id="source-title">订阅地址</h2><p>地址只在本机使用。</p></div></div>
+            <div class="source-line">
+              <label for="subscription-url"><span>订阅 URL</span><input id="subscription-url" type="url" placeholder="https://example.com/sub?token=…" autocomplete="off" /></label>
+              <button class="simple-button secondary" id="validate-source-button" type="button">读取节点</button>
+            </div>
+            <div id="source-result" class="inline-status" hidden></div>
+          </section>
+
+          <section class="simple-section" aria-labelledby="strategy-title">
+            <div class="simple-section-title"><b>2</b><div><h2 id="strategy-title">服务出口</h2><p>默认跟随 Leo；只修改有特殊需求的服务。</p></div></div>
+            <div id="service-route-list" class="service-list"><div class="simple-loading">正在载入服务列表…</div></div>
+          </section>
+
+          <section class="simple-generate" aria-labelledby="generate-title">
+            <div><h2 id="generate-title">生成订阅</h2><p id="generate-hint">请先读取订阅节点。</p></div>
+            <button class="simple-button primary" id="generate-button" type="button" disabled>生成订阅链接</button>
+          </section>
+
+          <section id="publish-result" class="simple-result" hidden aria-live="polite">
+            <div><b>生成成功</b><span>按客户端复制对应的订阅链接。</span></div>
+            <label class="result-line"><span>Clash / Mihomo</span><input id="published-clash-url" readonly /><button data-copy-output="clash" type="button">复制</button></label>
+            <label class="result-line"><span>Surge</span><input id="published-surge-url" readonly /><button data-copy-output="surge" type="button">复制</button></label>
+          </section>
         </div>
-        <div id="source-result" class="inline-status" hidden></div>
-      </section>
-
-      <section class="simple-section" aria-labelledby="strategy-title">
-        <div class="simple-section-title"><b>2</b><div><h2 id="strategy-title">服务出口</h2><p>默认跟随 Leo；只修改有特殊需求的服务。</p></div></div>
-        <div id="service-route-list" class="service-list"><div class="simple-loading">正在载入服务列表…</div></div>
-      </section>
-
-      <section class="simple-generate" aria-labelledby="generate-title">
-        <div><h2 id="generate-title">生成订阅</h2><p id="generate-hint">请先读取订阅节点。</p></div>
-        <button class="simple-button primary" id="generate-button" type="button" disabled>生成订阅链接</button>
-      </section>
-
-      <section id="publish-result" class="simple-result" hidden aria-live="polite">
-        <div><b>生成成功</b><span>按客户端复制对应的订阅链接。</span></div>
-        <label class="result-line"><span>Clash / Mihomo</span><input id="published-clash-url" readonly /><button data-copy-output="clash" type="button">复制</button></label>
-        <label class="result-line"><span>Surge</span><input id="published-surge-url" readonly /><button data-copy-output="surge" type="button">复制</button></label>
-      </section>
+      </div>
     </main>
 
     <div class="toast" id="toast" hidden role="status"></div>
-    <script src="/static/flow.js?v=15"></script>
+    <script src="/static/flow.js?v=17"></script>
   </body>
 </html>

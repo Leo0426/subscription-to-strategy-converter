@@ -12,14 +12,16 @@ def test_root_and_legacy_advanced_route_serve_the_same_simple_page() -> None:
     assert root.status_code == 200
     assert advanced.status_code == 200
     assert root.text == advanced.text
-    assert "/static/flow.js?v=15" in root.text
-    assert "/static/flow.css?v=15" in root.text
+    assert "/static/flow.js?v=17" in root.text
+    assert "/static/flow.css?v=17" in root.text
     assert "/static/assets/subflow-logo.png" in root.text
 
 
 def test_page_only_exposes_the_primary_subscription_flow() -> None:
     response = TestClient(app).get("/")
 
+    assert 'id="leo-reference"' in response.text
+    assert 'class="config-workbench"' in response.text
     assert 'id="subscription-url"' in response.text
     assert 'id="validate-source-button"' in response.text
     assert 'id="service-route-list"' in response.text
@@ -50,6 +52,11 @@ def test_page_loads_leo_groups_and_fine_grained_services() -> None:
     assert "SERVICE_DEFAULTS" in script
     assert "data-service-choice" in script
     assert "具体节点" in script
+    assert "function renderLeoReference()" in script
+    assert "data-reference-service" in script
+    assert "Leo 模板统计" not in script
+    assert "分流规则</span>" not in script
+    assert "规则源</span>" not in script
 
 
 def test_selected_service_outlets_are_sent_as_fine_grained_merge_rules() -> None:

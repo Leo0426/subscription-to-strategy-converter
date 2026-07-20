@@ -3,6 +3,7 @@ const LEO_TEMPLATE = "local:community_templates/leo/leo.yaml";
 
 const state = {
   leoGroups: [],
+  leoSummary: null,
   serviceCategories: [],
   servicePacks: [],
   serviceChoices: {},
@@ -89,6 +90,57 @@ function defaultServiceTarget(serviceId) {
   return SERVICE_DEFAULTS[serviceId] || "默认代理";
 }
 
+function renderLeoReference() {
+  const root = $("#leo-reference");
+  if (!state.leoSummary || !state.leoGroups.length) {
+    root.innerHTML = '<div class="simple-loading">正在读取 Leo 模板…</div>';
+    return;
+  }
+
+  const groupByName = Object.fromEntries(state.leoGroups.map((group) => [group.name, group]));
+  const coreNames = ["默认代理", "自动选择", "故障转移", "手动选择"];
+  const regionNames = ["香港自动", "台湾自动", "日本自动", "新加坡自动", "美国自动", "韩国自动", "欧洲自动"]
+    .filter((name) => groupByName[name]);
+  const coreRows = coreNames.filter((name) => groupByName[name]).map((name) => {
+    const group = groupByName[name];
+    const members = Array.isArray(group.proxies) && group.proxies.length
+      ? group.proxies.slice(0, 3).join(" / ")
+      : group.type;
+    return `<div class="reference-flow-row"><b>${escapeHtml(name)}</b><span>${escapeHtml(members)}</span></div>`;
+  }).join("");
+  const serviceRows = state.serviceCategories.map((category) => {
+    const packs = state.servicePacks.filter((pack) => pack.category === category.id);
+    if (!packs.length) return "";
+    return `<p class="reference-note">${escapeHtml(category.label)}</p>${packs.map((pack) => `
+      <button class="reference-service" type="button" data-reference-service="${escapeHtml(pack.id)}">
+        <span>${escapeHtml(pack.label)}</span><small>${escapeHtml(defaultServiceTarget(pack.id))}</small>
+      </button>`).join("")}`;
+  }).join("");
+
+  root.innerHTML = `
+    <details class="reference-module" open>
+      <summary>核心出口骨架</summary>
+      <div class="reference-module-body"><p class="reference-note">默认代理按自动选择、故障转移和地区组逐级组织。</p><div class="reference-flow">${coreRows}</div></div>
+    </details>
+    <details class="reference-module" open>
+      <summary>地区自动选择</summary>
+      <div class="reference-module-body"><p class="reference-note">地区组只收录名称匹配的节点，并独立测速。</p><div class="reference-chips">${regionNames.map((name) => `<span class="reference-chip">${escapeHtml(name)}</span>`).join("")}</div></div>
+    </details>
+    <details class="reference-module">
+      <summary>服务默认出口</summary>
+      <div class="reference-module-body"><p class="reference-note">点击服务可定位右侧配置；不修改时沿用下列默认值。</p><div class="reference-service-list">${serviceRows || '<span class="reference-note">正在载入服务映射…</span>'}</div></div>
+    </details>
+    <details class="reference-module">
+      <summary>运行能力</summary>
+      <div class="reference-module-body reference-capabilities">
+        <div class="reference-capability"><b>DNS</b><span>${state.leoSummary.has_dns ? "已内置" : "未配置"}</span></div>
+        <div class="reference-capability"><b>TUN</b><span>${state.leoSummary.has_tun ? "模板可用" : "未配置"}</span></div>
+        <div class="reference-capability"><b>Mihomo</b><span>完整输出</span></div>
+        <div class="reference-capability"><b>Surge</b><span>自动适配</span></div>
+      </div>
+    </details>`;
+}
+
 function renderServices() {
   const root = $("#service-route-list");
   if (!state.servicePacks.length || !state.leoGroups.length) {
@@ -122,8 +174,11 @@ async function loadLeoTemplate() {
   try {
     const body = await jsonRequest(`/templates/detail?template=${encodeURIComponent(LEO_TEMPLATE)}`);
     state.leoGroups = body.proxy_groups || [];
+    state.leoSummary = body.summary || null;
+    renderLeoReference();
     renderServices();
   } catch (error) {
+    $("#leo-reference").innerHTML = `<div class="simple-loading">Leo 模板加载失败：${escapeHtml(error.message)}</div>`;
     $("#service-route-list").innerHTML = `<div class="simple-loading">Leo 配置加载失败：${escapeHtml(error.message)}</div>`;
   }
 }
@@ -134,6 +189,7 @@ async function loadServices() {
     state.serviceCategories = body.categories || [];
     state.servicePacks = body.packs || [];
     state.serviceChoices = Object.fromEntries(state.servicePacks.map((pack) => [pack.id, ""]));
+    renderLeoReference();
     renderServices();
   } catch (error) {
     $("#service-route-list").innerHTML = `<div class="simple-loading">服务列表加载失败：${escapeHtml(error.message)}</div>`;
@@ -266,6 +322,17 @@ function bindEvents() {
     renderServices();
     $("#publish-result").hidden = true;
     refreshGenerateHint();
+  });
+  $("#leo-reference").addEventListener("click", (event) => {
+    const reference = event.target.closest("[data-reference-service]");
+    if (!reference) return;
+    const row = [...document.querySelectorAll("[data-service]")]
+      .find((candidate) => candidate.dataset.service === reference.dataset.referenceService);
+    if (!row) return;
+    row.scrollIntoView({ behavior: "smooth", block: "center" });
+    row.classList.remove("is-referenced");
+    requestAnimationFrame(() => row.classList.add("is-referenced"));
+    $("select", row)?.focus({ preventScroll: true });
   });
   $("#generate-button").addEventListener("click", generateSubscription);
   $("#publish-result").addEventListener("click", async (event) => {
