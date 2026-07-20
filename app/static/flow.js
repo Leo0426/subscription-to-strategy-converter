@@ -4,6 +4,8 @@ const LEO_TEMPLATE = "local:community_templates/leo/leo.yaml";
 const state = {
   leoGroups: [],
   leoSummary: null,
+  leoAudit: null,
+  publicData: [],
   serviceCategories: [],
   servicePacks: [],
   serviceChoices: {},
@@ -88,6 +90,60 @@ function leoEgressGroups() {
 
 function defaultServiceTarget(serviceId) {
   return SERVICE_DEFAULTS[serviceId] || "默认代理";
+}
+
+function auditTime(value) {
+  if (!value) return "暂无时间";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString("zh-CN", {
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  });
+}
+
+function renderDataLedger() {
+  const root = $("#data-ledger");
+  if (!state.leoSummary || !state.leoAudit) {
+    root.innerHTML = '<div class="simple-loading">正在核对公开数据…</div>';
+    return;
+  }
+
+  const audit = state.leoAudit;
+  const score = audit.quality_score || {};
+  const summary = audit.summary || {};
+  const mrsCount = (audit.sources || []).filter((source) => source.declared_format === "mrs").length;
+  const observed = Number(summary.invalid || 0) + Number(summary.failed || 0);
+  const dataLinks = state.publicData.length ? state.publicData : [
+    { label: "完整模板 YAML", href: "/templates/source" },
+    { label: "全部规则与来源", href: "/community/rules" },
+    { label: "完整质量审计", href: "/templates/audit" },
+  ];
+
+  root.innerHTML = `
+    <section class="ledger-score" aria-label="Leo 结构质量">
+      <div><span>结构质量</span><strong>${escapeHtml(score.total ?? "—")}</strong><small>/ 100 · ${escapeHtml(score.grade || "未评级")}</small></div>
+      <i title="结构质量为审计快照，不代表长期语义准确率"></i>
+    </section>
+    <div class="ledger-metrics" aria-label="模板实时统计">
+      <div><strong>${escapeHtml(state.leoSummary.proxy_group_count)}</strong><span>策略组</span></div>
+      <div><strong>${escapeHtml(state.leoSummary.rule_count)}</strong><span>路由规则</span></div>
+      <div><strong>${escapeHtml(state.leoSummary.rule_provider_count)}</strong><span>远程来源</span></div>
+      <div><strong>${escapeHtml(summary.valid ?? "—")}</strong><span>本轮可用</span></div>
+    </div>
+    <div class="ledger-facts">
+      <p><span>审计时间</span><b>${escapeHtml(auditTime(audit.generated_at))}</b></p>
+      <p><span>观察项</span><b>${escapeHtml(observed)} 个失败或异常，未静默删除</b></p>
+      <p><span>Mihomo</span><b>完整读取 Leo 规则格式</b></p>
+      <p><span>Surge</span><b>${escapeHtml(mrsCount)} 个 MRS 会降级跳过并告警</b></p>
+    </div>
+    <div class="route-order" aria-label="规则命中顺序">
+      <span>REJECT</span><i>→</i><span>DIRECT</span><i>→</i><span>专用服务</span><i>→</i><span>默认代理</span>
+    </div>
+    <nav class="public-data-links" aria-label="公开数据接口">
+      ${dataLinks.map((item, index) => `<a href="${escapeHtml(item.href)}" target="_blank" rel="noopener"><small>0${index + 1}</small><span>${escapeHtml(item.label)}</span><b>↗</b></a>`).join("")}
+    </nav>
+    <p class="privacy-boundary">公开的是模板与审计元数据；你的订阅地址、节点密码和第三方规则正文不会写入这些接口。</p>`;
 }
 
 function renderLeoReference() {
@@ -175,11 +231,22 @@ async function loadLeoTemplate() {
     const body = await jsonRequest(`/templates/detail?template=${encodeURIComponent(LEO_TEMPLATE)}`);
     state.leoGroups = body.proxy_groups || [];
     state.leoSummary = body.summary || null;
+    state.publicData = body.public_data || [];
+    renderDataLedger();
     renderLeoReference();
     renderServices();
   } catch (error) {
     $("#leo-reference").innerHTML = `<div class="simple-loading">Leo 模板加载失败：${escapeHtml(error.message)}</div>`;
     $("#service-route-list").innerHTML = `<div class="simple-loading">Leo 配置加载失败：${escapeHtml(error.message)}</div>`;
+  }
+}
+
+async function loadLeoAudit() {
+  try {
+    state.leoAudit = await jsonRequest("/templates/audit");
+    renderDataLedger();
+  } catch (error) {
+    $("#data-ledger").innerHTML = `<div class="ledger-error">审计数据暂不可用：${escapeHtml(error.message)}</div>`;
   }
 }
 
@@ -347,7 +414,7 @@ function bindEvents() {
 
 async function init() {
   bindEvents();
-  await Promise.allSettled([loadHealth(), loadLeoTemplate(), loadServices()]);
+  await Promise.allSettled([loadHealth(), loadLeoTemplate(), loadLeoAudit(), loadServices()]);
 }
 
 init();

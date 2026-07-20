@@ -1,6 +1,7 @@
 from functools import lru_cache
 import json
 import os
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
@@ -48,6 +49,9 @@ from app.models.request import ConvertRequest
 from app.models.strategy import ClaudePolicy, CustomStrategy, SelectedPolicy, ServiceRoute
 
 router = APIRouter()
+_PROJECT_DIR = Path(__file__).resolve().parents[2]
+_LEO_SOURCE_PATH = _PROJECT_DIR / "community_templates" / "leo" / "leo.yaml"
+_LEO_AUDIT_PATH = _LEO_SOURCE_PATH.with_name("audit.json")
 http_url_adapter = TypeAdapter(AnyHttpUrl)
 custom_strategy_adapter = TypeAdapter(CustomStrategy)
 selected_policy_adapter = TypeAdapter(SelectedPolicy)
@@ -145,6 +149,32 @@ async def policy_catalog() -> dict:
     return load_policy_catalog()
 
 
+@router.get("/templates/source", response_class=PlainTextResponse)
+async def leo_template_source() -> PlainTextResponse:
+    return PlainTextResponse(
+        _LEO_SOURCE_PATH.read_text(encoding="utf-8"),
+        media_type="text/yaml",
+    )
+
+
+@router.get("/templates/audit")
+async def leo_template_audit() -> dict:
+    if not _LEO_AUDIT_PATH.is_file():
+        raise HTTPException(status_code=404, detail="Leo audit snapshot is not available")
+    report = json.loads(_LEO_AUDIT_PATH.read_text(encoding="utf-8"))
+    loaded = load_template(LEO_TEMPLATE_ID)
+    providers = loaded.get("rule-providers") or {}
+    provider_count = len(providers) if isinstance(providers, dict) else 0
+    report["publication"] = {
+        "source_path": "community_templates/leo/audit.json",
+        "template_provider_count": provider_count,
+        "template_current": report.get("summary", {}).get("total") == provider_count,
+        "contains_remote_rule_content": False,
+        "contains_subscription_credentials": False,
+    }
+    return report
+
+
 @router.get("/templates/detail")
 async def template_detail(
     template: str = Query(default=LEO_TEMPLATE_ID),
@@ -172,6 +202,11 @@ async def template_detail(
 
     return {
         "template": _template_meta(template),
+        "public_data": [
+            {"label": "完整模板 YAML", "href": "/templates/source"},
+            {"label": "全部规则与来源", "href": "/community/rules"},
+            {"label": "完整质量审计", "href": "/templates/audit"},
+        ],
         "summary": {
             "proxy_group_count": len(proxy_groups) if isinstance(proxy_groups, list) else 0,
             "rule_count": len(rules) if isinstance(rules, list) else 0,

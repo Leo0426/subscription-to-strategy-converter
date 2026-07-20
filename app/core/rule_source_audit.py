@@ -24,6 +24,7 @@ from app.core.template_engine import LEO_TEMPLATE_ID, load_template
 FetchRuleSource = Callable[[str], Awaitable[dict[str, Any]]]
 DEFAULT_REPORT_DIR = Path(".scratch/leo-rule-source-quality/reports")
 LEO_TEMPLATE_PATH = Path(__file__).resolve().parents[2] / "community_templates" / "leo" / "leo.yaml"
+PUBLIC_AUDIT_PATH = LEO_TEMPLATE_PATH.with_name("audit.json")
 MAX_RULE_SOURCE_BYTES = 32 * 1024 * 1024
 
 _TARGET_PRIORITY = {
@@ -742,12 +743,23 @@ def write_audit_report(report: Mapping[str, Any], output_dir: Path = DEFAULT_REP
     return json_path, markdown_path
 
 
+def write_public_audit_snapshot(
+    report: Mapping[str, Any],
+    path: Path = PUBLIC_AUDIT_PATH,
+) -> Path:
+    """Publish the complete metadata-only audit beside leo.yaml."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Audit Leo RuleProvider availability and content summaries")
     parser.add_argument("--concurrency", type=int, default=24)
     parser.add_argument("--timeout", type=float, default=15.0)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_REPORT_DIR)
     parser.add_argument("--apply-safe-dedup", action="store_true")
+    parser.add_argument("--publish", action="store_true")
     args = parser.parse_args()
     report = asyncio.run(audit_leo_rule_sources(concurrency=args.concurrency, timeout=args.timeout))
     json_path, markdown_path = write_audit_report(report, args.output_dir)
@@ -756,6 +768,8 @@ def main() -> None:
     print(markdown_path)
     if args.apply_safe_dedup:
         print(json.dumps(write_safely_deduplicated_leo(report), ensure_ascii=False))
+    if args.publish:
+        print(write_public_audit_snapshot(report))
 
 
 if __name__ == "__main__":

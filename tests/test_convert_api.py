@@ -217,6 +217,28 @@ def test_local_template_detail_returns_source_path(client: TestClient) -> None:
     assert "proxy-groups:" in body["yaml"]
 
 
+def test_leo_public_data_endpoints_expose_source_rules_and_audit(client: TestClient) -> None:
+    detail = client.get("/templates/detail", params={"template": _LOCAL_TEMPLATE})
+    source = client.get("/templates/source")
+    rules = client.get("/community/rules")
+    audit = client.get("/templates/audit")
+
+    assert detail.status_code == source.status_code == rules.status_code == audit.status_code == 200
+    assert source.headers["content-type"].startswith("text/yaml")
+    assert "rule-providers:" in source.text
+    assert rules.json()["summary"]["provider_count"] == detail.json()["summary"]["rule_provider_count"]
+    audit_body = audit.json()
+    assert audit_body["summary"]["total"] == detail.json()["summary"]["rule_provider_count"]
+    assert len(audit_body["sources"]) == audit_body["summary"]["total"]
+    assert audit_body["quality_score"]["kind"] == "preliminary-structural"
+    assert audit_body["publication"]["template_current"] is True
+    assert {item["href"] for item in detail.json()["public_data"]} == {
+        "/templates/source",
+        "/community/rules",
+        "/templates/audit",
+    }
+
+
 def test_subscribe_accepts_encoded_custom_strategy(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,

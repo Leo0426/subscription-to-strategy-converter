@@ -6,7 +6,7 @@
     <meta name="color-scheme" content="light" />
     <title>Subflow · Leo 订阅生成器</title>
     <link rel="icon" type="image/png" href="/static/assets/subflow-logo.png" />
-    <link rel="stylesheet" href="/static/flow.css?v=17" />
+    <link rel="stylesheet" href="/static/flow.css?v=18" />
   </head>
   <body>
     <header class="simple-header">
@@ -21,24 +21,25 @@
       <div class="workspace-grid">
         <aside class="leo-reference-panel" aria-labelledby="leo-reference-title">
           <header class="reference-header">
-            <p>LEO / BLUEPRINT</p>
-            <h2 id="leo-reference-title">模板参考</h2>
-            <span>先看清 Leo 已经提供什么，再决定右侧需要覆盖什么。</span>
+            <p>LEO / PUBLIC LEDGER</p>
+            <h2 id="leo-reference-title">公开策略账本</h2>
+            <span>模板结构、规则来源、质量证据和平台边界均可直接查询。</span>
           </header>
+          <div id="data-ledger" class="data-ledger"><div class="simple-loading">正在核对公开数据…</div></div>
           <div id="leo-reference" class="leo-reference"><div class="simple-loading">正在读取 Leo 模板…</div></div>
         </aside>
 
         <div class="config-workbench">
           <header class="simple-intro">
             <p>LEO.YAML</p>
-            <h1>生成代理订阅</h1>
-            <span>填入订阅地址，按服务选择出口，然后生成链接。</span>
+            <h1>透明生成订阅</h1>
+            <span>Leo 提供完整默认策略；这里只配置订阅与例外出口。</span>
           </header>
 
           <div id="global-notice" class="simple-notice" hidden role="alert"></div>
 
           <section class="simple-section" aria-labelledby="source-title">
-            <div class="simple-section-title"><b>1</b><div><h2 id="source-title">订阅地址</h2><p>地址只在本机使用。</p></div></div>
+            <div class="simple-section-title"><b>1</b><div><h2 id="source-title">订阅地址</h2><p>仅用于本次转换，不进入公开模板或审计数据。</p></div></div>
             <div class="source-line">
               <label for="subscription-url"><span>订阅 URL</span><input id="subscription-url" type="url" placeholder="https://example.com/sub?token=…" autocomplete="off" /></label>
               <button class="simple-button secondary" id="validate-source-button" type="button">读取节点</button>
@@ -66,6 +67,6 @@
     </main>
 
     <div class="toast" id="toast" hidden role="status"></div>
-    <script src="/static/flow.js?v=17"></script>
+    <script src="/static/flow.js?v=18"></script>
   </body>
 </html>
