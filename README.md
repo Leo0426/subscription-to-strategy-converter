@@ -1,31 +1,67 @@
 <p align="center">
-  <img src="app/static/assets/subflow-logo.png" alt="Subflow Logo" width="260" />
+  <img src="app/static/assets/subflow-logo.png" alt="Subflow Logo" width="220" />
 </p>
 
-# Subflow · 策略订阅发布器
+# Subflow · Leo 策略订阅生成器
 
-把一条已授权的机场订阅转换为基于 `community_templates/leo/leo.yaml` 的 Clash / Mihomo 与 Surge 长期订阅。
+把一条已授权的 Clash/Mihomo 或 Surge 节点订阅，转换成基于 [`leo.yaml`](community_templates/leo/leo.yaml) 的 Clash/Mihomo 与 Surge 长期订阅。
 
-## 核心能力
+页面只保留三件事：读取节点、按服务覆盖出口、生成订阅。模板结构、规则来源、质量审计和平台边界通过公开接口完整披露。
 
-- 极简单页：读取订阅、按具体服务选择出口、生成订阅链接。
-- 双输入格式：读取 Clash/Mihomo YAML 或 Surge `[Proxy]` 配置，并统一归一化为节点列表。
-- 单一基础模板：页面和公开转换接口只接受 `local:community_templates/leo/leo.yaml`。
-- 服务级出口：Claude、OpenAI、GitHub、Netflix 等 15 个服务可独立选择 Leo 策略组或真实节点。
-- 双客户端发布：同一个 Profile 同时返回 Clash/Mihomo YAML 与 Surge CONF 订阅地址。
-- Profile 管理：一个 Profile 保存源订阅、服务出口与各目标最后成功的产物。
-- Token 保护：订阅和编辑均需要 Profile token；前端只将 token 保存在创建它的本机浏览器。
-- 陈旧产物回退：订阅源或远程规则暂时不可用时，返回最后成功产物并明确标记。
+## 页面预览
 
-## 当前范围
+### 桌面端：配置工作台与公开策略账本
 
-| 项目 | 当前行为 |
+![Subflow 公开策略账本与订阅生成器](docs/assets/subflow-public-ledger.png)
+
+### 移动端：先配置，后查证
+
+<p align="center">
+  <img src="docs/assets/subflow-mobile.png" alt="Subflow 移动端订阅生成器" width="390" />
+</p>
+
+## 当前能力
+
+| 能力 | 当前实现 |
 |---|---|
-| 上游订阅 | Clash/Mihomo YAML；Surge `[Proxy]` 中的 SS、Trojan、VMess、HTTP(S)、SOCKS5(-TLS) |
-| 发布目标 | Clash / Mihomo（完整语义）与 Surge（兼容编译） |
-| 默认定制 | 15 个具体服务默认跟随 Leo，仅修改的服务生成独立覆盖规则 |
-| Surge 边界 | 支持的节点与规则源正常编译；不支持的协议或 MRS 规则源会跳过并通过 `X-Compile-Warnings` 汇总 |
-| 其他目标 | Leo 页面和稳定订阅接口仍拒绝 sing-box |
+| 基础模板 | 仅使用 `community_templates/leo/leo.yaml` |
+| 输入格式 | Clash/Mihomo YAML；Surge `[Proxy]` 配置 |
+| 服务出口 | 15 个服务可独立选择 Leo 策略组或订阅中的具体节点 |
+| 输出目标 | 同时生成 Clash/Mihomo YAML 与 Surge CONF 订阅地址 |
+| 地区节点组 | 根据节点名称动态生成；没有匹配节点的地区组会自动移除 |
+| 规则优先级 | `REJECT → DIRECT → 专用服务 → 默认代理 → 兜底` |
+| 质量审计 | 检查可用性、格式、内容重复、目标冲突和实际命中顺序 |
+| 数据透明 | 原始模板、全部规则来源和完整审计报告均可通过 HTTP 查询 |
+
+## 当前公开基线
+
+下列数字来自受版本控制的 [`audit.json`](community_templates/leo/audit.json)，页面运行时不会写死这些值。
+
+| 指标 | 当前值 |
+|---|---:|
+| 策略组 | 21 |
+| 路由规则 | 656 |
+| RuleProvider | 508 |
+| 最近一轮可用来源 | 476 |
+| 观察项 | 32 |
+| 初步结构评分 | 95.95 / A |
+| Surge 无法直接消费的 MRS 来源 | 239 |
+
+结构评分仅衡量当前快照中的可用性、格式、重复和目标一致性，不代表长期新鲜度、服务覆盖率或语义绝对正确。
+
+## 公开数据接口
+
+服务启动或部署后，以下数据无需登录即可查询：
+
+| 接口 | 内容 |
+|---|---|
+| [`/templates/source`](http://127.0.0.1:8000/templates/source) | 完整 `leo.yaml` 原文 |
+| [`/community/rules`](http://127.0.0.1:8000/community/rules) | 全部顶层规则、RuleProvider 名称、URL、格式与来源路径 |
+| [`/templates/audit`](http://127.0.0.1:8000/templates/audit) | 508 个来源的状态、摘要、重复组、冲突样本与质量评分 |
+| [`/templates/detail`](http://127.0.0.1:8000/templates/detail) | 页面使用的模板摘要、策略组和公开数据入口 |
+| [`/docs`](http://127.0.0.1:8000/docs) | FastAPI OpenAPI 文档 |
+
+公开数据不包含：用户订阅地址、节点密码、Profile token 或第三方规则正文。审计报告只保存来源 URL、格式、哈希、数量和有限冲突样本。
 
 ## 快速启动
 
@@ -44,101 +80,87 @@ uv sync
 uv run uvicorn app.main:app --reload
 ```
 
-打开 [http://127.0.0.1:8000](http://127.0.0.1:8000)。`/advanced` 保留为兼容入口，展示同一个统一界面。
+打开 [http://127.0.0.1:8000](http://127.0.0.1:8000)。`/advanced` 是兼容入口，展示同一个页面。
 
-## 单页使用方式
+## 使用流程
 
-创建、编辑和已发布订阅列表共用一个主页，不发生页面跳转。工作台从上到下只有三个主要区域：连接订阅、选择规则、验证发布；已发布订阅列表固定在工作台下方，任何规则卡片都可在连接订阅前选择。
+### 1. 读取节点
 
-### 连接订阅
+填入已授权的订阅 URL，点击“读取节点”。URL 仅用于当前转换和生成的 Profile，不会进入模板或公开审计数据。
 
-粘贴授权的机场订阅 URL。Subflow 先解析并展示节点数量，不会立即创建 Profile。
+### 2. 配置服务出口
 
-### 选择规则卡片
+默认情况下，所有服务沿用 Leo 策略：
 
-Leo 模板中的 21 个策略组、720 个远程规则源和 868 条规则作为固定基础。业务规则卡片可在此基础上追加场景策略，每张卡片包含：
-
-- 目标 Proxy Group 和依赖策略组。
-- 规则用途和规则数量。
-- 可展开检查的完整域名规则。
-
-五个场景预设作为批量选择快捷方式：
-
-| 预设 | 用途 |
+| 分类 | 服务 |
 |---|---|
-| 通用代理 | 自动选择、故障转移与国内直连 |
-| AI / Claude | Claude、OpenAI、Gemini 等 AI 服务独立路由 |
-| 流媒体 | Netflix、YouTube、Disney+、Spotify 等服务分流 |
-| 开发者 | GitHub、Docker、npm、Microsoft 等开发服务分流 |
-| 空白策略 | 仅保留最小可发布图，供专家从头编排 |
+| AI 工具 | Claude、OpenAI、Gemini、Perplexity、Cursor、GitHub Copilot |
+| 开发服务 | GitHub、开发工具、Microsoft、Apple |
+| 流媒体 | Netflix、YouTube、Disney+、Spotify、Telegram |
 
-选择预设后仍可逐张添加或取消卡片。发布时，所选 RulePack 会组装成完整策略快照；以后 RulePack 或预设升级不会静默改变已有 Profile。
+只有存在特殊需求时才覆盖出口。读取节点后，出口可以选择 Leo 策略组，也可以绑定一个具体节点。
 
-### 可选：展开高级出口定制
+### 3. 生成订阅
 
-默认可直接跳过这一步，所有卡片沿用内置策略链。需要固定地区或协议时，系统提供一个排除“过期、剩余、流量”等噪声节点的“稳定节点”池，也可按地区、协议、包含词和排除词增加节点池。
-
-每条服务路由依次声明：
-
-```text
-服务 → 主节点池 → 可选备用节点池 → 最终回退
-```
-
-全部 15 张规则卡片均可定制出口。未定制的卡片沿用自身策略链；定制后会覆盖该卡片的目标组成员，但保留具体规则。节点匹配数量与样例会在编辑时实时显示。
-
-### 验证并发布
-
-发布前会基于 Leo 模板构建并检查策略。验证失败不会创建 Profile。成功后返回：
-
-需要直接控制规则顺序或 Rule Provider 时，从“配置检查器 → 专家编排”接管完整策略图。Node Selector 可按节点名称包含/排除正则和协议动态筛选当前订阅节点，并在策略组中通过 `selector:<id>` 引用；同一个 Profile 每次拉取上游订阅时都会重新计算，不依赖易变的节点名称。进入专家模式后，发布以完整 PolicySnapshot 为准，不再叠加默认服务路由编辑器的变更。
+生成前会构建策略工作区并检查错误。成功后返回两个长期地址：
 
 ```text
 /subscribe/<id>?token=…&target=clash
 /subscribe/<id>?token=…&target=surge
 ```
 
-Token 只在创建时返回。统一界面会把它存入当前浏览器的 `localStorage`，用于后续复制链接和授权编辑；Profile 列表 API 不回显 token 或源订阅 URL。
+Profile token 用于保护订阅和草稿接口，不会出现在公开模板、规则目录或审计报告中。
 
-> 清除站点数据或换浏览器后，列表仍可看到脱敏后的 Profile，但只能“基于此新建”。当前没有 token 恢复接口；已保存到客户端的订阅 URL 不受影响。
+## Mihomo 与 Surge 边界
 
-## Profile 生命周期
+| 项目 | Mihomo | Surge |
+|---|---|---|
+| Leo YAML 语义 | 完整 | 编译为 Surge CONF |
+| MRS RuleProvider | 支持 | 无文本映射时跳过并告警 |
+| Mihomo 专属规则类型 | 支持 | 跳过并通过 warning 汇总 |
+| 不支持的节点协议 | 按 Mihomo 能力输出 | 跳过并通过 warning 汇总 |
 
-| 操作 | 行为 |
-|---|---|
-| 创建 | 保存源订阅、所选 RulePack、可选 RouteIntent 与完整策略快照，返回一次性 token |
-| 编辑 | 仅持有 token 的浏览器可读取草稿；更新后清空旧产物缓存 |
-| 客户端拉取 | 实时拉取上游、重新计算 Node Selector，并将同一策略快照编译到对应目标 |
-| 外部加载失败 | 订阅源或外部模板加载失败时，返回该目标自己的最后成功产物，并设置 `X-Subflow-Stale: true` |
-| 转换或编译失败 | 直接返回错误，不使用缓存掩盖模板、策略或协议不兼容问题 |
+Surge 输出始终保留 `FINAL`，并过滤 Surge 不接受的 `DOMAIN-REGEX` 等规则。生成成功不等于两种客户端拥有完全相同的规则覆盖，应结合 `/templates/audit` 和响应 warning 判断。
+
+## 更新公开审计
+
+审计会访问 `leo.yaml` 中的全部远程 RuleProvider。确认网络环境允许后执行：
+
+```bash
+uv run python -m app.core.rule_source_audit --publish
+```
+
+该命令会：
+
+1. 在 `.scratch/leo-rule-source-quality/reports/` 生成带时间戳的 JSON 与 Markdown 报告。
+2. 更新 `community_templates/leo/audit.json`，供页面和 `/templates/audit` 使用。
+3. 不下载或提交第三方规则正文。
+
+不要因为单轮超时或 HTTP 403 自动删除来源。只有内容等价或多轮稳定失效的来源才适合进入安全清理流程。
 
 ## 项目结构
 
-根目录中各目录和入口文件的职责见 [DIRECTORY.md](DIRECTORY.md)。
-
 ```text
 app/
-├── api/                         # FastAPI 路由
+├── api/
+│   └── convert.py               # 模板、公开审计、Profile 与订阅接口
 ├── core/
+│   ├── template_engine.py       # Leo 模板加载、节点组物化与策略应用
+│   ├── rule_source_audit.py     # 规则源审计、评分与安全去重
 │   ├── policy_workspace.py      # 策略工作区 IR
-│   ├── template_engine.py       # Leo 模板加载与策略应用
-│   ├── policy_presets.py        # 产品场景预设与策略快照起点
-│   ├── rule_packs.py            # 规则卡片目录与策略组装
-│   ├── intent_compiler.py       # 节点池与服务路由意图编译
-│   ├── template_policy_transform.py # Claude 模板分析与子图变换
 │   ├── profiles.py              # Profile 持久化与目标缓存
-│   └── platforms/               # 实验性目标编译器（不进入 Leo 产品接口）
+│   └── platforms/               # Mihomo、Surge 等目标编译器
 ├── static/
-│   ├── index.html               # 统一产品入口
-│   ├── flow.js                  # 单页策略工作台与 Profile 管理
-│   └── flow.css                 # 响应式视觉系统
-└── models/
+│   ├── index.html               # 单页产品入口
+│   ├── flow.js                  # 公开账本与订阅生成流程
+│   └── flow.css                 # 桌面/移动响应式样式
+community_templates/leo/
+├── leo.yaml                     # 唯一基础策略模板
+├── audit.json                   # 可公开查询的审计快照
+└── README.md                    # 模板维护说明
 ```
 
-## 环境变量
-
-| 变量 | 默认值 | 说明 |
-|---|---|---|
-| `SUBFLOW_DB_PATH` | `./data/subflow.db` | Profile SQLite 数据库 |
+完整目录说明见 [`DIRECTORY.md`](DIRECTORY.md)。
 
 ## 测试
 
@@ -146,3 +168,5 @@ app/
 uv run pytest
 node --check app/static/flow.js
 ```
+
+当前回归基线：`215 passed`。
