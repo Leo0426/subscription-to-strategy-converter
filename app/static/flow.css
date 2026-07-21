@@ -182,7 +182,6 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
   .config-workbench { grid-row: 1; }
   .leo-reference-panel { position: static; grid-row: 2; max-height: none; }
   .leo-reference { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
-  .reference-overview { grid-column: 1 / -1; }
 }
 
 @media (max-width: 640px) {

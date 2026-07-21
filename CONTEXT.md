@@ -43,7 +43,7 @@ New issues should state which pain points they address.
 | **RulePackSelection** | The ordered set of RulePack identifiers chosen by a user and compiled into a PolicySnapshot |
 | **PolicySnapshot** | The complete `SelectedPolicy` stored in a Profile after preset selection or custom composition; later preset changes do not mutate it |
 | **PolicyWorkspace** | Product core for the MVP: an in-memory policy workspace holding nodes, groups, rules, providers, settings, graph data, analyzer findings, simulator traces, and compile output |
-| **PolicyWorkbench** | The single-page product surface that combines source connection, RulePackSelection, optional RouteIntent overrides, validation, and Profile publication |
+| **PolicyWorkbench** | The single-page product surface for source connection, fine-grained ServiceRoute overrides, validation, Profile publication, and public Leo audit evidence |
 | **Profile** | A mutable policy intent containing one authorized source, ServiceRoutes, and target-specific publication choices |
 | **ServiceRoute** | One entry in a RouteIntent that maps a catalog service to a primary NodePool, optional fallback NodePool, and final target |
 | **RuleSource** | A policy-rule input identified by its origin, format, version, and content digest |
@@ -85,7 +85,6 @@ Token-protected Subscription URLs
 | `app/core/parsers/surge.py` | Parses supported Surge `[Proxy]` entries into `ProxyNode` while rejecting malformed recognized entries |
 | `app/core/normalizer.py` | Post-parse dedup and normalization for `ProxyNode` lists |
 | `app/core/fetcher.py` | HTTP fetching with SSRF safety checks |
-| `app/core/subconverter.py` | Calls `tindy2013/subconverter` to convert raw subscriptions to Clash YAML |
 | `app/core/subscription.py` | `load_subscription()` — end-to-end: URL → Clash YAML or Surge config → normalized `ProxyNode` list |
 | `app/core/template_engine.py` | Built-in preset definitions, local template loader, `apply_template()`, `list_templates()` |
 | `app/core/powerfullz.py` | Fetches powerfullz static YAML from jsDelivr CDN |
@@ -106,7 +105,7 @@ Token-protected Subscription URLs
 | `app/api/convert.py` | Main API router — workspace, convert, subscribe, simulate, compile endpoints |
 | `app/api/community.py` | Community template catalog API |
 | `app/api/health.py` | Health check |
-| `app/api/system.py` | Route Control Room dependency status API for app, Profile DB, and subconverter |
+| `app/api/system.py` | Lightweight application and Profile database status API |
 | `app/models/` | Pydantic request/response models |
 
 ## Template Boundary
@@ -129,13 +128,15 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/health` | Health check |
-| GET | `/system/status` | App, Profile DB, and subconverter status for the Route Control Room |
+| GET | `/system/status` | Application and Profile database status used by the page health indicator |
 | GET | `/templates` | Return the single supported Leo template |
 | GET | `/templates/detail` | Leo template structure and YAML preview; other template IDs are rejected |
+| GET | `/templates/source` | Return the complete public Leo YAML source |
+| GET | `/templates/audit` | Return the versioned RuleSource audit snapshot and publication metadata |
+| GET | `/community/rules` | Return every top-level rule and RuleProvider source from Leo |
 | GET | `/policy-catalog` | Extracted rule providers across community templates |
 | GET | `/rule-packs` | List selectable RulePacks, concrete rules, dependencies, categories, and preset defaults |
 | GET | `/intent/catalog` | List supported service and region choices for RouteIntent editors |
-| GET | `/subconverter/targets` | All supported output targets |
 | POST | `/preview` | Parse subscription → node list + config tree |
 | POST | `/convert` | Full conversion → rendered config string |
 | POST | `/workspace/preview` | Build workspace + graph + analyzer findings |
@@ -186,7 +187,7 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - RulePackSelection is the default product customization boundary; PolicyPreset only supplies a default selection and never prevents individual card changes
 - RouteIntent is an optional egress override for selected RulePacks; its NodePools compile into NodeSelectors and its ServiceRoutes replace the corresponding target-group members
 - Expert composition replaces the complete PolicySnapshot and does not combine implicitly with RouteIntent changes
-- PolicyWorkbench exposes the common creation path on one page; RouteIntent controls and the complete PolicySnapshot composer are progressively disclosed rather than separate steps or pages
+- PolicyWorkbench keeps the common creation path on one page and exposes only fine-grained ServiceRoute overrides; template structure and RuleSource evidence remain queryable through the public ledger
 - A stored PolicySnapshot does not automatically merge later PolicyPreset changes; updating from a preset is an explicit reset operation
 - `NodeSelector` references are expanded against the latest upstream `ProxyNode` inventory on every preview/render/Profile subscription request; unknown selectors fail closed and selectors producing an empty group are publish-blocking errors
 - Rules after the first `MATCH` or `FINAL` are unreachable and must be reported by the analyzer
