@@ -3,6 +3,7 @@ from __future__ import annotations
 from app.core.policy_analyzer import analyze_workspace
 from app.core.policy_graph import build_policy_graph
 from app.core.policy_simulator import simulate_destination
+from app.core.template_engine import LEO_TEMPLATE_ID, load_template
 from app.core.policy_workspace import compile_mihomo_config, config_to_workspace, workspace_to_mihomo_config
 from app.ir import ProxyNode
 
@@ -106,6 +107,42 @@ def test_analyzer_reports_structural_findings() -> None:
     assert "duplicate_rule" in codes
     assert "group_cycle" in codes
     assert "unreachable_group" in codes
+
+
+def test_analyzer_reports_missing_provider_in_logical_rule() -> None:
+    workspace = config_to_workspace(
+        {
+            "proxy-groups": [{"name": "PROXY", "type": "select", "proxies": ["HK-01"]}],
+            "rule-providers": {"defined": {"type": "http"}},
+            "rules": [
+                "AND,((DST-PORT,443),(NOT,((RULE-SET,defined)))),PROXY",
+                "OR,((RULE-SET,defined),(RULE-SET,missing)),PROXY",
+            ],
+        },
+        [_node()],
+    )
+
+    findings = [
+        finding
+        for finding in analyze_workspace(workspace)
+        if finding.code == "missing_provider"
+    ]
+
+    assert [(finding.path, finding.message) for finding in findings] == [
+        ("rules[1]", "Rule references missing provider 'missing'.")
+    ]
+
+
+def test_leo_template_has_no_missing_rule_provider_references() -> None:
+    workspace = config_to_workspace(load_template(LEO_TEMPLATE_ID))
+
+    missing_providers = [
+        finding
+        for finding in analyze_workspace(workspace)
+        if finding.code == "missing_provider"
+    ]
+
+    assert missing_providers == []
 
 
 def test_simulator_matches_domain_ip_and_match_rules() -> None:

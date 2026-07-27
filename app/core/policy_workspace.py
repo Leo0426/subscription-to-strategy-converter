@@ -4,6 +4,7 @@ from dataclasses import asdict, is_dataclass
 from typing import Any
 
 from app.core.parsers.clash import clash_to_ir, ir_to_clash_dict
+from app.core.provider_egress import apply_provider_egress
 from app.ir import PolicyRule, PolicyWorkspace, ProxyGroup, ProxyNode, RuleProvider, TLSConfig, TransportConfig
 
 
@@ -236,4 +237,9 @@ def workspace_to_mihomo_config(workspace: PolicyWorkspace) -> dict[str, Any]:
 
 def compile_mihomo_config(config: dict[str, Any], nodes: list[ProxyNode]) -> dict[str, Any]:
     workspace = config_to_workspace(config, nodes, target="mihomo")
-    return workspace_to_mihomo_config(workspace)
+    compiled = workspace_to_mihomo_config(workspace)
+    apply_provider_egress(
+        compiled["rule-providers"],
+        [group.name for group in workspace.proxy_groups],
+    )
+    return compiled
