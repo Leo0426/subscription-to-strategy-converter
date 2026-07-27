@@ -33,6 +33,16 @@ dns:
   - ntp.*.com
   - +.market.xiaomi.com
   - +.push.apple.com
+  # 系统联网探测与游戏 NAT 打洞域名需要真实 IP,fake-ip 会导致
+  # 断网误判和 NAT 类型劣化。
+  - +.msftconnecttest.com
+  - +.msftncsi.com
+  - dns.msftncsi.com
+  - +.srv.nintendo.net
+  - +.stun.playstation.net
+  - +.xboxlive.com
+  - stun.*.*
+  - stun.*.*.*
 sniffer:
   enable: true
   parse-pure-ip: true
