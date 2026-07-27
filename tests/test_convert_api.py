@@ -418,3 +418,41 @@ TW01 = ss, tw.example.com, 443, encrypt-method=aes-128-gcm, password=secret, obf
     assert "plugin: obfs" in response.text
     assert "mode: http" in response.text
     assert "host: cdn.example.com" in response.text
+
+
+def test_clash_subscription_maps_ss_plugin_obfs_to_surge_output(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    clash_subscription = """
+proxies:
+  - name: TW01
+    type: ss
+    server: tw.example.com
+    port: 8801
+    cipher: chacha20-ietf
+    password: secret
+    plugin: obfs
+    plugin-opts:
+      mode: http
+      host: download.microsoft.com
+"""
+
+    async def fake_fetch_subscription(url: str) -> str:
+        return clash_subscription
+
+    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
+
+    response = client.get(
+        "/subscribe",
+        params={
+            "subscription_url": "https://example.com/subscribe/clash/",
+            "template": _LOCAL_TEMPLATE,
+            "target": "surge",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "TW01 = ss, tw.example.com, 8801" in response.text
+    assert "obfs=http" in response.text
+    assert "obfs-host=download.microsoft.com" in response.text

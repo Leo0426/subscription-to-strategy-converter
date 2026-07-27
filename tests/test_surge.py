@@ -89,6 +89,29 @@ def test_ss_chacha_cipher() -> None:
     assert "encrypt-method=chacha20-ietf-poly1305" in line
 
 
+def test_ss_plugin_obfs_maps_to_surge_obfuscation() -> None:
+    node = ProxyNode(
+        name="TW01",
+        protocol="ss",
+        server="tw.example.com",
+        port=8801,
+        extra={
+            "cipher": "chacha20-ietf",
+            "password": "secret",
+            "plugin": "obfs",
+            "plugin_opts": {
+                "mode": "http",
+                "host": "download.microsoft.com",
+            },
+        },
+    )
+
+    line = _node_to_surge_line(node)
+
+    assert "obfs=http" in line
+    assert "obfs-host=download.microsoft.com" in line
+
+
 def test_trojan_line_format() -> None:
     line = _node_to_surge_line(_trojan())
     assert line is not None

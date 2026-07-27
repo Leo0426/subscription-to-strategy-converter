@@ -133,10 +133,17 @@ def _ss_line(node: ProxyNode) -> str:
     parts = [f"ss, {node.server}, {node.port}"]
     parts.append(f"encrypt-method={cipher}")
     parts.append(f"password={password}")
-    if node.extra.get("obfs"):
-        parts.append(f"obfs={node.extra['obfs']}")
-    if node.extra.get("obfs_host"):
-        parts.append(f"obfs-host={node.extra['obfs_host']}")
+    obfs = str(node.extra.get("obfs") or "")
+    obfs_host = str(node.extra.get("obfs_host") or "")
+    plugin = str(node.extra.get("plugin") or "").lower()
+    plugin_opts = node.extra.get("plugin_opts")
+    if not obfs and plugin in {"obfs", "simple-obfs"} and isinstance(plugin_opts, dict):
+        obfs = str(plugin_opts.get("mode") or "")
+        obfs_host = str(plugin_opts.get("host") or "")
+    if obfs:
+        parts.append(f"obfs={obfs}")
+    if obfs_host:
+        parts.append(f"obfs-host={obfs_host}")
     if node.extra.get("udp"):
         parts.append("udp-relay=true")
     return f"{node.name} = {', '.join(parts)}"
