@@ -2650,8 +2650,8 @@ rules:
 - RULE-SET,add_direct_domain,DIRECT
 - RULE-SET,blackmatrix7_direct,DIRECT
 - RULE-SET,Category-DoH,DIRECT
-- RULE-SET,cdn_domainset,DIRECT
-- RULE-SET,cdn_non_ip,DIRECT
+- RULE-SET,cdn_domainset,默认代理
+- RULE-SET,cdn_non_ip,默认代理
 - RULE-SET,China / Domain,DIRECT
 - RULE-SET,China / IP,DIRECT
 - RULE-SET,China,DIRECT
