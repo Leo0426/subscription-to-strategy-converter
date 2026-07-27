@@ -701,10 +701,13 @@ class PublicRuleSourceFetcher:
         self._host_lock = asyncio.Lock()
 
     async def __aenter__(self) -> PublicRuleSourceFetcher:
+        # The audit answers "can the target client fetch this?", so it must send
+        # the UA a real Mihomo core sends (global-ua defaults to clash.meta);
+        # hosts like kelee.one allow-list that prefix and 403 everything else.
         self._client = httpx.AsyncClient(
             timeout=self.timeout,
             follow_redirects=False,
-            headers={"User-Agent": "subflow-rule-audit/0.1"},
+            headers={"User-Agent": "clash.meta/1.18.0 (subflow-rule-audit)"},
         )
         return self
 

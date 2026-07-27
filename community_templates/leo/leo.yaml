@@ -836,7 +836,7 @@ rule-providers:
     type: http
     behavior: classical
     format: text
-    url: https://raw.ihtw.moe/github.com/Repcz/Tool/raw/X/mihomo/Rules/AppleProxy.list
+    url: https://raw.githubusercontent.com/Repcz/Tool/X/mihomo/Rules/AppleProxy.list
     path: ./rule_provider/leo/121.txt
     interval: 86400
   apple_services:
