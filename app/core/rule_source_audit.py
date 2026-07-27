@@ -846,7 +846,18 @@ def write_public_audit_snapshot(
     report: Mapping[str, Any],
     path: Path = PUBLIC_AUDIT_PATH,
 ) -> Path:
-    """Publish the complete metadata-only audit beside leo.yaml."""
+    """Publish the complete metadata-only audit beside leo.yaml.
+
+    An audit where nothing succeeded describes the audit environment (blocked
+    DNS, no network), not the sources; publishing it would replace real
+    evidence with noise, so it is refused.
+    """
+    summary = report.get("summary") or {}
+    if not int(summary.get("valid") or 0):
+        raise ValueError(
+            "refusing to publish an audit with zero valid sources; "
+            "this indicates an audit-environment failure, not source quality"
+        )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return path

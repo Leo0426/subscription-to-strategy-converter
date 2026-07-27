@@ -13,6 +13,7 @@ from app.core.rule_source_audit import (
     reorder_rules_by_target_priority,
     score_rule_source_report,
     supply_chain_facts,
+    write_public_audit_snapshot,
 )
 
 
@@ -332,3 +333,21 @@ async def test_audit_rule_sources_isolates_fetch_failures_and_summarizes_results
     assert report["sources"][0]["name"] == "Broken"
     assert report["sources"][0]["error"] == "timeout"
     assert "content" not in report["sources"][1]
+
+
+def test_write_public_audit_snapshot_refuses_a_fully_failed_audit(tmp_path) -> None:
+    all_failed = {"summary": {"total": 508, "valid": 0, "invalid": 0, "failed": 508}, "sources": []}
+    target = tmp_path / "audit.json"
+
+    with pytest.raises(ValueError, match="audit-environment failure"):
+        write_public_audit_snapshot(all_failed, target)
+
+    assert not target.exists()
+
+
+def test_write_public_audit_snapshot_publishes_when_any_source_is_valid(tmp_path) -> None:
+    report = {"summary": {"total": 2, "valid": 1, "invalid": 0, "failed": 1}, "sources": []}
+    target = tmp_path / "audit.json"
+
+    assert write_public_audit_snapshot(report, target) == target
+    assert target.exists()
