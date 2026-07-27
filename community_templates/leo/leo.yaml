@@ -223,20 +223,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/sunfing/iNg/main/Rules/AIGC/A_AIGC.yaml
     path: ./rule_provider/leo/001.yaml
     interval: 86400
-  AI:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/666OS/rules/raw/release/mihomo/domain/AI.mrs
-    path: ./rule_provider/leo/002.mrs
-    interval: 86400
-  ai-3:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo-ruleset/ai.mrs
-    path: ./rule_provider/leo/004.mrs
-    interval: 86400
   ai-4:
     type: http
     behavior: domain
@@ -244,34 +230,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ai-!cn.list
     path: ./rule_provider/leo/005.txt
     interval: 7200
-  ai-5:
-    type: http
-    behavior: domain
-    format: text
-    url: https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/ai.list
-    path: ./rule_provider/leo/006.txt
-    interval: 7200
-  AI-6:
-    type: http
-    behavior: classical
-    format: text
-    url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/AI.list
-    path: ./rule_provider/leo/007.txt
-    interval: 86400
-  AI-9:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://kelee.one/Tool/Clash/Rule/AI.yaml
-    path: ./rule_provider/leo/010.yaml
-    interval: 3600
-  AI-10:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/QuixoticHeart/rule-set/raw/refs/heads/ruleset/meta/domain/ai.mrs
-    path: ./rule_provider/leo/011.mrs
-    interval: 86400
   AI Suite:
     type: http
     behavior: classical
@@ -320,13 +278,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Claude/Claude_No_Resolve.yaml
     path: ./rule_provider/leo/020.yaml
     interval: 86400
-  Claude-2:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/anthropic.mrs
-    path: ./rule_provider/leo/021.mrs
-    interval: 86400
   Claude / Domain:
     type: http
     behavior: classical
@@ -354,13 +305,6 @@ rule-providers:
     format: yaml
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Gemini/Gemini_No_Resolve.yaml
     path: ./rule_provider/leo/026.yaml
-    interval: 86400
-  Gemini-2:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/google-gemini.mrs
-    path: ./rule_provider/leo/027.mrs
     interval: 86400
   Gemini / Domain:
     type: http
@@ -920,13 +864,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Epic/Epic_No_Resolve.yaml
     path: ./rule_provider/leo/146.yaml
     interval: 86400
-  Epic-3:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/epicgames.mrs
-    path: ./rule_provider/leo/147.mrs
-    interval: 86400
   Epic / Domain:
     type: http
     behavior: classical
@@ -961,20 +898,6 @@ rule-providers:
     format: mrs
     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/gitbook.mrs
     path: ./rule_provider/leo/153.mrs
-    interval: 86400
-  github:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://rule.kelee.one/Clash/GitHub.yaml
-    path: ./rule_provider/leo/154.yaml
-    interval: 3600
-  Github-3:
-    type: http
-    behavior: classical
-    format: text
-    url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Github.list
-    path: ./rule_provider/leo/156.txt
     interval: 86400
   GitHub-5:
     type: http
@@ -1176,13 +1099,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Nintendo/Nintendo_No_Resolve.yaml
     path: ./rule_provider/leo/234.yaml
     interval: 86400
-  Nintendo-2:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/nintendo.mrs
-    path: ./rule_provider/leo/235.mrs
-    interval: 86400
   NintendoCN:
     type: http
     behavior: domain
@@ -1224,20 +1140,6 @@ rule-providers:
     url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/PayPal.yaml
     path: ./rule_provider/leo/244.yaml
     interval: 604800
-  PayPal-2:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://gh.669588.xyz/rules/geo/geosite/paypal.mrs
-    path: ./rule_provider/leo/245.mrs
-    interval: 86400
-  PayPal-3:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/paypal.mrs
-    path: ./rule_provider/leo/246.mrs
-    interval: 86400
   PlayStation:
     type: http
     behavior: domain
@@ -1266,19 +1168,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/sony.mrs
     path: ./rule_provider/leo/251.mrs
     interval: 86400
-  Steam:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Steam.yaml
-    path: ./rule_provider/leo/253.yaml
-    interval: 604800
-  Steam-3:
-    type: http
-    behavior: classical
-    format: text
-    url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Steam.list
-    path: ./rule_provider/leo/255.txt
-    interval: 86400
   Steam-5:
     type: http
     behavior: classical
@@ -1286,13 +1175,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Steam/Steam_No_Resolve.yaml
     path: ./rule_provider/leo/257.yaml
     interval: 86400
-  Steam-6:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://rule.kelee.one/Clash/Steam.yaml
-    path: ./rule_provider/leo/258.yaml
-    interval: 3600
   Steam / Domain:
     type: http
     behavior: domain
@@ -1369,13 +1251,6 @@ rule-providers:
     format: yaml
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Xbox/Xbox_No_Resolve.yaml
     path: ./rule_provider/leo/277.yaml
-    interval: 86400
-  Xbox-2:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/xbox.mrs
-    path: ./rule_provider/leo/278.mrs
     interval: 86400
   XboxCN:
     type: http
@@ -1454,26 +1329,12 @@ rule-providers:
     url: https://gh-proxy.com/github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geosite/bybit.mrs
     path: ./rule_provider/leo/289.mrs
     interval: 86400
-  Crypto:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/666OS/rules/raw/release/mihomo/domain/Crypto.mrs
-    path: ./rule_provider/leo/290.mrs
-    interval: 86400
   Crypto-2:
     type: http
     behavior: classical
     url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Crypto.yaml
     path: ./rule_provider/leo/291.yaml
     interval: 604800
-  Crypto-3:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-cryptocurrency.mrs
-    path: ./rule_provider/leo/292.mrs
-    interval: 86400
   OKX / Domain:
     type: http
     behavior: domain
@@ -1515,26 +1376,12 @@ rule-providers:
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Game/Game.yaml
     path: ./rule_provider/leo/298.yaml
     interval: 86400
-  Game-2:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://kelee.one/Tool/Clash/Rule/Game.yaml
-    path: ./rule_provider/leo/299.yaml
-    interval: 3600
   GameDownload:
     type: http
     behavior: classical
     format: yaml
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Game/GameDownload/GameDownload_No_Resolve.yaml
     path: ./rule_provider/leo/301.yaml
-    interval: 86400
-  GameDownload-2:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-game-platforms-download.mrs
-    path: ./rule_provider/leo/302.mrs
     interval: 86400
   GameDownloadCN:
     type: http
@@ -1564,13 +1411,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/games-cn.list
     path: ./rule_provider/leo/306.txt
     interval: 7200
-  games-cn-2:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://gh.669588.xyz/rules/geo/geosite/category-games-cn.mrs
-    path: ./rule_provider/leo/307.mrs
-    interval: 86400
   GamesGlobal:
     type: http
     behavior: domain
@@ -2613,12 +2453,6 @@ rule-providers:
     url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/Pandora.yaml
     path: ./rule_provider/leo/570.yaml
     interval: 604800
-  Discord:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Discord.yaml
-    path: ./rule_provider/leo/571.yaml
-    interval: 604800
   Discord-2:
     type: http
     behavior: classical
@@ -2680,13 +2514,6 @@ rule-providers:
     format: yaml
     url: https://gh.669588.xyz/rules/geo/geosite/facebook.yaml
     path: ./rule_provider/leo/581.yaml
-    interval: 86400
-  Facebook_IP-2:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo-lite/geoip/facebook.mrs
-    path: ./rule_provider/leo/584.mrs
     interval: 86400
   Instagram:
     type: http
@@ -2758,52 +2585,12 @@ rule-providers:
     url: https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/telegram.mrs
     path: ./rule_provider/leo/599.mrs
     interval: 86400
-  Telegram:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/666OS/rules/raw/release/mihomo/domain/Telegram.mrs
-    path: ./rule_provider/leo/600.mrs
-    interval: 86400
-  Telegram-2:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Telegram.yaml
-    path: ./rule_provider/leo/601.yaml
-    interval: 604800
-  Telegram-3:
-    type: http
-    behavior: classical
-    format: text
-    url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Telegram.list
-    path: ./rule_provider/leo/602.txt
-    interval: 86400
-  Telegram-4:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/ameyukisora/Clash-Rule/master/provider/Telegram.yaml
-    path: ./rule_provider/leo/603.yaml
-    interval: 86400
   Telegram-6:
     type: http
     behavior: classical
     format: yaml
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Telegram/Telegram_No_Resolve.yaml
     path: ./rule_provider/leo/605.yaml
-    interval: 86400
-  Telegram-7:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://kelee.one/Tool/Clash/Rule/Telegram.yaml
-    path: ./rule_provider/leo/606.yaml
-    interval: 3600
-  telegram-ip:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://gh.669588.xyz/rules/geo/geoip/telegram.mrs
-    path: ./rule_provider/leo/611.mrs
     interval: 86400
   Telegram-zj:
     type: http
@@ -2819,13 +2606,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Telegram/Telegram.yaml
     path: ./rule_provider/leo/614.yaml
     interval: 86400
-  telegram_ip-4:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo-lite/geoip/telegram.mrs
-    path: ./rule_provider/leo/619.mrs
-    interval: 43200
   telegram_ip-5:
     type: http
     behavior: classical
@@ -2840,20 +2620,6 @@ rule-providers:
     url: https://ruleset.skk.moe/Clash/non_ip/telegram.txt
     path: ./rule_provider/leo/623.txt
     interval: 43200
-  TelegramIP:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://github.com/666OS/rules/raw/release/mihomo/ip/Telegram.mrs
-    path: ./rule_provider/leo/625.mrs
-    interval: 86400
-  telegramip-2:
-    type: http
-    behavior: ipcidr
-    format: text
-    url: https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/telegramip.list
-    path: ./rule_provider/leo/626.txt
-    interval: 7200
   Tumblr:
     type: http
     behavior: domain
@@ -2867,27 +2633,6 @@ rule-providers:
     format: mrs
     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/twitter.mrs
     path: ./rule_provider/leo/629.mrs
-    interval: 86400
-  Twitter:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/666OS/rules/raw/release/mihomo/domain/Twitter.mrs
-    path: ./rule_provider/leo/630.mrs
-    interval: 86400
-  Twitter-2:
-    type: http
-    behavior: classical
-    format: text
-    url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Twitter.list
-    path: ./rule_provider/leo/631.txt
-    interval: 86400
-  twitter-3:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://gh.669588.xyz/rules/geo/geosite/twitter.mrs
-    path: ./rule_provider/leo/632.mrs
     interval: 86400
   Twitter-4:
     type: http
@@ -2958,13 +2703,6 @@ rule-providers:
     format: mrs
     url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-communication.mrs
     path: ./rule_provider/leo/652.mrs
-    interval: 86400
-  SocialMedia:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/666OS/rules/raw/release/mihomo/domain/SocialMedia.mrs
-    path: ./rule_provider/leo/653.mrs
     interval: 86400
   SocialMedia-2:
     type: http
@@ -3401,13 +3139,7 @@ rules:
 - RULE-SET,A_AIGC,AI 服务
 - RULE-SET,AI Suite,AI 服务
 - RULE-SET,ai!cn_domain,AI 服务
-- RULE-SET,AI,AI 服务
-- RULE-SET,AI-10,AI 服务
-- RULE-SET,ai-3,AI 服务
 - RULE-SET,ai-4,AI 服务
-- RULE-SET,ai-5,AI 服务
-- RULE-SET,AI-6,AI 服务
-- RULE-SET,AI-9,AI 服务
 - RULE-SET,AI-CN,AI 服务
 - RULE-SET,ai_domain,AI 服务
 - RULE-SET,ai_non_ip,AI 服务
@@ -3415,12 +3147,10 @@ rules:
 - RULE-SET,ChatGPT / Domain,AI 服务
 - RULE-SET,Claude / Domain,AI 服务
 - RULE-SET,Claude,AI 服务
-- RULE-SET,Claude-2,AI 服务
 - RULE-SET,Copilot / Domain,AI 服务
 - RULE-SET,Copilot,AI 服务
 - RULE-SET,Gemini / Domain,AI 服务
 - RULE-SET,Gemini,AI 服务
-- RULE-SET,Gemini-2,AI 服务
 - RULE-SET,Grok / Domain,AI 服务
 - RULE-SET,Groq / Domain,AI 服务
 - RULE-SET,Meta AI / Domain,AI 服务
@@ -3468,23 +3198,16 @@ rules:
 - RULE-SET,Docker,开发服务
 - RULE-SET,gitbook_domain,开发服务
 - RULE-SET,GitHub / Domain,开发服务
-- RULE-SET,github,开发服务
-- RULE-SET,Github-3,开发服务
 - RULE-SET,GitHub-5,开发服务
 - RULE-SET,GitHub-zj,开发服务
 - RULE-SET,bank_cn_domain,金融服务
 - RULE-SET,Binance / Domain,金融服务
 - RULE-SET,Bybit / Domain,金融服务
-- RULE-SET,Crypto,金融服务
 - RULE-SET,Crypto-2,金融服务
-- RULE-SET,Crypto-3,金融服务
 - RULE-SET,OKX / Domain,金融服务
 - RULE-SET,PayPal,金融服务
-- RULE-SET,PayPal-2,金融服务
-- RULE-SET,PayPal-3,金融服务
 - RULE-SET,Wise_domain,金融服务
 - RULE-SET,Communication,社交通讯
-- RULE-SET,Discord,社交通讯
 - RULE-SET,Discord-2,社交通讯
 - RULE-SET,discord_asn,社交通讯
 - RULE-SET,discord_domain,社交通讯
@@ -3492,7 +3215,6 @@ rules:
 - RULE-SET,Facebook,社交通讯
 - RULE-SET,Facebook-IP,社交通讯
 - RULE-SET,Facebook-zj,社交通讯
-- RULE-SET,Facebook_IP-2,社交通讯
 - RULE-SET,geoip_twitter,社交通讯
 - RULE-SET,Instagram,社交通讯
 - RULE-SET,instagram_domain,社交通讯
@@ -3503,31 +3225,18 @@ rules:
 - RULE-SET,Reddit / Domain,社交通讯
 - RULE-SET,signal_domain,社交通讯
 - RULE-SET,site_telegram,社交通讯
-- RULE-SET,SocialMedia,社交通讯
 - RULE-SET,SocialMedia-2,社交通讯
 - RULE-SET,SocialMediaIP,社交通讯
 - RULE-SET,talkatone_domain,社交通讯
 - RULE-SET,talkatone_ip,社交通讯
-- RULE-SET,Telegram,社交通讯
-- RULE-SET,Telegram-2,社交通讯
-- RULE-SET,Telegram-3,社交通讯
-- RULE-SET,Telegram-4,社交通讯
 - RULE-SET,Telegram-6,社交通讯
-- RULE-SET,Telegram-7,社交通讯
-- RULE-SET,telegram-ip,社交通讯
 - RULE-SET,Telegram-zj,社交通讯
 - RULE-SET,telegram_domain,社交通讯
-- RULE-SET,telegram_ip-4,社交通讯
 - RULE-SET,telegram_ip-5,社交通讯
 - RULE-SET,telegram_non_ip,社交通讯
-- RULE-SET,TelegramIP,社交通讯
-- RULE-SET,telegramip-2,社交通讯
 - RULE-SET,threads_domain,社交通讯
 - RULE-SET,Tumblr,社交通讯
 - RULE-SET,Twitter / Domain,社交通讯
-- RULE-SET,Twitter,社交通讯
-- RULE-SET,Twitter-2,社交通讯
-- RULE-SET,twitter-3,社交通讯
 - RULE-SET,Twitter-4,社交通讯
 - RULE-SET,WeChat,社交通讯
 - RULE-SET,wechat_asn,社交通讯
@@ -3539,34 +3248,25 @@ rules:
 - RULE-SET,category-cngames,游戏服务
 - RULE-SET,Epic / Domain,游戏服务
 - RULE-SET,Epic-2,游戏服务
-- RULE-SET,Epic-3,游戏服务
 - RULE-SET,EpicCN,游戏服务
 - RULE-SET,Game,游戏服务
-- RULE-SET,Game-2,游戏服务
 - RULE-SET,GameDownload,游戏服务
-- RULE-SET,GameDownload-2,游戏服务
 - RULE-SET,GameDownloadCN,游戏服务
 - RULE-SET,Games,游戏服务
 - RULE-SET,games-!cn,游戏服务
 - RULE-SET,games-cn,游戏服务
-- RULE-SET,games-cn-2,游戏服务
 - RULE-SET,GamesGlobal,游戏服务
 - RULE-SET,Nintendo,游戏服务
-- RULE-SET,Nintendo-2,游戏服务
 - RULE-SET,NintendoCN,游戏服务
 - RULE-SET,PlayStation / Domain,游戏服务
 - RULE-SET,PlayStation,游戏服务
 - RULE-SET,Steam / Domain,游戏服务
-- RULE-SET,Steam,游戏服务
-- RULE-SET,Steam-3,游戏服务
 - RULE-SET,Steam-5,游戏服务
-- RULE-SET,Steam-6,游戏服务
 - RULE-SET,steam_cn_domain,游戏服务
 - RULE-SET,steamcdn_domain,游戏服务
 - RULE-SET,steamcdn_ip,游戏服务
 - RULE-SET,SteamCN-2,游戏服务
 - RULE-SET,Xbox,游戏服务
-- RULE-SET,Xbox-2,游戏服务
 - RULE-SET,XboxCN,游戏服务
 - RULE-SET,Abema TV,流媒体
 - RULE-SET,Bahamut,流媒体
