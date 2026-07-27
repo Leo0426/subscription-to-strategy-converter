@@ -2737,6 +2737,13 @@ rules:
 - RULE-SET,OpenAI,AI 服务
 - RULE-SET,OpenAI-zj,AI 服务
 - RULE-SET,Perplexity / Domain,AI 服务
+# GitHub 等子服务必须先于 Apple/Google/Microsoft 厂商族规则:
+# geosite:microsoft 含 +.github.com,后置会把 GitHub 截进 Microsoft 组。
+- RULE-SET,Docker,开发服务
+- RULE-SET,gitbook_domain,开发服务
+- RULE-SET,GitHub / Domain,开发服务
+- RULE-SET,GitHub-5,开发服务
+- RULE-SET,GitHub-zj,开发服务
 - RULE-SET,Apple / Domain,Apple
 - RULE-SET,Apple-4,Apple
 - RULE-SET,Apple-CN / Domain,Apple
@@ -2773,11 +2780,6 @@ rules:
 - RULE-SET,microsoft_cdn_non_ip,Microsoft
 - RULE-SET,microsoft_non_ip,Microsoft
 - RULE-SET,OneDrive-2,Microsoft
-- RULE-SET,Docker,开发服务
-- RULE-SET,gitbook_domain,开发服务
-- RULE-SET,GitHub / Domain,开发服务
-- RULE-SET,GitHub-5,开发服务
-- RULE-SET,GitHub-zj,开发服务
 - RULE-SET,bank_cn_domain,金融服务
 - RULE-SET,Binance / Domain,金融服务
 - RULE-SET,Bybit / Domain,金融服务
