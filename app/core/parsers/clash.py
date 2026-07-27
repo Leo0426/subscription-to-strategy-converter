@@ -1,12 +1,36 @@
 """Clash/Mihomo YAML proxy dict ↔ ProxyNode IR."""
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 
 from app.ir import ProxyNode, TLSConfig, TransportConfig
 
 
 # ── dict → IR ─────────────────────────────────────────────────────────────
+
+
+_COMMON_OWNED_FIELDS = {
+    "name", "type", "server", "port", "tls", "sni", "servername",
+    "skip-cert-verify", "alpn", "fingerprint", "reality-opts", "network",
+    "ws-opts", "h2-opts", "grpc-opts",
+}
+_PROTOCOL_OWNED_FIELDS = {
+    "ss": {"cipher", "password", "plugin", "plugin-opts", "udp"},
+    "vmess": {"uuid", "alterId", "cipher", "udp"},
+    "vless": {"uuid", "flow", "udp"},
+    "trojan": {"password", "udp"},
+    "hysteria2": {"password", "obfs", "obfs-password", "up", "down"},
+    "tuic": {"uuid", "password", "congestion-controller"},
+    "socks5": {"username", "password"},
+    "socks": {"username", "password"},
+    "http": {"username", "password"},
+}
+
+
+def _passthrough_fields(proxy: dict, protocol: str) -> dict[str, Any]:
+    owned = _COMMON_OWNED_FIELDS | _PROTOCOL_OWNED_FIELDS.get(protocol, set())
+    return deepcopy({key: value for key, value in proxy.items() if key not in owned})
 
 
 def _tls(proxy: dict) -> TLSConfig:
@@ -73,6 +97,9 @@ def clash_to_ir(proxy: dict) -> ProxyNode:
         protocol = "socks5"
 
     extra: dict[str, Any] = {}
+    passthrough = _passthrough_fields(proxy, protocol)
+    if passthrough:
+        extra["_clash_passthrough"] = passthrough
 
     if protocol == "ss":
         extra["cipher"] = str(proxy.get("cipher") or "")
@@ -142,12 +169,14 @@ def clash_to_ir(proxy: dict) -> ProxyNode:
 
 def ir_to_clash_dict(node: ProxyNode) -> dict[str, Any]:
     """Convert a ProxyNode IR to a Mihomo-compatible proxy dict."""
-    d: dict[str, Any] = {
+    passthrough = node.extra.get("_clash_passthrough")
+    d: dict[str, Any] = deepcopy(passthrough) if isinstance(passthrough, dict) else {}
+    d.update({
         "name": node.name,
         "type": node.protocol,
         "server": node.server,
         "port": node.port,
-    }
+    })
 
     # TLS — trojan/hysteria2/tuic imply TLS; don't duplicate the key
     proto = node.protocol
