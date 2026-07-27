@@ -19,6 +19,26 @@ def test_leo_materializes_subscription_backed_groups_from_current_nodes() -> Non
     assert "use" not in _group(config, "自动选择")
 
 
+def test_leo_defaults_to_openclash_safe_ipv4_dns() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+
+    assert template["ipv6"] is False
+    assert template["dns"]["ipv6"] is False
+    assert template["dns"]["proxy-server-nameserver"] == [
+        "223.5.5.5",
+        "119.29.29.29",
+    ]
+
+
+def test_leo_does_not_require_optional_biliintl_geosite_tag() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+
+    # Some OpenClash GeoSite.dat builds omit this tag. The equivalent
+    # RuleProvider is already declared and ordered earlier in the rule graph.
+    assert "RULE-SET,biliintl,流媒体" in template["rules"]
+    assert not any(rule.startswith("GEOSITE,biliintl,") for rule in template["rules"])
+
+
 def test_leo_region_groups_do_not_match_ambiguous_country_fragments() -> None:
     template = load_template(LEO_TEMPLATE_ID)
     config = apply_template(
