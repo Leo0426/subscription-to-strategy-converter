@@ -2629,6 +2629,7 @@ rule-providers:
     path: ./rule_provider/leo/720.txt
     interval: 86400
 rules:
+- AND,((NETWORK,UDP),(DST-PORT,443),(NOT,((GEOSITE,cn))),(NOT,((GEOIP,CN)))),REJECT
 - RULE-SET,AdBlock,REJECT
 - RULE-SET,ads,REJECT
 - RULE-SET,Advertising,REJECT
@@ -2980,18 +2981,12 @@ rules:
 - RULE-SET,UbisoftCN,默认代理
 - RULE-SET,xiaomi_domain,默认代理
 - RULE-SET,Xunlei,默认代理
-- AND,((DST-PORT,443),(NETWORK,UDP),(NOT,((GEOIP,CN)))),REJECT
-- AND,((DST-PORT,443),(NETWORK,UDP)),REJECT
 - DST-PORT,6881-6999,REJECT
-- AND,(AND,(DST-PORT,443),(NETWORK,UDP)),(NOT,((GEOSITE,cn))),REJECT
-- AND,(AND,(DST-PORT,443),(NETWORK,UDP)),(NOT,((GEOIP,CN))),REJECT
 - GEOSITE,category-ads-all,REJECT
 - IP-CIDR,198.18.0.1/16,REJECT,no-resolve
 - IP-CIDR,169.254.169.254/32,REJECT,no-resolve
 - DOMAIN,t-ring-fdv2.msedge.net,REJECT,no-resolve
-- AND,((DST-PORT,443),(NETWORK,UDP),(NOT,((RULE-SET,ChinaIP))),(NOT,((RULE-SET,China)))),REJECT
 - IP-CIDR,95.161.76.100/31,REJECT,no-resolve
-- AND,(DST-PORT,443),(NETWORK,UDP),(NOT,((RULE-SET,China))),REJECT
 - DOMAIN,access.pikpakdrive.com,REJECT
 - DOMAIN,access.mypikpak.com,REJECT
 - DOMAIN,access.mypikpak.net,REJECT
@@ -3103,7 +3098,6 @@ rules:
 - IN-NAME,in_mixed,默认代理
 - AND,((DST-PORT,3478),(RULE-SET,ip_webrtc)),默认代理
 - DST-PORT,1337/2710/6881-6999/7777,默认代理
-- AND,((NETWORK,UDP),(DST-PORT,443)),默认代理
 - DST-PORT,10000-65535,默认代理
 - GEOSITE,category-scholar-!cn,默认代理
 - GEOSITE,ehentai,默认代理
