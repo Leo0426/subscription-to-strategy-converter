@@ -230,7 +230,9 @@ def test_leo_public_data_endpoints_expose_source_rules_and_audit(client: TestCli
     audit_body = audit.json()
     assert audit_body["summary"]["total"] == detail.json()["summary"]["rule_provider_count"]
     assert len(audit_body["sources"]) == audit_body["summary"]["total"]
-    assert audit_body["quality_score"]["kind"] == "preliminary-structural"
+    assert audit_body["quality_score"]["kind"] == "structural-v2"
+    assert "supply_chain" in audit_body["quality_score"]["dimensions"]
+    assert "cold_start_cost" in audit_body["quality_score"]["dimensions"]
     assert audit_body["publication"]["template_current"] is True
     assert {item["href"] for item in detail.json()["public_data"]} == {
         "/templates/source",

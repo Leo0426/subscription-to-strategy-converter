@@ -9,6 +9,7 @@ from hashlib import sha256
 from itertools import combinations
 import json
 from pathlib import Path
+import re
 from time import perf_counter
 from typing import Any, Awaitable, Callable, Mapping
 from urllib.parse import urlparse
@@ -18,6 +19,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 from app.core.fetcher import _ensure_resolved_host_is_public, _validate_url
+from app.core.policy_analyzer import _PROVIDER_COUNT_BUDGET as PROVIDER_COUNT_BUDGET
 from app.core.template_engine import LEO_TEMPLATE_ID, load_template
 
 
@@ -26,6 +28,10 @@ DEFAULT_REPORT_DIR = Path(".scratch/leo-rule-source-quality/reports")
 LEO_TEMPLATE_PATH = Path(__file__).resolve().parents[2] / "community_templates" / "leo" / "leo.yaml"
 PUBLIC_AUDIT_PATH = LEO_TEMPLATE_PATH.with_name("audit.json")
 MAX_RULE_SOURCE_BYTES = 32 * 1024 * 1024
+
+#: Total bytes a client downloads on every cold start across all providers.
+#: Shares the provider-count budget with the analyzer so there is one standard.
+COLD_START_BYTE_BUDGET = 16 * 1024 * 1024
 
 _TARGET_PRIORITY = {
     "REJECT": 0,
@@ -260,6 +266,63 @@ def find_ordered_entry_conflicts(
     }
 
 
+_GITHUB_ORIGIN_HOSTS = frozenset(
+    {
+        "github.com",
+        "raw.githubusercontent.com",
+        "gist.githubusercontent.com",
+        "objects.githubusercontent.com",
+        "codeload.github.com",
+    }
+)
+_COMMIT_SHA = re.compile(r"^[0-9a-f]{40}$")
+_VERSION_TAG = re.compile(r"^v?\d+(\.\d+)+$")
+
+
+def _github_ref_is_pinned(segments: list[str]) -> bool:
+    """segments: [owner, repo, ref, ...] or [owner, repo, "refs", "heads"|"tags", ref, ...]."""
+    if len(segments) < 3:
+        return False
+    if segments[2] == "refs" and len(segments) >= 5:
+        return segments[3] == "tags"
+    return bool(_COMMIT_SHA.match(segments[2]) or _VERSION_TAG.match(segments[2]))
+
+
+def supply_chain_facts(url: str) -> dict[str, Any]:
+    """Machine-checkable supply-chain properties of one RuleSource URL.
+
+    - `upstream`: who can change the content (`github:<owner>` or the hostname).
+    - `pinned`: the URL names an immutable ref (commit sha or tag), so upstream
+      pushes cannot silently change what clients download.
+    - `via_intermediary`: the content passes through a third-party proxy front
+      (gh-proxy style) that could rewrite it in transit; official CDNs with a
+      declared upstream (jsDelivr `gh/<owner>@<ref>`) are not intermediaries.
+    """
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower()
+    segments = [segment for segment in parsed.path.split("/") if segment]
+
+    if host in _GITHUB_ORIGIN_HOSTS:
+        upstream = f"github:{segments[0]}" if segments else host
+        return {"upstream": upstream, "pinned": _github_ref_is_pinned(segments), "via_intermediary": False}
+
+    if host.endswith(".jsdelivr.net") and len(segments) >= 2 and segments[0] == "gh":
+        owner, _, ref = segments[1].partition("@")
+        pinned = bool(_COMMIT_SHA.match(ref) or _VERSION_TAG.match(ref))
+        return {"upstream": f"github:{owner}", "pinned": pinned, "via_intermediary": False}
+
+    embedded = next(
+        (index for index, segment in enumerate(segments) if segment.lower() in _GITHUB_ORIGIN_HOSTS),
+        None,
+    )
+    if embedded is not None:
+        inner = segments[embedded + 1 :]
+        upstream = f"github:{inner[0]}" if inner else host
+        return {"upstream": upstream, "pinned": _github_ref_is_pinned(inner), "via_intermediary": True}
+
+    return {"upstream": host, "pinned": False, "via_intermediary": False}
+
+
 def score_rule_source_report(report: Mapping[str, Any]) -> dict[str, Any]:
     """Compute a preliminary structural score; semantic accuracy remains unscored."""
     summary = report.get("summary") or {}
@@ -279,20 +342,42 @@ def score_rule_source_report(report: Mapping[str, Any]) -> dict[str, Any]:
     else:
         affected = len(conflicts.get("affected_providers") or [])
         consistency_ratio = max(0, 1 - affected / max(1, valid))
+
+    sources = [source for source in report.get("sources") or [] if isinstance(source, dict)]
+    facts = [supply_chain_facts(str(source.get("url") or "")) for source in sources]
+    if facts:
+        direct_ratio = sum(not fact["via_intermediary"] for fact in facts) / len(facts)
+        pinned_ratio = sum(bool(fact["pinned"]) for fact in facts) / len(facts)
+    else:
+        direct_ratio = pinned_ratio = 1.0
+    total_bytes = sum(int(source.get("byte_count") or 0) for source in sources)
+    count_ratio = min(1.0, PROVIDER_COUNT_BUDGET / total)
+    bytes_ratio = min(1.0, COLD_START_BYTE_BUDGET / total_bytes) if total_bytes else 1.0
+
     dimensions = {
-        "availability": round(50 * valid / total, 2),
-        "content_validity": round(15 * valid / inspected, 2),
-        "content_uniqueness": round(20 * max(0, 1 - redundant / total), 2),
-        "target_consistency": round(15 * consistency_ratio, 2),
+        "availability": round(40 * valid / total, 2),
+        "content_validity": round(10 * valid / inspected, 2),
+        "content_uniqueness": round(15 * max(0, 1 - redundant / total), 2),
+        "target_consistency": round(10 * consistency_ratio, 2),
+        "supply_chain": round(15 * (0.5 * direct_ratio + 0.5 * pinned_ratio), 2),
+        "cold_start_cost": round(10 * (0.5 * count_ratio + 0.5 * bytes_ratio), 2),
     }
     total_score = round(sum(dimensions.values()), 2)
     grade = "A" if total_score >= 90 else "B" if total_score >= 80 else "C" if total_score >= 70 else "D" if total_score >= 60 else "F"
     return {
-        "kind": "preliminary-structural",
+        "kind": "structural-v2",
         "total": total_score,
         "grade": grade,
         "dimensions": dimensions,
-        "unmeasured": ["semantic_accuracy", "service_coverage", "long_term_freshness"],
+        "evidence": {
+            "upstream_count": len({fact["upstream"] for fact in facts}),
+            "via_intermediary_count": sum(bool(fact["via_intermediary"]) for fact in facts),
+            "unpinned_count": sum(not fact["pinned"] for fact in facts),
+            "total_bytes": total_bytes,
+            "provider_count_budget": PROVIDER_COUNT_BUDGET,
+            "cold_start_byte_budget": COLD_START_BYTE_BUDGET,
+        },
+        "unmeasured": ["semantic_accuracy", "service_coverage", "long_term_freshness", "content_drift"],
     }
 
 
@@ -488,6 +573,7 @@ async def audit_rule_sources(
             "declared_format": str(raw.get("format") or ""),
             "targets": sorted(set(targets.get(name, []))),
             "routes": list((routes or {}).get(name, [])),
+            **supply_chain_facts(url),
         }
         try:
             async with semaphore:
@@ -665,6 +751,17 @@ class PublicRuleSourceFetcher:
         raise RuntimeError("rule source redirect limit exceeded")
 
 
+def _render_supply_chain_line(evidence: Mapping[str, Any]) -> str:
+    return (
+        f"供应链与冷启动：**{evidence.get('upstream_count', 0)}** 个独立上游，"
+        f"**{evidence.get('via_intermediary_count', 0)}** 个源经第三方代理中转，"
+        f"**{evidence.get('unpinned_count', 0)}** 个源不可固定版本；"
+        f"冷启动总下载量 **{evidence.get('total_bytes', 0) / 1048576:.1f} MiB**"
+        f"（预算 {evidence.get('cold_start_byte_budget', COLD_START_BYTE_BUDGET) / 1048576:.0f} MiB，"
+        f"数量预算 {evidence.get('provider_count_budget', PROVIDER_COUNT_BUDGET)}）。"
+    )
+
+
 def render_markdown_report(report: Mapping[str, Any]) -> str:
     summary = report["summary"]
     sources = list(report.get("sources", []))
@@ -691,7 +788,9 @@ def render_markdown_report(report: Mapping[str, Any]) -> str:
         "",
         f"按实际规则顺序生效的冲突：**{ordered_conflicts.get('ordered_conflict_entry_count', 0)}** 条。",
         "",
-        f"初步结构质量评分：**{quality.get('total', 0)} / 100（{quality.get('grade', '-')}）**。该分数不包含语义准确率、服务覆盖率和长期新鲜度。",
+        f"初步结构质量评分：**{quality.get('total', 0)} / 100（{quality.get('grade', '-')}）**。该分数不包含语义准确率、服务覆盖率、长期新鲜度和内容漂移。",
+        "",
+        _render_supply_chain_line(quality.get("evidence") or {}),
         "",
         "## 检测格式",
         "",

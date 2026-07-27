@@ -99,6 +99,7 @@ Token-protected Subscription URLs
 | `app/core/template_policy_transform.py` | ServiceRoute transformation boundary with Claude template analysis and compatibility adapters |
 | `app/core/profiles.py` | Persistent Profile store with token authorization and last-successful artifact caching |
 | `app/core/provider_egress.py` | Decides which RuleProviders must download through a ProxyGroup instead of the direct route |
+| `app/core/rule_source_audit.py` | RuleSource availability/content/supply-chain audit, structural-v2 quality score, and the published `audit.json` snapshot |
 | `app/core/renderer.py` | `render_yaml()` — serializes a dict to YAML string |
 | `app/core/platforms/surge.py` | Public Surge compatibility compiler; reports skipped protocols and unsupported MRS rule sets |
 | `app/core/platforms/singbox.py` | Experimental sing-box compiler |
@@ -198,6 +199,7 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - `NodeSelector` references are expanded against the latest upstream `ProxyNode` inventory on every preview/render/Profile subscription request; unknown selectors fail closed and selectors producing an empty group are publish-blocking errors
 - Rules after the first `MATCH` or `FINAL` are unreachable and must be reported by the analyzer
 - A structurally valid artifact is not necessarily a runnable one; the analyzer reports target-client runtime feasibility (RuleProvider reachability, cold-start provider budget, core version requirements) as warnings that never block publication
+- New RuleSources must pass the admission checklist in `community_templates/leo/README.md` (trusted upstream, no third-party proxy fronts, pin when possible, cost-proportional, no high overlap, no target conflicts); the structural-v2 score and the analyzer share one provider-count budget
 - RuleProviders hosted where the client has no direct route must declare `proxy: <group>`; `provider_egress.py` owns that decision for both the compiler and the analyzer
 - The published Subscription URL host is unknowable from the request; the page guesses `location.origin` and `SUBFLOW_PUBLIC_BASE_URL` overrides it for clients running on another host
 - A publishable Release stores immutable target artifacts plus the source-content digest, ProfileRevision, template identity, rule-source identity, and compiler/transformer versions that produced them

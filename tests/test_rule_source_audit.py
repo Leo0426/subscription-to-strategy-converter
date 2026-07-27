@@ -1,6 +1,7 @@
 import pytest
 
 from app.core.rule_source_audit import (
+    COLD_START_BYTE_BUDGET,
     apply_safe_duplicate_pruning,
     apply_verified_unusable_source_pruning,
     audit_rule_sources,
@@ -11,6 +12,7 @@ from app.core.rule_source_audit import (
     inspect_rule_source_content,
     reorder_rules_by_target_priority,
     score_rule_source_report,
+    supply_chain_facts,
 )
 
 
@@ -128,10 +130,78 @@ def test_score_rule_source_report_is_weighted_and_explains_unmeasured_semantics(
 
     score = score_rule_source_report(report)
 
-    assert score["total"] == pytest.approx(80.58, abs=0.01)
-    assert score["dimensions"]["availability"] == 40.0
+    assert score["total"] == pytest.approx(85.39, abs=0.01)
+    assert score["dimensions"]["availability"] == 32.0
     assert "semantic_accuracy" in score["unmeasured"]
+    assert "content_drift" in score["unmeasured"]
     assert score["grade"] == "B"
+
+
+def test_supply_chain_facts_classifies_origin_pinning_and_intermediaries() -> None:
+    branch = supply_chain_facts(
+        "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/115.mrs"
+    )
+    tag = supply_chain_facts(
+        "https://raw.githubusercontent.com/owner/repo/refs/tags/v1.2.0/rules.yaml"
+    )
+    sha = supply_chain_facts(
+        "https://raw.githubusercontent.com/owner/repo/0123456789abcdef0123456789abcdef01234567/rules.yaml"
+    )
+    cdn_branch = supply_chain_facts("https://testingcf.jsdelivr.net/gh/owner@master/rules.txt")
+    cdn_version = supply_chain_facts("https://cdn.jsdelivr.net/gh/owner@1.2.3/rules.txt")
+    proxied = supply_chain_facts(
+        "https://gh-proxy.com/https://raw.githubusercontent.com/owner/repo/master/rules.txt"
+    )
+    first_party = supply_chain_facts("https://ruleset.skk.moe/Clash/domainset/reject.txt")
+
+    assert branch == {"upstream": "github:MetaCubeX", "pinned": False, "via_intermediary": False}
+    assert tag["pinned"] is True and tag["via_intermediary"] is False
+    assert sha["pinned"] is True
+    assert cdn_branch == {"upstream": "github:owner", "pinned": False, "via_intermediary": False}
+    assert cdn_version["pinned"] is True
+    assert proxied == {"upstream": "github:owner", "pinned": False, "via_intermediary": True}
+    assert first_party == {"upstream": "ruleset.skk.moe", "pinned": False, "via_intermediary": False}
+
+
+def test_score_rule_source_report_scores_supply_chain_and_cold_start_cost() -> None:
+    half_budget = COLD_START_BYTE_BUDGET // 2
+    report = {
+        "summary": {"total": 4, "valid": 4, "invalid": 0, "failed": 0},
+        "duplicate_content_groups": [],
+        "entry_target_conflicts": {},
+        "sources": [
+            {
+                "name": "branch-a",
+                "url": "https://raw.githubusercontent.com/owner/repo/master/a.yaml",
+                "byte_count": half_budget,
+            },
+            {
+                "name": "branch-b",
+                "url": "https://raw.githubusercontent.com/owner/repo/master/b.yaml",
+                "byte_count": half_budget,
+            },
+            {
+                "name": "proxied",
+                "url": "https://gh-proxy.com/https://raw.githubusercontent.com/owner/repo/master/c.yaml",
+                "byte_count": half_budget,
+            },
+            {
+                "name": "pinned",
+                "url": "https://raw.githubusercontent.com/owner/repo/refs/tags/v1.0.0/d.yaml",
+                "byte_count": half_budget,
+            },
+        ],
+    }
+
+    score = score_rule_source_report(report)
+
+    # direct 3/4, pinned 1/4 → 15 × (0.375 + 0.125); bytes at 2× budget → 10 × (0.5 + 0.25)
+    assert score["dimensions"]["supply_chain"] == pytest.approx(7.5)
+    assert score["dimensions"]["cold_start_cost"] == pytest.approx(7.5)
+    assert score["evidence"]["upstream_count"] == 1
+    assert score["evidence"]["via_intermediary_count"] == 1
+    assert score["evidence"]["unpinned_count"] == 3
+    assert score["evidence"]["total_bytes"] == COLD_START_BYTE_BUDGET * 2
 
 
 def test_apply_safe_duplicate_pruning_keeps_first_ordered_equivalent_provider() -> None:
