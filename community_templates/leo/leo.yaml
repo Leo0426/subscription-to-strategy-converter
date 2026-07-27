@@ -1,12 +1,7 @@
-# Leo 策略模板
-# 由 Subflow 注入订阅节点，并在生成时按地区筛选策略组。
-
 mixed-port: 7890
 allow-lan: true
 mode: rule
 log-level: info
-# OpenClash 官方排障建议默认关闭 IPv6；需要 IPv6 的部署可在 OpenClash
-# 覆写中同时开启顶层与 DNS 的 ipv6，避免双栈状态不一致。
 ipv6: false
 unified-delay: true
 tcp-concurrent: true
@@ -2380,20 +2375,6 @@ rule-providers:
     url: https://gh-proxy.com/raw.githubusercontent.com/liandu2024/clash/refs/heads/main/list/Crunchyroll.list
     path: ./rule_provider/leo/425.txt
     interval: 86400
-  disney-2:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo-ruleset/disney.mrs
-    path: ./rule_provider/leo/427.mrs
-    interval: 86400
-  Disney-3:
-    type: http
-    behavior: classical
-    format: text
-    url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Disney.list
-    path: ./rule_provider/leo/428.txt
-    interval: 86400
   Disney-5:
     type: http
     behavior: classical
@@ -2414,47 +2395,12 @@ rule-providers:
     url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/Disney%20Plus.yaml
     path: ./rule_provider/leo/433.yaml
     interval: 604800
-  Emby:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/666OS/rules/raw/release/mihomo/domain/Emby.mrs
-    path: ./rule_provider/leo/435.mrs
-    interval: 86400
-  emby-2:
-    type: http
-    behavior: classical
-    format: text
-    url: https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Rules/Emby.list
-    path: ./rule_provider/leo/436.txt
-    interval: 86400
-  emby-3:
-    type: http
-    behavior: classical
-    format: text
-    url: https://raw.githubusercontent.com/JohnsonRan/CRules/master/rules/Emby.txt
-    path: ./rule_provider/leo/437.txt
-    interval: 86400
   Emby-5:
     type: http
     behavior: classical
     format: yaml
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Emby/Emby_No_Resolve.yaml
     path: ./rule_provider/leo/439.yaml
-    interval: 86400
-  Emby-6:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://kelee.one/Tool/Clash/Rule/EmbyServer.yaml
-    path: ./rule_provider/leo/440.yaml
-    interval: 3600
-  Emby-7:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/category-emby.mrs
-    path: ./rule_provider/leo/441.mrs
     interval: 86400
   emby_domain:
     type: http
@@ -2463,26 +2409,12 @@ rule-providers:
     url: https://raw.githubusercontent.com/Lanlan13-14/Rules/refs/heads/main/rules/Domain/emby.mrs
     path: ./rule_provider/leo/443.mrs
     interval: 86400
-  emby_ip:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://raw.githubusercontent.com/Lanlan13-14/Rules/refs/heads/main/rules/IP/emby-ip.mrs
-    path: ./rule_provider/leo/444.mrs
-    interval: 86400
   EmbyIP:
     type: http
     behavior: ipcidr
     format: mrs
     url: https://github.com/666OS/rules/raw/release/mihomo/ip/Emby.mrs
     path: ./rule_provider/leo/445.mrs
-    interval: 86400
-  HBO-2:
-    type: http
-    behavior: classical
-    format: text
-    url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/HBO.list
-    path: ./rule_provider/leo/447.txt
     interval: 86400
   HBO-3:
     type: http
@@ -2504,52 +2436,18 @@ rule-providers:
     url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/Max.yaml
     path: ./rule_provider/leo/452.yaml
     interval: 604800
-  max-2:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo-ruleset/max.mrs
-    path: ./rule_provider/leo/453.mrs
-    interval: 86400
   Hulu:
     type: http
     behavior: classical
     url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/Hulu.yaml
     path: ./rule_provider/leo/454.yaml
     interval: 604800
-  Hulu-2:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/hulu.mrs
-    path: ./rule_provider/leo/455.mrs
-    interval: 86400
   Hulu Japan:
     type: http
     behavior: classical
     url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/Hulu%20Japan.yaml
     path: ./rule_provider/leo/456.yaml
     interval: 604800
-  Netflix-2:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/Netflix.yaml
-    path: ./rule_provider/leo/458.yaml
-    interval: 604800
-  Netflix-4:
-    type: http
-    behavior: classical
-    format: text
-    url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Netflix.list
-    path: ./rule_provider/leo/460.txt
-    interval: 86400
-  Netflix-5:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://gh.669588.xyz/rules/geo/geosite/netflix.mrs
-    path: ./rule_provider/leo/461.mrs
-    interval: 86400
   Netflix-6:
     type: http
     behavior: classical
@@ -2557,13 +2455,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Netflix/Netflix_Classical_No_Resolve.yaml
     path: ./rule_provider/leo/462.yaml
     interval: 86400
-  Netflix-7:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://rule.kelee.one/Clash/Netflix.yaml
-    path: ./rule_provider/leo/463.yaml
-    interval: 3600
   Netflix / Domain:
     type: http
     behavior: domain
@@ -2591,20 +2482,6 @@ rule-providers:
     url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/Niconico.yaml
     path: ./rule_provider/leo/474.yaml
     interval: 604800
-  primevideo:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo-ruleset/primevideo.mrs
-    path: ./rule_provider/leo/475.mrs
-    interval: 86400
-  PrimeVideo-2:
-    type: http
-    behavior: classical
-    format: text
-    url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/PrimeVideo.list
-    path: ./rule_provider/leo/476.txt
-    interval: 86400
   PrimeVideo-3:
     type: http
     behavior: classical
@@ -2612,39 +2489,12 @@ rule-providers:
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/PrimeVideo/PrimeVideo_No_Resolve.yaml
     path: ./rule_provider/leo/477.yaml
     interval: 86400
-  PrimeVideo-4:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/primevideo.mrs
-    path: ./rule_provider/leo/478.mrs
-    interval: 86400
   Soundcloud:
     type: http
     behavior: classical
     url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/Soundcloud.yaml
     path: ./rule_provider/leo/480.yaml
     interval: 604800
-  Spotify-2:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/Spotify.yaml
-    path: ./rule_provider/leo/482.yaml
-    interval: 604800
-  spotify-3:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo-ruleset/spotify.mrs
-    path: ./rule_provider/leo/483.mrs
-    interval: 86400
-  Spotify-4:
-    type: http
-    behavior: classical
-    format: text
-    url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Spotify.list
-    path: ./rule_provider/leo/484.txt
-    interval: 86400
   Spotify-5:
     type: http
     behavior: classical
@@ -2659,26 +2509,6 @@ rule-providers:
     url: https://gh-proxy.com/github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geosite/spotify.mrs
     path: ./rule_provider/leo/488.mrs
     interval: 86400
-  TikTok:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/TikTok.yaml
-    path: ./rule_provider/leo/492.yaml
-    interval: 604800
-  tiktok-2:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo-ruleset/tiktok.mrs
-    path: ./rule_provider/leo/493.mrs
-    interval: 86400
-  TikTok-3:
-    type: http
-    behavior: classical
-    format: text
-    url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/TikTok.list
-    path: ./rule_provider/leo/494.txt
-    interval: 86400
   TikTok-4:
     type: http
     behavior: classical
@@ -2686,13 +2516,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/TikTok/TikTok_No_Resolve.yaml
     path: ./rule_provider/leo/495.yaml
     interval: 86400
-  TikTok-5:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://kelee.one/Tool/Clash/Rule/TikTok.yaml
-    path: ./rule_provider/leo/496.yaml
-    interval: 3600
   TikTok / Domain:
     type: http
     behavior: domain
@@ -2728,19 +2551,6 @@ rule-providers:
     url: https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/youtube.mrs
     path: ./rule_provider/leo/506.mrs
     interval: 86400
-  YouTube-2:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/YouTube.yaml
-    path: ./rule_provider/leo/508.yaml
-    interval: 604800
-  YouTube-4:
-    type: http
-    behavior: classical
-    format: text
-    url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/YouTube.list
-    path: ./rule_provider/leo/510.txt
-    interval: 86400
   YouTube-6:
     type: http
     behavior: classical
@@ -2754,13 +2564,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/YouTubeMusic/YouTubeMusic.yaml
     path: ./rule_provider/leo/518.yaml
     interval: 604800
-  YouTubeMusic:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/YouTubeMusic/YouTubeMusic_No_Resolve.yaml
-    path: ./rule_provider/leo/519.yaml
-    interval: 86400
   appletv:
     type: http
     behavior: domain
@@ -2794,26 +2597,6 @@ rule-providers:
     url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/Youku.yaml
     path: ./rule_provider/leo/525.yaml
     interval: 604800
-  Bilibili:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/Bilibili.yaml
-    path: ./rule_provider/leo/526.yaml
-    interval: 604800
-  bilibili-2:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo-ruleset/bilibili.mrs
-    path: ./rule_provider/leo/527.mrs
-    interval: 86400
-  bilibili-4:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://gh.669588.xyz/rules/geo/geosite/bilibili.mrs
-    path: ./rule_provider/leo/529.mrs
-    interval: 86400
   Bilibili-5:
     type: http
     behavior: classical
@@ -2911,20 +2694,6 @@ rule-providers:
     url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/Bahamut.yaml
     path: ./rule_provider/leo/549.yaml
     interval: 604800
-  bahamut-2:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://git.ihtw.moe/JohnsonRan/meta-rules-dat/raw/meta/geo/geosite/bahamut.mrs
-    path: ./rule_provider/leo/550.mrs
-    interval: 86400
-  Bahamut-4:
-    type: http
-    behavior: classical
-    format: text
-    url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Bahamut.list
-    path: ./rule_provider/leo/552.txt
-    interval: 86400
   douyin-zj:
     type: http
     behavior: classical
@@ -4010,13 +3779,8 @@ rules:
 - RULE-SET,XboxCN,游戏服务
 - RULE-SET,Abema TV,流媒体
 - RULE-SET,Bahamut,流媒体
-- RULE-SET,bahamut-2,流媒体
-- RULE-SET,Bahamut-4,流媒体
 - RULE-SET,BBC iPlayer,流媒体
 - RULE-SET,BiliBili / Domain,流媒体
-- RULE-SET,Bilibili,流媒体
-- RULE-SET,bilibili-2,流媒体
-- RULE-SET,bilibili-4,流媒体
 - RULE-SET,Bilibili-5,流媒体
 - RULE-SET,bilibili_ip,流媒体
 - RULE-SET,BiliBiliIntl,流媒体
@@ -4027,31 +3791,21 @@ rules:
 - RULE-SET,Discovery Plus,流媒体
 - RULE-SET,Disney / Domain,流媒体
 - RULE-SET,Disney Plus,流媒体
-- RULE-SET,disney-2,流媒体
-- RULE-SET,Disney-3,流媒体
 - RULE-SET,Disney-5,流媒体
 - RULE-SET,DMM,流媒体
 - RULE-SET,douyin-zj,流媒体
 - RULE-SET,DouYin_域,流媒体
-- RULE-SET,Emby,流媒体
-- RULE-SET,emby-2,流媒体
-- RULE-SET,emby-3,流媒体
 - RULE-SET,Emby-5,流媒体
-- RULE-SET,Emby-6,流媒体
-- RULE-SET,Emby-7,流媒体
 - RULE-SET,emby_domain,流媒体
-- RULE-SET,emby_ip,流媒体
 - RULE-SET,EmbyIP,流媒体
 - RULE-SET,encoreTVB,流媒体
 - RULE-SET,F1 TV,流媒体
 - RULE-SET,Fox Now,流媒体
 - RULE-SET,Fox+,流媒体
 - RULE-SET,HBO / Domain,流媒体
-- RULE-SET,HBO-2,流媒体
 - RULE-SET,HBO-3,流媒体
 - RULE-SET,Hulu Japan,流媒体
 - RULE-SET,Hulu,流媒体
-- RULE-SET,Hulu-2,流媒体
 - RULE-SET,iptv_domain,流媒体
 - RULE-SET,IQ,流媒体
 - RULE-SET,IQIYI,流媒体
@@ -4060,7 +3814,6 @@ rules:
 - RULE-SET,KKTV,流媒体
 - RULE-SET,Letv,流媒体
 - RULE-SET,Max,流媒体
-- RULE-SET,max-2,流媒体
 - RULE-SET,media!cn_domain,流媒体
 - RULE-SET,media,流媒体
 - RULE-SET,mediaip,流媒体
@@ -4070,27 +3823,17 @@ rules:
 - RULE-SET,NetEaseMusic_ip,流媒体
 - RULE-SET,Netflix / Domain,流媒体
 - RULE-SET,Netflix / IP,流媒体
-- RULE-SET,Netflix-2,流媒体
-- RULE-SET,Netflix-4,流媒体
-- RULE-SET,Netflix-5,流媒体
 - RULE-SET,Netflix-6,流媒体
-- RULE-SET,Netflix-7,流媒体
 - RULE-SET,Netflix_IP-2,流媒体
 - RULE-SET,NewsMedia,流媒体
 - RULE-SET,Niconico,流媒体
 - RULE-SET,Pandora,流媒体
 - RULE-SET,PBS,流媒体
 - RULE-SET,Popcorn / Domain,流媒体
-- RULE-SET,primevideo,流媒体
-- RULE-SET,PrimeVideo-2,流媒体
 - RULE-SET,PrimeVideo-3,流媒体
-- RULE-SET,PrimeVideo-4,流媒体
 - RULE-SET,site_youtube,流媒体
 - RULE-SET,Soundcloud,流媒体
 - RULE-SET,Spotify / Domain,流媒体
-- RULE-SET,Spotify-2,流媒体
-- RULE-SET,spotify-3,流媒体
-- RULE-SET,Spotify-4,流媒体
 - RULE-SET,Spotify-5,流媒体
 - RULE-SET,stream_ip,流媒体
 - RULE-SET,stream_non_ip,流媒体
@@ -4098,11 +3841,7 @@ rules:
 - RULE-SET,StreamingIP,流媒体
 - RULE-SET,Tencent Video,流媒体
 - RULE-SET,TikTok / Domain,流媒体
-- RULE-SET,TikTok,流媒体
-- RULE-SET,tiktok-2,流媒体
-- RULE-SET,TikTok-3,流媒体
 - RULE-SET,TikTok-4,流媒体
-- RULE-SET,TikTok-5,流媒体
 - RULE-SET,TikTok-zj,流媒体
 - RULE-SET,TVB_domain,流媒体
 - RULE-SET,Twitch,流媒体
@@ -4113,10 +3852,7 @@ rules:
 - RULE-SET,XPTVIP,流媒体
 - RULE-SET,Youku,流媒体
 - RULE-SET,YouTube Music,流媒体
-- RULE-SET,YouTube-2,流媒体
-- RULE-SET,YouTube-4,流媒体
 - RULE-SET,YouTube-6,流媒体
-- RULE-SET,YouTubeMusic,流媒体
 - RULE-SET,115_domain,默认代理
 - RULE-SET,1Password,默认代理
 - RULE-SET,ABC,默认代理
