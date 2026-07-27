@@ -69,7 +69,7 @@ def test_rule_catalog_exposes_every_parseable_community_rule_with_its_source(cli
     assert all(template["source_path"].startswith("community_templates/") for template in body["templates"])
     assert all(template["rules"] for template in body["templates"])
     assert any(
-        rule == "RULE-SET,Tracking,REJECT"
+        rule == "RULE-SET,ads,REJECT"
         for template in body["templates"]
         for rule in template["rules"]
     )
@@ -84,7 +84,7 @@ def test_rule_catalog_uses_the_consolidated_template(client: TestClient) -> None
     )
 
     assert leo["extraction"] == "yaml"
-    assert "RULE-SET,Tracking,REJECT" in leo["rules"]
+    assert "RULE-SET,ads,REJECT" in leo["rules"]
 
 
 # ── Preview endpoint ───────────────────────────────────────────────────────

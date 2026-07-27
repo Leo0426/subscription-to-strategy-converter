@@ -73,7 +73,7 @@ def test_workspace_customizes_only_existing_claude_policy_subgraph(monkeypatch) 
     # the transform must re-point whichever recognizable Claude rule remains
     # while leaving non-Claude AI rules untouched.
     claude_index = next(i for i, rule in enumerate(rules) if rule["match"] == "Claude")
-    chatgpt_index = next(i for i, rule in enumerate(rules) if rule["match"] == "ChatGPT / Domain")
+    chatgpt_index = next(i for i, rule in enumerate(rules) if rule["match"] == "ai-4")
     assert claude_index > chatgpt_index
     assert rules[claude_index]["target"] == "Claude"
     assert rules[chatgpt_index]["target"] == "AI 服务"
