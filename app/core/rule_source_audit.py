@@ -33,6 +33,10 @@ MAX_RULE_SOURCE_BYTES = 32 * 1024 * 1024
 #: Shares the provider-count budget with the analyzer so there is one standard.
 COLD_START_BYTE_BUDGET = 16 * 1024 * 1024
 
+#: Above this failure ratio a run is treated as an audit-environment failure
+#: and cannot replace the published snapshot. Healthy runs fail well under it.
+_PUBLISH_MAX_FAILED_RATIO = 0.25
+
 _TARGET_PRIORITY = {
     "REJECT": 0,
     "REJECT-DROP": 0,
@@ -851,14 +855,18 @@ def write_public_audit_snapshot(
 ) -> Path:
     """Publish the complete metadata-only audit beside leo.yaml.
 
-    An audit where nothing succeeded describes the audit environment (blocked
-    DNS, no network), not the sources; publishing it would replace real
-    evidence with noise, so it is refused.
+    An audit where nothing succeeded — or where failures dominate — describes
+    the audit environment (blocked DNS, degraded proxy route), not the sources;
+    publishing it would replace real evidence with noise, so it is refused.
+    Real source decay arrives gradually and passes this gate.
     """
     summary = report.get("summary") or {}
-    if not int(summary.get("valid") or 0):
+    total = max(1, int(summary.get("total") or 0))
+    valid = int(summary.get("valid") or 0)
+    failed = int(summary.get("failed") or 0)
+    if not valid or failed / total > _PUBLISH_MAX_FAILED_RATIO:
         raise ValueError(
-            "refusing to publish an audit with zero valid sources; "
+            f"refusing to publish an audit with {failed}/{total} failed sources; "
             "this indicates an audit-environment failure, not source quality"
         )
     path.parent.mkdir(parents=True, exist_ok=True)

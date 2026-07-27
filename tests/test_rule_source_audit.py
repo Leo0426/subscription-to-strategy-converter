@@ -345,9 +345,19 @@ def test_write_public_audit_snapshot_refuses_a_fully_failed_audit(tmp_path) -> N
     assert not target.exists()
 
 
-def test_write_public_audit_snapshot_publishes_when_any_source_is_valid(tmp_path) -> None:
-    report = {"summary": {"total": 2, "valid": 1, "invalid": 0, "failed": 1}, "sources": []}
+def test_write_public_audit_snapshot_publishes_when_failures_are_a_minority(tmp_path) -> None:
+    report = {"summary": {"total": 10, "valid": 8, "invalid": 0, "failed": 2}, "sources": []}
     target = tmp_path / "audit.json"
 
     assert write_public_audit_snapshot(report, target) == target
     assert target.exists()
+
+
+def test_write_public_audit_snapshot_refuses_a_majority_failed_audit(tmp_path) -> None:
+    degraded = {"summary": {"total": 373, "valid": 171, "invalid": 0, "failed": 202}, "sources": []}
+    target = tmp_path / "audit.json"
+
+    with pytest.raises(ValueError, match="audit-environment failure"):
+        write_public_audit_snapshot(degraded, target)
+
+    assert not target.exists()
