@@ -1,13 +1,18 @@
 services:
   subflow:
-    image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
-    working_dir: /app
-    command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: subflow:latest
+    restart: unless-stopped
     environment:
       SUBFLOW_DB_PATH: /app/data/subflow.db
-      UV_PROJECT_ENVIRONMENT: /tmp/subflow-venv
+      # 生成的订阅地址默认跟随浏览器地址栏。当客户端不在本机（例如路由器上的
+      # OpenClash）时，改成该设备能访问到的地址，否则复制出的 127.0.0.1 无效。
+      # SUBFLOW_PUBLIC_BASE_URL: http://192.168.1.10:8000
+      # 规则集下载的出口策略组；设为 DIRECT 可关闭改写。
+      # SUBFLOW_PROVIDER_EGRESS: 自动选择
     volumes:
-      - .:/app
       - ./data:/app/data
     ports:
       - "8000:8000"

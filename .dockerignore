@@ -1,0 +1,13 @@
+.git
+.idea
+.claude
+.pytest_cache
+.scratch
+.venv
+__pycache__
+*.py[cod]
+*.log
+data
+dist
+docs
+tests
