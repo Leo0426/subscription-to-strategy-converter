@@ -376,13 +376,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/JohnsonRan/CRules/master/rules/customProxy.yaml
     path: ./rule_provider/leo/040.yaml
     interval: 86400
-  custom_proxy-2:
-    type: http
-    behavior: classical
-    format: text
-    url: https://raw.githubusercontent.com/lvbibir/clash/refs/heads/master/Ruleset/Proxy.list
-    path: ./rule_provider/leo/041.txt
-    interval: 43200
   Geo-!CN:
     type: http
     behavior: domain
@@ -396,13 +389,6 @@ rule-providers:
     format: mrs
     url: https://gh.669588.xyz/rules/geo/geosite/geolocation-!cn.mrs
     path: ./rule_provider/leo/044.mrs
-    interval: 86400
-  gfw:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://gh.669588.xyz/rules/geo/geosite/gfw.mrs
-    path: ./rule_provider/leo/045.mrs
     interval: 86400
   gfw-2:
     type: http
@@ -446,46 +432,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/Pililink/AirRules/refs/heads/main/clash/ruleset/proxy.list
     path: ./rule_provider/leo/053.txt
     interval: 7200
-  Proxy:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/666OS/rules/raw/release/mihomo/domain/Proxy.mrs
-    path: ./rule_provider/leo/054.mrs
-    interval: 86400
-  PROXY-2:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Proxy.yaml
-    path: ./rule_provider/leo/055.yaml
-    interval: 604800
-  proxy-3:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo-ruleset/proxy.mrs
-    path: ./rule_provider/leo/056.mrs
-    interval: 86400
-  proxy-4:
-    type: http
-    behavior: domain
-    format: text
-    url: https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/proxy.list
-    path: ./rule_provider/leo/057.txt
-    interval: 7200
-  Proxy-5:
-    type: http
-    behavior: classical
-    format: text
-    url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Proxy.list
-    path: ./rule_provider/leo/058.txt
-    interval: 86400
-  Proxy-6:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/ameyukisora/Clash-Rule/master/provider/Proxy.yaml
-    path: ./rule_provider/leo/059.yaml
-    interval: 86400
   Proxy-8:
     type: http
     behavior: classical
@@ -493,13 +439,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Proxy/Proxy_Classical_No_Resolve.yaml
     path: ./rule_provider/leo/061.yaml
     interval: 86400
-  Proxy-9:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://kelee.one/Tool/Clash/Rule/Proxy.yaml
-    path: ./rule_provider/leo/062.yaml
-    interval: 3600
   Proxy / Domain:
     type: http
     behavior: classical
@@ -849,13 +788,6 @@ rule-providers:
     format: yaml
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Origin/Origin_No_Resolve.yaml
     path: ./rule_provider/leo/143.yaml
-    interval: 86400
-  Origin-2:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/origin.mrs
-    path: ./rule_provider/leo/144.mrs
     interval: 86400
   Epic-2:
     type: http
@@ -1273,13 +1205,6 @@ rule-providers:
     url: https://kelee.one/Tool/Clash/Rule/ChinaDownloadCDN.yaml
     path: ./rule_provider/leo/281.yaml
     interval: 3600
-  Download:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/666OS/rules/raw/release/mihomo/domain/Download.mrs
-    path: ./rule_provider/leo/282.mrs
-    interval: 86400
   Download-2:
     type: http
     behavior: classical
@@ -1348,13 +1273,6 @@ rule-providers:
     url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Scholar.yaml
     path: ./rule_provider/leo/294.yaml
     interval: 604800
-  Scholar-2:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-scholar-!cn.mrs
-    path: ./rule_provider/leo/295.mrs
-    interval: 86400
   xiaomi_domain:
     type: http
     behavior: domain
@@ -1452,13 +1370,6 @@ rule-providers:
     url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/miHoYo.yaml
     path: ./rule_provider/leo/316.yaml
     interval: 604800
-  Tencent:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://gh.669588.xyz/rules/geo/geosite/tencent.mrs
-    path: ./rule_provider/leo/317.mrs
-    interval: 86400
   Tencent-2:
     type: http
     behavior: classical
@@ -1606,33 +1517,12 @@ rule-providers:
     url: https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/cn.list
     path: ./rule_provider/leo/342.txt
     interval: 7200
-  cn-2:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://raw.githubusercontent.com/ameyukisora/Clash-Rule/master/autoupdate/cn.mrs
-    path: ./rule_provider/leo/343.mrs
-    interval: 86400
   cn-domain:
     type: http
     behavior: domain
     format: mrs
     url: https://gh.669588.xyz/rules/geo/geosite/cn.mrs
     path: ./rule_provider/leo/345.mrs
-    interval: 86400
-  cn-ip:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://gh.669588.xyz/rules/geo/geoip/cn.mrs
-    path: ./rule_provider/leo/346.mrs
-    interval: 86400
-  cn_ip:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://github.com/ForestL18/rules-dat/raw/mihomo/asn/combined/China-ASN-combined.mrs
-    path: ./rule_provider/leo/348.mrs
     interval: 86400
   cn_v6:
     type: http
@@ -1662,27 +1552,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/JohnsonRan/CRules/master/rules/custom.yaml
     path: ./rule_provider/leo/355.yaml
     interval: 86400
-  custom_direct-2:
-    type: http
-    behavior: classical
-    format: text
-    url: https://raw.githubusercontent.com/lvbibir/clash/refs/heads/master/Ruleset/Direct.list
-    path: ./rule_provider/leo/356.txt
-    interval: 43200
-  Direct:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/666OS/rules/raw/release/mihomo/domain/Direct.mrs
-    path: ./rule_provider/leo/357.mrs
-    interval: 86400
-  Direct-2:
-    type: http
-    behavior: classical
-    format: text
-    url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Direct.list
-    path: ./rule_provider/leo/358.txt
-    interval: 86400
   Direct-3:
     type: http
     behavior: classical
@@ -1690,13 +1559,6 @@ rule-providers:
     url: https://kelee.one/Tool/Clash/Rule/Direct.yaml
     path: ./rule_provider/leo/359.yaml
     interval: 3600
-  Direct-4:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://fastly.jsdelivr.net/gh/0xWans/my-backup@main/clash/rules/Direct.mrs
-    path: ./rule_provider/leo/360.mrs
-    interval: 86400
   Direct / Domain:
     type: http
     behavior: classical
@@ -1826,13 +1688,6 @@ rule-providers:
     url: https://gcore.jsdelivr.net/gh/TG-Twilight/AWAvenue-Ads-Rule@main/Filters/AWAvenue-Ads-Rule-Clash-Classical.yaml
     path: ./rule_provider/leo/385.yaml
     interval: 60480
-  AWAvenue-Ads-Rule:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://raw.githubusercontent.com/TG-Twilight/AWAvenue-Ads-Rule/main/Filters/AWAvenue-Ads-Rule-Clash.mrs
-    path: ./rule_provider/leo/387.mrs
-    interval: 86400
   AWAvenue_Ads_Rule:
     type: http
     behavior: domain
@@ -1895,13 +1750,6 @@ rule-providers:
     format: text
     url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Reject.list
     path: ./rule_provider/leo/398.txt
-    interval: 86400
-  reject-2:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://gh.669588.xyz/rules/geo/geosite/category-ads-all.mrs
-    path: ./rule_provider/leo/399.mrs
     interval: 86400
   Trackers:
     type: http
@@ -2739,13 +2587,6 @@ rule-providers:
     url: https://ruleset.skk.moe/Clash/non_ip/cdn.txt
     path: ./rule_provider/leo/659.txt
     interval: 86400
-  cloudflare:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/cloudflare.mrs
-    path: ./rule_provider/leo/660.mrs
-    interval: 86400
   Cloudflare-2:
     type: http
     behavior: classical
@@ -2788,13 +2629,6 @@ rule-providers:
     url: https://fastly.jsdelivr.net/gh/0xWans/my-backup@main/clash/rules/DNSLeak.mrs
     path: ./rule_provider/leo/667.mrs
     interval: 86400
-  Fake-IP-Filter:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/DustinWin/ruleset_geodata/raw/refs/heads/mihomo-ruleset/fakeip-filter.mrs
-    path: ./rule_provider/leo/668.mrs
-    interval: 86400
   fakeip-filter-2:
     type: http
     behavior: domain
@@ -2807,20 +2641,6 @@ rule-providers:
     format: mrs
     url: https://raw.githubusercontent.com/Lanlan13-14/Rules/refs/heads/main/rules/Domain/fakeip-filter.mrs
     path: ./rule_provider/leo/672.mrs
-    interval: 86400
-  fakeipfilter:
-    type: http
-    behavior: domain
-    format: text
-    url: https://raw.githubusercontent.com/juewuy/ShellCrash/refs/heads/dev/public/fake_ip_filter.list
-    path: ./rule_provider/leo/673.txt
-    interval: 43200
-  fakeipfilter_domain:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://raw.githubusercontent.com/wwqgtxx/clash-rules/release/fakeip-filter.mrs
-    path: ./rule_provider/leo/674.mrs
     interval: 86400
   fastly-ip:
     type: http
@@ -2835,13 +2655,6 @@ rule-providers:
     url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/HTTPDNS.yaml
     path: ./rule_provider/leo/678.yaml
     interval: 604800
-  httpdns-2:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/meta/geo/geosite/category-httpdns-cn.mrs
-    path: ./rule_provider/leo/679.mrs
-    interval: 86400
   ip_httpdns:
     type: http
     behavior: ipcidr
@@ -2863,39 +2676,12 @@ rule-providers:
     url: https://testingcf.jsdelivr.net/gh/yiteei/Share@Proxy/rules/ip/webrtc.mrs
     path: ./rule_provider/leo/682.mrs
     interval: 86400
-  LAN:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/LAN.yaml
-    path: ./rule_provider/leo/683.yaml
-    interval: 604800
-  Lan-2:
-    type: http
-    behavior: classical
-    format: text
-    url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/Lan.list
-    path: ./rule_provider/leo/684.txt
-    interval: 86400
   Lan-3:
     type: http
     behavior: classical
     format: yaml
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Lan/Lan_No_Resolve.yaml
     path: ./rule_provider/leo/685.yaml
-    interval: 86400
-  LAN-4:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://kelee.one/Tool/Clash/Rule/LAN_SPLITTER.yaml
-    path: ./rule_provider/leo/686.yaml
-    interval: 3600
-  Lan-5:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/private.mrs
-    path: ./rule_provider/leo/687.mrs
     interval: 86400
   lan_ip:
     type: http
@@ -2925,13 +2711,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/JohnsonRan/CRules/master/rules/no-fakeip.txt
     path: ./rule_provider/leo/692.txt
     interval: 86400
-  Private:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/666OS/rules/raw/release/mihomo/domain/Private.mrs
-    path: ./rule_provider/leo/693.mrs
-    interval: 86400
   private-2:
     type: http
     behavior: domain
@@ -2939,13 +2718,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/private.list
     path: ./rule_provider/leo/694.txt
     interval: 7200
-  PrivateIP:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://github.com/666OS/rules/raw/release/mihomo/ip/Private.mrs
-    path: ./rule_provider/leo/707.mrs
-    interval: 86400
   privateip-2:
     type: http
     behavior: ipcidr
@@ -2967,39 +2739,12 @@ rule-providers:
     url: https://testingcf.jsdelivr.net/gh/yiteei/Share@Proxy/rules/site/webrtc.mrs
     path: ./rule_provider/leo/711.mrs
     interval: 86400
-  Speedtest:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/666OS/rules/raw/release/mihomo/domain/Speedtest.mrs
-    path: ./rule_provider/leo/712.mrs
-    interval: 86400
-  Speedtest-2:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Speedtest.yaml
-    path: ./rule_provider/leo/713.yaml
-    interval: 604800
   speedtest-3:
     type: http
     behavior: domain
     format: text
     url: https://ruleset.skk.moe/Clash/domainset/speedtest.txt
     path: ./rule_provider/leo/714.txt
-    interval: 86400
-  Speedtest-4:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Speedtest/Speedtest_No_Resolve.yaml
-    path: ./rule_provider/leo/715.yaml
-    interval: 86400
-  Speedtest-5:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-speedtest.mrs
-    path: ./rule_provider/leo/716.mrs
     interval: 86400
   speedtest_domain:
     type: http
@@ -3035,7 +2780,6 @@ rules:
 - RULE-SET,Advertising,REJECT
 - RULE-SET,AdvertisingIP,REJECT
 - RULE-SET,AWAvenue,REJECT
-- RULE-SET,AWAvenue-Ads-Rule,REJECT
 - RULE-SET,AWAvenue_Ads_Rule,REJECT
 - RULE-SET,BanAD,REJECT
 - RULE-SET,banAd_domain,REJECT
@@ -3045,7 +2789,6 @@ rules:
 - RULE-SET,category-ads-all,REJECT
 - RULE-SET,custom_reject,REJECT
 - RULE-SET,Reject,REJECT
-- RULE-SET,reject-2,REJECT
 - RULE-SET,Trackers,REJECT
 - RULE-SET,Trackers-IP,REJECT
 - RULE-SET,Tracking,REJECT
@@ -3066,26 +2809,18 @@ rules:
 - RULE-SET,ChinaIP,DIRECT
 - RULE-SET,ChinaIPs,DIRECT
 - RULE-SET,ChinaMedia,DIRECT
-- RULE-SET,cloudflare,DIRECT
 - RULE-SET,Cloudflare-2,DIRECT
 - RULE-SET,cloudflare-ip,DIRECT
 - RULE-SET,Cloudflarecn,DIRECT
 - RULE-SET,cloudfront-ip,DIRECT
 - RULE-SET,cn,DIRECT
-- RULE-SET,cn-2,DIRECT
 - RULE-SET,cn-domain,DIRECT
-- RULE-SET,cn-ip,DIRECT
-- RULE-SET,cn_ip,DIRECT
 - RULE-SET,cn_v6,DIRECT
 - RULE-SET,CN_域,DIRECT
 - RULE-SET,cnip,DIRECT
 - RULE-SET,custom_direct,DIRECT
-- RULE-SET,custom_direct-2,DIRECT
 - RULE-SET,Direct / Domain,DIRECT
-- RULE-SET,Direct,DIRECT
-- RULE-SET,Direct-2,DIRECT
 - RULE-SET,Direct-3,DIRECT
-- RULE-SET,Direct-4,DIRECT
 - RULE-SET,direct_domain,DIRECT
 - RULE-SET,DNS-IP,DIRECT
 - RULE-SET,DNSLeak,DIRECT
@@ -3094,42 +2829,28 @@ rules:
 - RULE-SET,domestic_ip,DIRECT
 - RULE-SET,ecs-no-cn,DIRECT
 - RULE-SET,ESET_China,DIRECT
-- RULE-SET,Fake-IP-Filter,DIRECT
 - RULE-SET,fakeip-filter-2,DIRECT
 - RULE-SET,fakeip_filter_domain,DIRECT
-- RULE-SET,fakeipfilter,DIRECT
-- RULE-SET,fakeipfilter_domain,DIRECT
 - RULE-SET,fastly-ip,DIRECT
 - RULE-SET,HTTPDNS,DIRECT
-- RULE-SET,httpdns-2,DIRECT
 - RULE-SET,ip_cn,DIRECT
 - RULE-SET,ip_httpdns,DIRECT
 - RULE-SET,ip_private,DIRECT
 - RULE-SET,ip_webrtc,DIRECT
-- RULE-SET,LAN,DIRECT
-- RULE-SET,Lan-2,DIRECT
 - RULE-SET,Lan-3,DIRECT
-- RULE-SET,LAN-4,DIRECT
-- RULE-SET,Lan-5,DIRECT
 - RULE-SET,lan_ip,DIRECT
 - RULE-SET,lan_non_ip,DIRECT
 - RULE-SET,media_cn_domain,DIRECT
 - RULE-SET,networktest,DIRECT
 - RULE-SET,no-fakeip,DIRECT
-- RULE-SET,Private,DIRECT
 - RULE-SET,private-2,DIRECT
-- RULE-SET,PrivateIP,DIRECT
 - RULE-SET,privateip-2,DIRECT
 - RULE-SET,site_cn,DIRECT
 - RULE-SET,site_httpdns,DIRECT
 - RULE-SET,site_webrtc,DIRECT
 - RULE-SET,skk_direct,DIRECT
 - RULE-SET,SpecialDirect,DIRECT
-- RULE-SET,Speedtest,DIRECT
-- RULE-SET,Speedtest-2,DIRECT
 - RULE-SET,speedtest-3,DIRECT
-- RULE-SET,Speedtest-4,DIRECT
-- RULE-SET,Speedtest-5,DIRECT
 - RULE-SET,speedtest_domain,DIRECT
 - RULE-SET,SpeedtestIntl,DIRECT
 - RULE-SET,WebRTC_端/域,DIRECT
@@ -3361,8 +3082,6 @@ rules:
 - RULE-SET,category-porn,默认代理
 - RULE-SET,ChinaDownloadCDN,默认代理
 - RULE-SET,custom_proxy,默认代理
-- RULE-SET,custom_proxy-2,默认代理
-- RULE-SET,Download,默认代理
 - RULE-SET,Download-2,默认代理
 - RULE-SET,download_domainset,默认代理
 - RULE-SET,download_non_ip,默认代理
@@ -3375,7 +3094,6 @@ rules:
 - RULE-SET,fcm_domain,默认代理
 - RULE-SET,Geo-!CN,默认代理
 - RULE-SET,geolocation-!cn-2,默认代理
-- RULE-SET,gfw,默认代理
 - RULE-SET,gfw-2,默认代理
 - RULE-SET,Global,默认代理
 - RULE-SET,global_non_ip,默认代理
@@ -3396,26 +3114,17 @@ rules:
 - RULE-SET,Nintend / Domain,默认代理
 - RULE-SET,Nvidia / Domain,默认代理
 - RULE-SET,Origin,默认代理
-- RULE-SET,Origin-2,默认代理
 - RULE-SET,Pixiv,默认代理
 - RULE-SET,Pornhub,默认代理
 - RULE-SET,PrivateTracker,默认代理
 - RULE-SET,Proxy / Domain,默认代理
-- RULE-SET,Proxy,默认代理
-- RULE-SET,PROXY-2,默认代理
-- RULE-SET,proxy-3,默认代理
-- RULE-SET,proxy-4,默认代理
-- RULE-SET,Proxy-5,默认代理
-- RULE-SET,Proxy-6,默认代理
 - RULE-SET,Proxy-8,默认代理
-- RULE-SET,Proxy-9,默认代理
 - RULE-SET,proxy_domain,默认代理
 - RULE-SET,ProxyIP,默认代理
 - RULE-SET,proxylite,默认代理
 - RULE-SET,pt_cn_domain,默认代理
 - RULE-SET,public-tracker_domain,默认代理
 - RULE-SET,Scholar,默认代理
-- RULE-SET,Scholar-2,默认代理
 - RULE-SET,Shopee_domain,默认代理
 - RULE-SET,Shopify_domain,默认代理
 - RULE-SET,site_win-update,默认代理
@@ -3425,7 +3134,6 @@ rules:
 - RULE-SET,Teams,默认代理
 - RULE-SET,TeamViewer,默认代理
 - RULE-SET,tencent!cn_domain,默认代理
-- RULE-SET,Tencent,默认代理
 - RULE-SET,Tencent-2,默认代理
 - RULE-SET,tencent_domain,默认代理
 - RULE-SET,TEST / Domain,默认代理
