@@ -62,9 +62,9 @@ proxy-groups:
 - name: 默认代理
   type: select
   proxies:
+  - 香港自动
   - 自动选择
   - 故障转移
-  - 香港自动
   - 台湾自动
   - 日本自动
   - 新加坡自动
@@ -2664,9 +2664,9 @@ rules:
 - RULE-SET,ChinaIP,DIRECT
 - RULE-SET,ChinaIPs,DIRECT
 - RULE-SET,ChinaMedia,DIRECT
-- RULE-SET,Cloudflare-2,DIRECT
-- RULE-SET,cloudflare-ip,DIRECT,no-resolve
-- RULE-SET,cloudfront-ip,DIRECT,no-resolve
+- RULE-SET,Cloudflare-2,默认代理
+- RULE-SET,cloudflare-ip,默认代理,no-resolve
+- RULE-SET,cloudfront-ip,默认代理,no-resolve
 - RULE-SET,cn,DIRECT
 - RULE-SET,cn-domain,DIRECT
 - RULE-SET,cn_v6,DIRECT
@@ -2685,7 +2685,7 @@ rules:
 - RULE-SET,ESET_China,DIRECT
 - RULE-SET,fakeip-filter-2,DIRECT
 - RULE-SET,fakeip_filter_domain,DIRECT
-- RULE-SET,fastly-ip,DIRECT,no-resolve
+- RULE-SET,fastly-ip,默认代理,no-resolve
 - RULE-SET,HTTPDNS,DIRECT
 - RULE-SET,ip_cn,DIRECT
 - RULE-SET,ip_httpdns,DIRECT
@@ -3012,12 +3012,10 @@ rules:
 - DOMAIN-SUFFIX,cdn-apple.com,DIRECT
 - DOMAIN-SUFFIX,ls.apple.com,DIRECT
 - IP-CIDR,100.64.0.0/10,DIRECT,no-resolve
-- GEOIP,private,DIRECT
 - GEOSITE,steam@cn,DIRECT
 - IP-CIDR,10.0.0.0/8,DIRECT
 - IP-CIDR,172.16.0.0/12,DIRECT
 - IP-CIDR,192.168.0.0/16,DIRECT
-- IP-CIDR,100.64.0.0/10,DIRECT
 - IP-CIDR,127.0.0.0/8,DIRECT
 - IP-CIDR,223.5.5.5/32,DIRECT,no-resolve
 - IP-CIDR,223.6.6.6/32,DIRECT,no-resolve
@@ -3025,7 +3023,6 @@ rules:
 - DOMAIN-KEYWORD,dl-a10b-,DIRECT
 - DOMAIN-KEYWORD,dl-z01a-,DIRECT
 - DOMAIN-REGEX,^dl-[A-Za-z0-9-]+\.mypikpak\.com$,DIRECT
-- GEOIP,CN,DIRECT,no-resolve
 - GEOSITE,category-ai-!cn,AI 服务
 - GEOSITE,openai,AI 服务
 - GEOIP,ai,AI 服务,no-resolve
@@ -3061,11 +3058,8 @@ rules:
 - GEOSITE,tiktok,流媒体
 - GEOSITE,category-media-cn,流媒体
 - GEOIP,netflix,流媒体,no-resolve
-- GEOIP,netflix,流媒体
 - DOMAIN-KEYWORD,speedtest,默认代理
-- GEOIP,CN,默认代理
 - DOMAIN-SUFFIX,3gppnetwork.org,默认代理
-- GEOIP,lan,默认代理,no-resolve
 - PROCESS-NAME-REGEX,.*telegram.*,默认代理
 - GEOSITE,microsoft,默认代理
 - GEOSITE,telegram,默认代理
@@ -3089,15 +3083,11 @@ rules:
 - DOMAIN-SUFFIX,huggingface.co,默认代理
 - GEOSITE,category-games,默认代理
 - GEOSITE,twitter,默认代理
-- GEOIP,telegram,默认代理
-- GEOIP,twitter,默认代理
-- GEOIP,google,默认代理
 - GEOSITE,category-speedtest,默认代理
 - AND,((DST-PORT,53),(NOT,((IN-TYPE,Inner)))),默认代理
 - AND,((DST-PORT,3478),(RULE-SET,site_webrtc)),默认代理
 - IN-NAME,in_mixed,默认代理
 - AND,((DST-PORT,3478),(RULE-SET,ip_webrtc)),默认代理
-- DST-PORT,1337/2710/6881-6999/7777,默认代理
 - DST-PORT,10000-65535,默认代理
 - GEOSITE,category-scholar-!cn,默认代理
 - GEOSITE,ehentai,默认代理
