@@ -414,26 +414,12 @@ rule-providers:
     url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/docker.mrs
     path: ./rule_provider/leo/139.mrs
     interval: 86400
-  EA:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/ea.mrs
-    path: ./rule_provider/leo/140.mrs
-    interval: 86400
   EA / Domain:
     type: http
     behavior: classical
     format: text
-    url: https://gh-proxy.com/raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/EA/EA.list
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/EA/EA.list
     path: ./rule_provider/leo/141.txt
-    interval: 86400
-  Origin:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Origin/Origin_No_Resolve.yaml
-    path: ./rule_provider/leo/143.yaml
     interval: 86400
   EpicCN:
     type: http
@@ -503,20 +489,6 @@ rule-providers:
     format: yaml
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Microsoft/Microsoft_No_Resolve.yaml
     path: ./rule_provider/leo/211.yaml
-    interval: 86400
-  MSN:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/msn.mrs
-    path: ./rule_provider/leo/223.mrs
-    interval: 86400
-  site_win-update:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/win-update.mrs
-    path: ./rule_provider/leo/229.mrs
     interval: 86400
   Teams:
     type: http
@@ -1427,13 +1399,6 @@ rule-providers:
     url: https://ruleset.skk.moe/Clash/ip/lan.txt
     path: ./rule_provider/leo/688.txt
     interval: 43200
-  networktest:
-    type: http
-    behavior: classical
-    format: text
-    url: https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/mihomo-ruleset/networktest.list
-    path: ./rule_provider/leo/691.txt
-    interval: 7200
   no-fakeip:
     type: http
     behavior: domain
@@ -1469,20 +1434,6 @@ rule-providers:
     url: https://ruleset.skk.moe/Clash/domainset/speedtest.txt
     path: ./rule_provider/leo/714.txt
     interval: 86400
-  speedtest_domain:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ookla-speedtest.mrs
-    path: ./rule_provider/leo/717.mrs
-    interval: 86400
-  SpeedtestIntl:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://kelee.one/Tool/Clash/Rule/SpeedtestInternational.yaml
-    path: ./rule_provider/leo/718.yaml
-    interval: 3600
   WebRTC_端/域:
     type: http
     behavior: classical
@@ -1519,14 +1470,11 @@ rules:
 - RULE-SET,ip_httpdns,DIRECT
 - RULE-SET,ip_webrtc,DIRECT
 - RULE-SET,lan_ip,DIRECT
-- RULE-SET,networktest,DIRECT
 - RULE-SET,no-fakeip,DIRECT
 - RULE-SET,private-2,DIRECT
 - RULE-SET,privateip-2,DIRECT
 - RULE-SET,site_webrtc,DIRECT
 - RULE-SET,speedtest-3,DIRECT
-- RULE-SET,speedtest_domain,DIRECT
-- RULE-SET,SpeedtestIntl,DIRECT
 - RULE-SET,WebRTC_端/域,DIRECT
 - RULE-SET,ai-4,AI 服务
 - RULE-SET,Claude,AI 服务
@@ -1639,7 +1587,6 @@ rules:
 - RULE-SET,custom_proxy,默认代理
 - RULE-SET,download_domainset,默认代理
 - RULE-SET,EA / Domain,默认代理
-- RULE-SET,EA,默认代理
 - RULE-SET,ebay_domain,默认代理
 - RULE-SET,Ecommerce,默认代理
 - RULE-SET,ehentai_domain,默认代理
@@ -1651,18 +1598,15 @@ rules:
 - RULE-SET,ifast_domain,默认代理
 - RULE-SET,JapanWeb,默认代理
 - RULE-SET,miHoYo,默认代理
-- RULE-SET,MSN,默认代理
 - RULE-SET,myignore,默认代理
 - RULE-SET,Nintend / Domain,默认代理
 - RULE-SET,Nvidia / Domain,默认代理
-- RULE-SET,Origin,默认代理
 - RULE-SET,Pixiv,默认代理
 - RULE-SET,PrivateTracker,默认代理
 - RULE-SET,ProxyIP,默认代理,no-resolve
 - RULE-SET,Scholar,默认代理
 - RULE-SET,Shopee_domain,默认代理
 - RULE-SET,Shopify_domain,默认代理
-- RULE-SET,site_win-update,默认代理
 - RULE-SET,Sony,默认代理
 - RULE-SET,Special,默认代理
 - RULE-SET,Teams,默认代理
