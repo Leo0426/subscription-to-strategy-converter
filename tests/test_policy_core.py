@@ -192,3 +192,33 @@ def test_graph_builder_outputs_stable_nodes_and_edges() -> None:
 
     assert {"provider:ai", "rule:0", "group:PROXY", "proxy:HK-01", "builtin:DIRECT"} <= node_ids
     assert {"rule-provider", "rule-target", "group-member"} <= edge_types
+
+
+def test_analyzer_warns_on_resolving_ip_rules_routed_to_service_groups() -> None:
+    workspace = config_to_workspace(
+        {
+            "proxy-groups": [{"name": "AI 服务", "type": "select", "proxies": ["HK-01"]}],
+            "rule-providers": {
+                "AIIP": {"type": "http", "behavior": "ipcidr"},
+                "tg_ip": {"type": "http", "behavior": "ipcidr"},
+                "china_ip": {"type": "http", "behavior": "ipcidr"},
+            },
+            "rules": [
+                "RULE-SET,AIIP,AI 服务",
+                "RULE-SET,tg_ip,AI 服务,no-resolve",
+                "RULE-SET,china_ip,DIRECT",
+                "MATCH,AI 服务",
+            ],
+        },
+        [_node()],
+    )
+
+    findings = [
+        finding
+        for finding in analyze_workspace(workspace)
+        if finding.code == "ip_rule_resolves_shared_infra"
+    ]
+
+    # Only the resolving service-group rule offends: no-resolve and DIRECT are fine.
+    assert len(findings) == 1
+    assert "1 ipcidr rules" in findings[0].message

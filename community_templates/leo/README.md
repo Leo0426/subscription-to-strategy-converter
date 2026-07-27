@@ -36,5 +36,6 @@
 4. **成本合理**：单源体积与其被引用的规则数相称。审计报告中 `byte_count` 大而 `routes` 少的源是合并候选，不是新增样板。总量受两个预算约束：来源数 200（`policy_analyzer` 同源）、冷启动总下载 16 MiB。
 5. **不与现有源高重叠**：加入前跑 `python -m app.core.rule_source_audit`，确认不出现在 `high_overlap_pairs`（≥95% 重叠）或 `duplicate_content_groups` 中；同语义内容用已有源，不加副本。
 6. **目标一致**：新源路由到的策略组不得与已有源对同一条目产生 `REJECT <> DIRECT` 类冲突；冲突见审计报告 `ordered_entry_conflicts.risk_directions`。
+7. **IP 规则边界**：`ipcidr` 源只允许用于确实存在无域名裸 IP 流量的服务（Telegram、Discord 语音），且规则必须带 `no-resolve`。共享基础设施服务（AI、Google、流媒体）禁止 IP 层分流——它们的前端 IP 承载多个无关服务，可解析的 IP 规则会把同一页面劈到两个出口（曾导致 YouTube 图片经 AI 节点加载失败）。地理/私网兜底（China IP、private IP → DIRECT）豁免。
 
 删除来源的标准保持不变：仅删除跨多轮审计确认不可用的源（`apply_verified_unusable_source_pruning`），单轮抓取失败不构成删除理由。

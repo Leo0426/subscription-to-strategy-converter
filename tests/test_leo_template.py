@@ -62,3 +62,18 @@ def test_leo_prunes_empty_region_groups_and_their_parent_references() -> None:
         and "日本自动" not in group.get("proxies", [])
         for group in config["proxy-groups"]
     )
+
+
+def test_leo_has_no_ip_layer_routing_for_shared_infrastructure_services() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+    providers = template["rule-providers"]
+
+    assert "AIIP" not in providers
+
+    ipcidr = {name for name, p in providers.items() if str(p.get("behavior")) == "ipcidr"}
+    for rule in template["rules"]:
+        if not isinstance(rule, str) or not rule.startswith("RULE-SET,"):
+            continue
+        parts = [part.strip() for part in rule.split(",")]
+        if parts[1] in ipcidr and parts[2] != "DIRECT":
+            assert "no-resolve" in parts, f"resolving service IP rule: {rule}"

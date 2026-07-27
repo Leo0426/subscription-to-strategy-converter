@@ -100,7 +100,48 @@ def analyze_workspace(workspace: PolicyWorkspace) -> list[AnalyzerFinding]:
     findings.extend(_unreachable_group_findings(workspace))
     findings.extend(_unreachable_rule_findings(workspace))
     findings.extend(_runtime_feasibility_findings(workspace))
+    findings.extend(_shared_infra_ip_rule_findings(workspace))
     return findings
+
+
+def _shared_infra_ip_rule_findings(workspace: PolicyWorkspace) -> list[AnalyzerFinding]:
+    """Warn when an ipcidr RULE-SET routes to a service group without no-resolve.
+
+    Service IPs are shared infrastructure (Google front IPs carry YouTube and
+    Gemini alike), so a resolving IP rule hijacks domain traffic that earlier
+    domain rules did not claim and splits one page across two egresses.
+    Geo/private fallbacks targeting DIRECT legitimately resolve and are exempt.
+    """
+    ipcidr_providers = {
+        provider.name
+        for provider in workspace.rule_providers
+        if str(provider.raw.get("behavior") or "").lower() == "ipcidr"
+    }
+    if not ipcidr_providers:
+        return []
+    offending = [
+        rule
+        for rule in workspace.rules
+        if rule.type == "RULE-SET"
+        and rule.provider in ipcidr_providers
+        and rule.target not in {"DIRECT", ""}
+        and "no-resolve" not in str(rule.raw)
+    ]
+    if not offending:
+        return []
+    return [
+        AnalyzerFinding(
+            severity="warning",
+            code="ip_rule_resolves_shared_infra",
+            message=(
+                f"{len(offending)} ipcidr rules route to service groups without no-resolve; "
+                f"they force DNS resolution and can hijack shared-infrastructure domains "
+                f"(e.g. Google front IPs) away from their domain rules."
+            ),
+            path=f"rules[{offending[0].index}]",
+            ref=offending[0].id,
+        )
+    ]
 
 
 def _runtime_feasibility_findings(workspace: PolicyWorkspace) -> list[AnalyzerFinding]:

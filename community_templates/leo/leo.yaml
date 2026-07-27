@@ -264,13 +264,6 @@ rule-providers:
     url: https://ruleset.skk.moe/Clash/non_ip/ai.txt
     path: ./rule_provider/leo/017.txt
     interval: 43200
-  AIIP:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://github.com/666OS/rules/raw/release/mihomo/ip/AI.mrs
-    path: ./rule_provider/leo/018.mrs
-    interval: 86400
   Claude:
     type: http
     behavior: classical
@@ -2639,7 +2632,7 @@ rules:
 - RULE-SET,AdBlock,REJECT
 - RULE-SET,ads,REJECT
 - RULE-SET,Advertising,REJECT
-- RULE-SET,AdvertisingIP,REJECT
+- RULE-SET,AdvertisingIP,REJECT,no-resolve
 - RULE-SET,AWAvenue,REJECT
 - RULE-SET,AWAvenue_Ads_Rule,REJECT
 - RULE-SET,BanAD,REJECT
@@ -2651,7 +2644,7 @@ rules:
 - RULE-SET,custom_reject,REJECT
 - RULE-SET,Reject,REJECT
 - RULE-SET,Trackers,REJECT
-- RULE-SET,Trackers-IP,REJECT
+- RULE-SET,Trackers-IP,REJECT,no-resolve
 - RULE-SET,Tracking,REJECT
 - RULE-SET,UnBan,REJECT
 - RULE-SET,add_direct_domain,DIRECT
@@ -2671,8 +2664,8 @@ rules:
 - RULE-SET,ChinaIPs,DIRECT
 - RULE-SET,ChinaMedia,DIRECT
 - RULE-SET,Cloudflare-2,DIRECT
-- RULE-SET,cloudflare-ip,DIRECT
-- RULE-SET,cloudfront-ip,DIRECT
+- RULE-SET,cloudflare-ip,DIRECT,no-resolve
+- RULE-SET,cloudfront-ip,DIRECT,no-resolve
 - RULE-SET,cn,DIRECT
 - RULE-SET,cn-domain,DIRECT
 - RULE-SET,cn_v6,DIRECT
@@ -2691,7 +2684,7 @@ rules:
 - RULE-SET,ESET_China,DIRECT
 - RULE-SET,fakeip-filter-2,DIRECT
 - RULE-SET,fakeip_filter_domain,DIRECT
-- RULE-SET,fastly-ip,DIRECT
+- RULE-SET,fastly-ip,DIRECT,no-resolve
 - RULE-SET,HTTPDNS,DIRECT
 - RULE-SET,ip_cn,DIRECT
 - RULE-SET,ip_httpdns,DIRECT
@@ -2722,7 +2715,6 @@ rules:
 - RULE-SET,AI-CN,AI 服务
 - RULE-SET,ai_domain,AI 服务
 - RULE-SET,ai_non_ip,AI 服务
-- RULE-SET,AIIP,AI 服务
 - RULE-SET,ChatGPT / Domain,AI 服务
 - RULE-SET,Claude,AI 服务
 - RULE-SET,Copilot / Domain,AI 服务
@@ -2739,7 +2731,7 @@ rules:
 - RULE-SET,Apple-CN / Domain,Apple
 - RULE-SET,apple-cn-2,Apple
 - RULE-SET,Apple-Custome / Domain,Apple
-- RULE-SET,Apple-IP,Apple
+- RULE-SET,Apple-IP,Apple,no-resolve
 - RULE-SET,apple_cdn,Apple
 - RULE-SET,apple_cn_non_ip,Apple
 - RULE-SET,apple_firmware_domain,Apple
@@ -2753,15 +2745,15 @@ rules:
 - RULE-SET,appleTV_domain,Apple
 - RULE-SET,icloud,Apple
 - RULE-SET,Google / Domain,Google
-- RULE-SET,Google / IP,Google
+- RULE-SET,Google / IP,Google,no-resolve
 - RULE-SET,Google Drive,Google
 - RULE-SET,Google Search,Google
 - RULE-SET,Google-2,Google
 - RULE-SET,google-cn,Google
 - RULE-SET,Google-zj,Google
-- RULE-SET,google_asn_cn,Google
+- RULE-SET,google_asn_cn,Google,no-resolve
 - RULE-SET,google_domain,Google
-- RULE-SET,Google_IP-4,Google
+- RULE-SET,Google_IP-4,Google,no-resolve
 - RULE-SET,GoogleFCM,Google
 - RULE-SET,googlevpn_domain,Google
 - RULE-SET,Microsoft / Domain,Microsoft
@@ -2784,16 +2776,16 @@ rules:
 - RULE-SET,Wise_domain,金融服务
 - RULE-SET,Communication,社交通讯
 - RULE-SET,Discord-2,社交通讯
-- RULE-SET,discord_asn,社交通讯
+- RULE-SET,discord_asn,社交通讯,no-resolve
 - RULE-SET,discord_domain,社交通讯
 - RULE-SET,Facebook / Domain,社交通讯
 - RULE-SET,Facebook,社交通讯
-- RULE-SET,Facebook-IP,社交通讯
+- RULE-SET,Facebook-IP,社交通讯,no-resolve
 - RULE-SET,Facebook-zj,社交通讯
-- RULE-SET,geoip_twitter,社交通讯
+- RULE-SET,geoip_twitter,社交通讯,no-resolve
 - RULE-SET,Instagram,社交通讯
 - RULE-SET,instagram_domain,社交通讯
-- RULE-SET,ip_telegram,社交通讯
+- RULE-SET,ip_telegram,社交通讯,no-resolve
 - RULE-SET,Line TV,社交通讯
 - RULE-SET,line_domain,社交通讯
 - RULE-SET,Meta,社交通讯
@@ -2801,9 +2793,9 @@ rules:
 - RULE-SET,signal_domain,社交通讯
 - RULE-SET,site_telegram,社交通讯
 - RULE-SET,SocialMedia-2,社交通讯
-- RULE-SET,SocialMediaIP,社交通讯
+- RULE-SET,SocialMediaIP,社交通讯,no-resolve
 - RULE-SET,talkatone_domain,社交通讯
-- RULE-SET,talkatone_ip,社交通讯
+- RULE-SET,talkatone_ip,社交通讯,no-resolve
 - RULE-SET,Telegram-6,社交通讯
 - RULE-SET,Telegram-zj,社交通讯
 - RULE-SET,telegram_domain,社交通讯
@@ -2814,7 +2806,7 @@ rules:
 - RULE-SET,Twitter / Domain,社交通讯
 - RULE-SET,Twitter-4,社交通讯
 - RULE-SET,WeChat,社交通讯
-- RULE-SET,wechat_asn,社交通讯
+- RULE-SET,wechat_asn,社交通讯,no-resolve
 - RULE-SET,wechat_domain,社交通讯
 - RULE-SET,WhatsApp / Domain,社交通讯
 - RULE-SET,WhatsApp,社交通讯
@@ -2836,7 +2828,7 @@ rules:
 - RULE-SET,Steam-5,游戏服务
 - RULE-SET,steam_cn_domain,游戏服务
 - RULE-SET,steamcdn_domain,游戏服务
-- RULE-SET,steamcdn_ip,游戏服务
+- RULE-SET,steamcdn_ip,游戏服务,no-resolve
 - RULE-SET,SteamCN-2,游戏服务
 - RULE-SET,XboxCN,游戏服务
 - RULE-SET,Abema TV,流媒体
@@ -2844,7 +2836,7 @@ rules:
 - RULE-SET,BBC iPlayer,流媒体
 - RULE-SET,BiliBili / Domain,流媒体
 - RULE-SET,Bilibili-5,流媒体
-- RULE-SET,bilibili_ip,流媒体
+- RULE-SET,bilibili_ip,流媒体,no-resolve
 - RULE-SET,biliintl,流媒体
 - RULE-SET,biliintl_domain,流媒体
 - RULE-SET,Crunchyroll / Domain,流媒体
@@ -2858,7 +2850,7 @@ rules:
 - RULE-SET,DouYin_域,流媒体
 - RULE-SET,Emby-5,流媒体
 - RULE-SET,emby_domain,流媒体
-- RULE-SET,EmbyIP,流媒体
+- RULE-SET,EmbyIP,流媒体,no-resolve
 - RULE-SET,encoreTVB,流媒体
 - RULE-SET,F1 TV,流媒体
 - RULE-SET,Fox+,流媒体
@@ -2875,14 +2867,14 @@ rules:
 - RULE-SET,Max,流媒体
 - RULE-SET,media!cn_domain,流媒体
 - RULE-SET,media,流媒体
-- RULE-SET,mediaip,流媒体
+- RULE-SET,mediaip,流媒体,no-resolve
 - RULE-SET,Netease Music,流媒体
 - RULE-SET,NetEaseMusic_domain,流媒体
-- RULE-SET,NetEaseMusic_ip,流媒体
+- RULE-SET,NetEaseMusic_ip,流媒体,no-resolve
 - RULE-SET,Netflix / Domain,流媒体
-- RULE-SET,Netflix / IP,流媒体
+- RULE-SET,Netflix / IP,流媒体,no-resolve
 - RULE-SET,Netflix-6,流媒体
-- RULE-SET,Netflix_IP-2,流媒体
+- RULE-SET,Netflix_IP-2,流媒体,no-resolve
 - RULE-SET,NewsMedia,流媒体
 - RULE-SET,Niconico,流媒体
 - RULE-SET,Pandora,流媒体
@@ -2895,7 +2887,7 @@ rules:
 - RULE-SET,stream_ip,流媒体
 - RULE-SET,stream_non_ip,流媒体
 - RULE-SET,Streaming,流媒体
-- RULE-SET,StreamingIP,流媒体
+- RULE-SET,StreamingIP,流媒体,no-resolve
 - RULE-SET,Tencent Video,流媒体
 - RULE-SET,TikTok / Domain,流媒体
 - RULE-SET,TikTok-4,流媒体
@@ -2906,7 +2898,7 @@ rules:
 - RULE-SET,ViuTV,流媒体
 - RULE-SET,WeTV,流媒体
 - RULE-SET,XPTV,流媒体
-- RULE-SET,XPTVIP,流媒体
+- RULE-SET,XPTVIP,流媒体,no-resolve
 - RULE-SET,Youku,流媒体
 - RULE-SET,YouTube Music,流媒体
 - RULE-SET,YouTube-6,流媒体
@@ -2918,7 +2910,7 @@ rules:
 - RULE-SET,aliyun_domain,默认代理
 - RULE-SET,Amazon / Domain,默认代理
 - RULE-SET,Amazon,默认代理
-- RULE-SET,Amazon_ip,默认代理
+- RULE-SET,Amazon_ip,默认代理,no-resolve
 - RULE-SET,AppStore,默认代理
 - RULE-SET,Bing,默认代理
 - RULE-SET,Blizzard / Domain,默认代理
@@ -2960,7 +2952,7 @@ rules:
 - RULE-SET,Proxy / Domain,默认代理
 - RULE-SET,Proxy-8,默认代理
 - RULE-SET,proxy_domain,默认代理
-- RULE-SET,ProxyIP,默认代理
+- RULE-SET,ProxyIP,默认代理,no-resolve
 - RULE-SET,proxylite,默认代理
 - RULE-SET,pt_cn_domain,默认代理
 - RULE-SET,public-tracker_domain,默认代理
@@ -2978,7 +2970,7 @@ rules:
 - RULE-SET,tencent_domain,默认代理
 - RULE-SET,TEST / Domain,默认代理
 - RULE-SET,TestFlight,默认代理
-- RULE-SET,tg_ip,默认代理
+- RULE-SET,tg_ip,默认代理,no-resolve
 - RULE-SET,tg_site,默认代理
 - RULE-SET,tracker,默认代理
 - RULE-SET,trackerslist,默认代理
