@@ -149,9 +149,60 @@ def test_apply_consolidation_plan_removes_providers_and_rules_per_batch() -> Non
     assert list(batch["rule-providers"]) == ["Netflix", "Telegram", "Telegram-2"]
     assert "RULE-SET,Netflix-2,流媒体" not in batch["rules"]
     assert "RULE-SET,Telegram-2,社交通讯" in batch["rules"]
-    assert changes == {"providers_removed": 1, "rules_removed": 1}
+    assert changes == {"providers_removed": 1, "rules_removed": 1, "providers_protected": 0}
 
     everything, changes_all = apply_consolidation_plan(config, plan)
 
     assert list(everything["rule-providers"]) == ["Netflix", "Telegram"]
-    assert changes_all == {"providers_removed": 2, "rules_removed": 2}
+    assert changes_all == {"providers_removed": 2, "rules_removed": 2, "providers_protected": 0}
+
+
+def test_apply_consolidation_plan_protects_logical_rule_references() -> None:
+    config = {
+        "rule-providers": {
+            "China": {"url": "https://a.example/china1"},
+            "China-2": {"url": "https://a.example/china2"},
+        },
+        "rules": [
+            "AND,((DST-PORT,443),(NOT,((RULE-SET,China)))),REJECT",
+            "RULE-SET,China,DIRECT",
+            "RULE-SET,China-2,DIRECT",
+            "MATCH,兜底",
+        ],
+    }
+    plan = {
+        "units": [
+            {
+                "family": "china",
+                "targets": ["DIRECT"],
+                "retained": {"name": "China-2", "url": ""},
+                "removed": [{"name": "China"}],
+            }
+        ]
+    }
+
+    optimized, changes = apply_consolidation_plan(config, plan)
+
+    # China stays: deleting it would dangle the nested RULE-SET reference.
+    assert list(optimized["rule-providers"]) == ["China", "China-2"]
+    assert "RULE-SET,China,DIRECT" in optimized["rules"]
+    assert changes == {"providers_removed": 0, "rules_removed": 0, "providers_protected": 1}
+
+
+def test_consolidation_gates_reject_a_dangling_reference() -> None:
+    from app.core.rule_consolidation import consolidation_gate_failures
+
+    before = {
+        "proxy-groups": [{"name": "PROXY", "type": "select", "proxies": ["GATE-NODE"]}],
+        "rule-providers": {"kept": {"type": "http", "url": "https://a.example/kept.txt", "behavior": "classical"}},
+        "rules": ["RULE-SET,kept,PROXY", "MATCH,PROXY"],
+    }
+    broken = {
+        "proxy-groups": [{"name": "PROXY", "type": "select", "proxies": ["GATE-NODE"]}],
+        "rule-providers": {},
+        "rules": ["RULE-SET,kept,PROXY", "MATCH,PROXY"],
+    }
+
+    assert consolidation_gate_failures(before, before) == []
+    failures = consolidation_gate_failures(before, broken)
+    assert any("missing_provider" in failure for failure in failures)

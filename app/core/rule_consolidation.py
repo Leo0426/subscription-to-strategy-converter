@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
+from app.core.policy_analyzer import _rule_provider_references
 from app.core.rule_source_audit import (
     DEFAULT_REPORT_DIR,
     LEO_TEMPLATE_PATH,
@@ -119,6 +120,23 @@ def build_consolidation_plan(records: list[Mapping[str, Any]]) -> dict[str, Any]
     }
 
 
+def _protected_provider_names(rules: list[Any]) -> set[str]:
+    """Names referenced inside logical AND/OR/NOT rules.
+
+    A simple `RULE-SET,name,target` line is removed together with its provider,
+    but a nested reference survives the removal and would dangle.
+    """
+    protected: set[str] = set()
+    for rule in rules:
+        if not isinstance(rule, str):
+            continue
+        parts = [part.strip() for part in rule.split(",")]
+        if parts and parts[0] == "RULE-SET":
+            continue
+        protected.update(_rule_provider_references(rule))
+    return protected
+
+
 def apply_consolidation_plan(
     config: Mapping[str, Any],
     plan: Mapping[str, Any],
@@ -128,6 +146,7 @@ def apply_consolidation_plan(
     """Remove a plan's pruned providers and their rules from a config copy.
 
     `families` limits execution to one reviewable batch; None applies all units.
+    Providers referenced by logical rules are protected and reported, not removed.
     """
     from copy import deepcopy
 
@@ -137,6 +156,8 @@ def apply_consolidation_plan(
         if families is None or unit["family"] in families
         for entry in unit["removed"]
     }
+    protected = removed_names & _protected_provider_names(list(config.get("rules") or []))
+    removed_names -= protected
     optimized = deepcopy(dict(config))
     providers = optimized.get("rule-providers")
     rules = optimized.get("rules")
@@ -153,7 +174,78 @@ def apply_consolidation_plan(
             continue
         kept_rules.append(rule)
     optimized["rules"] = kept_rules
-    return optimized, {"providers_removed": len(removed_names), "rules_removed": removed_rule_count}
+    return optimized, {
+        "providers_removed": len(removed_names),
+        "rules_removed": removed_rule_count,
+        "providers_protected": len(protected),
+    }
+
+
+def consolidation_gate_failures(
+    before: Mapping[str, Any],
+    after: Mapping[str, Any],
+) -> list[str]:
+    """ADR 0011 execution gates: no new analyzer errors, both targets compile."""
+    from app.core.platforms.surge import build_surge_config
+    from app.core.policy_analyzer import analyze_workspace
+    from app.core.policy_workspace import compile_mihomo_config, config_to_workspace
+    from app.ir import ProxyNode
+
+    node = ProxyNode(
+        name="GATE-NODE",
+        protocol="ss",
+        server="gate.example",
+        port=443,
+        extra={"cipher": "aes-128-gcm", "password": "gate"},
+    )
+    failures: list[str] = []
+
+    def error_findings(config: Mapping[str, Any]) -> set[str]:
+        workspace = config_to_workspace(dict(config), [node])
+        return {
+            f"{finding.code}: {finding.message}"
+            for finding in analyze_workspace(workspace)
+            if finding.severity == "error"
+        }
+
+    new_errors = error_findings(after) - error_findings(before)
+    failures.extend(sorted(new_errors))
+    try:
+        compile_mihomo_config(dict(after), [node])
+    except Exception as exc:
+        failures.append(f"mihomo compile failed: {exc}")
+    try:
+        build_surge_config(
+            [node],
+            list(after.get("proxy-groups") or []),
+            list(after.get("rules") or []),
+            dict(after.get("rule-providers") or {}),
+        )
+    except Exception as exc:
+        failures.append(f"surge compile failed: {exc}")
+    return failures
+
+
+def execute_consolidation_batch(
+    plan: Mapping[str, Any],
+    *,
+    families: set[str] | None = None,
+    path: Path = LEO_TEMPLATE_PATH,
+) -> dict[str, int]:
+    """Apply one batch to leo.yaml, refusing to write when any gate fails."""
+    from ruamel.yaml import YAML
+
+    yaml = YAML()
+    yaml.preserve_quotes = True
+    yaml.width = 4096
+    config = yaml.load(path.read_text(encoding="utf-8"))
+    optimized, changes = apply_consolidation_plan(config, plan, families=families)
+    failures = consolidation_gate_failures(config, optimized)
+    if failures:
+        raise ValueError("consolidation gates failed: " + "; ".join(failures))
+    with path.open("w", encoding="utf-8") as handle:
+        yaml.dump(optimized, handle)
+    return changes
 
 
 async def plan_leo_consolidation(*, concurrency: int = 24, timeout: float = 15.0) -> dict[str, Any]:
@@ -199,7 +291,15 @@ def main() -> None:
     parser.add_argument("--concurrency", type=int, default=24)
     parser.add_argument("--timeout", type=float, default=15.0)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_REPORT_DIR)
+    parser.add_argument("--execute", type=Path, help="Apply a previously generated plan JSON to leo.yaml")
+    parser.add_argument("--families", type=str, help="Comma-separated family batch for --execute")
     args = parser.parse_args()
+    if args.execute:
+        plan = json.loads(args.execute.read_text(encoding="utf-8"))
+        families = {f.strip() for f in args.families.split(",")} if args.families else None
+        changes = execute_consolidation_batch(plan, families=families)
+        print(json.dumps(changes, ensure_ascii=False))
+        return
     plan = asyncio.run(plan_leo_consolidation(concurrency=args.concurrency, timeout=args.timeout))
     args.output_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
