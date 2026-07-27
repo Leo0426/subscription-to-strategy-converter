@@ -5,6 +5,11 @@ from app.core.normalizer import normalize_nodes
 from app.core.parsers.clash import clash_to_ir, ir_to_clash_dict
 from app.core.parsers.surge import SurgeParseError, looks_like_surge_config, parse_surge_nodes
 from app.core.parser import ParseError, parse_clash_yaml_full
+from app.core.subconverter import (
+    SubconverterError,
+    convert_subscription_to_clash,
+    is_subconverter_configured,
+)
 from app.ir import ProxyNode
 
 
@@ -28,15 +33,31 @@ async def load_subscription(url: str) -> tuple[list[ProxyNode], dict]:
 
     try:
         raw_proxies, raw_config = parse_clash_yaml_full(content)
-    except ParseError as exc:
+    except ParseError as clash_exc:
         if not looks_like_surge_config(content):
-            raise SubscriptionError(f"subscription returned unexpected content: {exc}") from exc
+            if not is_subconverter_configured():
+                raise SubscriptionError(
+                    "subscription returned unexpected content: expected Clash YAML or Surge "
+                    "config; configure SUBFLOW_SUBCONVERTER_URL for Base64 and URI "
+                    "subscription compatibility"
+                ) from clash_exc
+            try:
+                converted = await convert_subscription_to_clash(url)
+                raw_proxies, raw_config = parse_clash_yaml_full(converted)
+            except (SubconverterError, ParseError) as adapter_exc:
+                raise SubscriptionError(
+                    f"subscription compatibility conversion failed: {adapter_exc}"
+                ) from adapter_exc
+            raw_config = dict(raw_config)
+            raw_config["source-format"] = "subconverter"
+            ir_nodes = [clash_to_ir(proxy) for proxy in raw_proxies]
+            return normalize_nodes(ir_nodes), raw_config
         try:
             ir_nodes = parse_surge_nodes(content)
         except SurgeParseError as surge_exc:
             raise SubscriptionError(f"subscription returned invalid Surge config: {surge_exc}") from surge_exc
         if not ir_nodes:
-            raise SubscriptionError("Surge subscription contains no supported proxy nodes") from exc
+            raise SubscriptionError("Surge subscription contains no supported proxy nodes") from clash_exc
         normalized = normalize_nodes(ir_nodes)
         return normalized, {
             "source-format": "surge",

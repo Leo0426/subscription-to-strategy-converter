@@ -1,0 +1,18 @@
+services:
+  subflow:
+    environment:
+      SUBFLOW_SUBCONVERTER_URL: http://subconverter:25500
+    depends_on:
+      subconverter:
+        condition: service_healthy
+
+  subconverter:
+    image: ${SUBCONVERTER_IMAGE:-tindy2013/subconverter:latest}
+    restart: unless-stopped
+    expose:
+      - "25500"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:25500/version"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
