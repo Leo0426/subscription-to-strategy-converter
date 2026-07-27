@@ -25,7 +25,7 @@
 | 能力 | 当前实现 |
 |---|---|
 | 基础模板 | 仅使用 `community_templates/leo/leo.yaml` |
-| 输入格式 | Clash/Mihomo YAML；Surge `[Proxy]` 配置 |
+| 输入格式 | Clash/Mihomo YAML；Surge `[Proxy]`；可选 Subconverter 兼容 Base64/URI 订阅 |
 | 服务出口 | 15 个服务可独立选择 Leo 策略组或订阅中的具体节点 |
 | 输出目标 | 同时生成 Clash/Mihomo YAML 与 Surge CONF 订阅地址 |
 | 地区节点组 | 根据节点名称动态生成；没有匹配节点的地区组会自动移除 |
@@ -40,7 +40,7 @@
 | 指标 | 当前值 |
 |---|---:|
 | 策略组 | 21 |
-| 路由规则 | 656 |
+| 路由规则 | 653 |
 | RuleProvider | 508 |
 | 最近一轮可用来源 | 476 |
 | 观察项 | 32 |
@@ -68,7 +68,60 @@
 ### Docker
 
 ```bash
-docker compose up
+docker compose up --build -d
+```
+
+打开 <http://127.0.0.1:8000>。运行数据保存在宿主机的 `data/` 目录，应用源码不再挂载进容器。
+
+如果机场只提供 Base64 或 `ss://`、`vmess://`、`trojan://` 等 URI 节点订阅，启用可选兼容层：
+
+```bash
+docker compose \
+  -f docker-compose.yml \
+  -f docker-compose.compatibility.yml \
+  up --build -d
+```
+
+Subconverter 只在直接解析 Clash/Surge 失败时使用，并且只在 Compose 内部网络暴露。稳定部署建议用 `SUBCONVERTER_IMAGE` 固定已验证的 tag 或 digest，不要长期依赖 `latest`。
+
+### 打包和离线导出镜像
+
+脚本使用 Docker Buildx 分别构建可被 `docker load` 直接导入的 Linux x86_64 和 ARM64 镜像：
+
+| 目标 | 打包命令 | 镜像标签 |
+|---|---|---|
+| x86_64 / amd64 | `./scripts/docker-build.sh amd64 1.0.0` | `subflow:1.0.0-amd64` |
+| ARM64 / aarch64 | `./scripts/docker-build.sh arm64 1.0.0` | `subflow:1.0.0-arm64` |
+| 两种架构 | `./scripts/docker-build.sh all 1.0.0` | 上述两个标签 |
+
+导出压缩镜像包：
+
+```bash
+./scripts/docker-export.sh all 1.0.0
+```
+
+默认产物位于 `dist/docker/`：
+
+```text
+subflow-1.0.0-linux-amd64.tar.gz
+subflow-1.0.0-linux-arm64.tar.gz
+```
+
+在目标机器导入并运行：
+
+```bash
+docker load < subflow-1.0.0-linux-amd64.tar.gz
+docker run -d --name subflow \
+  -p 8000:8000 \
+  -v subflow-data:/app/data \
+  subflow:1.0.0-amd64
+```
+
+自定义镜像仓库名称时，打包和导出必须使用相同的 `IMAGE_NAME`：
+
+```bash
+IMAGE_NAME=registry.example.com/leo/subflow ./scripts/docker-build.sh all 1.0.0
+IMAGE_NAME=registry.example.com/leo/subflow ./scripts/docker-export.sh all 1.0.0
 ```
 
 ### 本地开发
@@ -78,6 +131,13 @@ docker compose up
 ```bash
 uv sync
 uv run uvicorn app.main:app --reload
+```
+
+本地已有 Subconverter 服务时，可显式连接：
+
+```bash
+SUBFLOW_SUBCONVERTER_URL=http://127.0.0.1:25500 \
+  uv run uvicorn app.main:app --reload
 ```
 
 打开 [http://127.0.0.1:8000](http://127.0.0.1:8000)。`/advanced` 是兼容入口，展示同一个页面。
@@ -110,6 +170,23 @@ uv run uvicorn app.main:app --reload
 ```
 
 Profile token 用于保护订阅和草稿接口，不会出现在公开模板、规则目录或审计报告中。
+
+### 4. 在其他设备上使用（OpenClash 等）
+
+地址中的 host 来自你打开页面时的地址栏。如果你在 `http://127.0.0.1:8000` 上生成，复制到的地址对路由器无效——`127.0.0.1` 会指向路由器自己。页面会在这种情况下给出提示。
+
+两种解决方式：
+
+- 用本机局域网 IP 打开页面，例如 `http://192.168.1.10:8000`；
+- 或固定对外地址：
+
+```bash
+SUBFLOW_PUBLIC_BASE_URL=http://192.168.1.10:8000
+```
+
+`leo.yaml` 有 288 个规则集托管在 `github.com` / `raw.githubusercontent.com`。生成 Clash/Mihomo 配置时，这些规则集会自动加上 `proxy: 自动选择`，通过节点下载；其余走 CDN 镜像的规则集保持直连。用 `SUBFLOW_PROVIDER_EGRESS` 可以改用别的策略组，设为 `DIRECT` 则关闭改写。
+
+另外两点与客户端有关，生成时会作为 warning / info 提示：508 个规则集在冷启动时全部下载，性能受限的设备可能超时；239 个 `mrs` 规则集要求 Mihomo 内核 ≥ 1.18.0，旧版 Clash 内核会直接拒绝。
 
 ## Mihomo 与 Surge 边界
 
@@ -169,4 +246,15 @@ uv run pytest
 node --check app/static/flow.js
 ```
 
-当前回归基线：`215 passed`。
+对真实机场订阅执行 OpenClash/Mihomo Docker 全链路验收：
+
+```bash
+SUBFLOW_E2E_SUBSCRIPTION_URL='https://example.com/your-authorized-subscription' \
+  ./scripts/openclash-e2e.sh
+```
+
+该脚本会验证长期订阅能被独立容器拉取、配置能被 Mihomo 加载、至少一个节点通过测速，并通过生成配置实际访问 Google；订阅凭据和生成配置仅保存在权限为 `0700` 的临时目录，成功或失败后默认清理。
+
+当前回归基线：`249 passed`。
+
+参考实现对比、风险与后续架构候选见 [`docs/audits/subconverter-comparison.md`](docs/audits/subconverter-comparison.md)。

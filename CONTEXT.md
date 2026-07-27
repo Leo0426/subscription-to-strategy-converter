@@ -86,6 +86,7 @@ Token-protected Subscription URLs
 | `app/core/normalizer.py` | Post-parse dedup and normalization for `ProxyNode` lists |
 | `app/core/fetcher.py` | HTTP fetching with SSRF safety checks |
 | `app/core/subscription.py` | `load_subscription()` — end-to-end: URL → Clash YAML or Surge config → normalized `ProxyNode` list |
+| `app/core/subconverter.py` | Optional compatibility Adapter: unsupported subscription URL → node-only Clash YAML through an operator-configured Subconverter |
 | `app/core/template_engine.py` | Built-in preset definitions, local template loader, `apply_template()`, `list_templates()` |
 | `app/core/powerfullz.py` | Fetches powerfullz static YAML from jsDelivr CDN |
 | `app/core/policy_workspace.py` | Workspace conversion boundary: `config_to_workspace()`, `workspace_from_dict()`, `workspace_to_mihomo_config()`, `compile_mihomo_config()` |
@@ -97,6 +98,7 @@ Token-protected Subscription URLs
 | `app/core/intent_compiler.py` | Compiles product-facing NodePools and ServiceRoutes into NodeSelectors, ProxyGroups, and ordered rules |
 | `app/core/template_policy_transform.py` | ServiceRoute transformation boundary with Claude template analysis and compatibility adapters |
 | `app/core/profiles.py` | Persistent Profile store with token authorization and last-successful artifact caching |
+| `app/core/provider_egress.py` | Decides which RuleProviders must download through a ProxyGroup instead of the direct route |
 | `app/core/renderer.py` | `render_yaml()` — serializes a dict to YAML string |
 | `app/core/platforms/surge.py` | Public Surge compatibility compiler; reports skipped protocols and unsupported MRS rule sets |
 | `app/core/platforms/singbox.py` | Experimental sing-box compiler |
@@ -164,11 +166,14 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 ## Key Invariants
 
 - `ProxyNode` is the only internal representation of a proxy — never pass raw dicts across module boundaries
+- Clash fields not yet modeled by `ProxyNode` must survive Mihomo round trips through the private `_clash_passthrough` payload; policy code must not depend on that payload
+- Subconverter is an opt-in input compatibility Adapter used only after direct Clash/Surge parsing fails; it never owns templates, rules, target rendering, or the Profile lifecycle
 - Shadowsocks transport options required for connectivity, including Surge `obfs` and `obfs-host`, must survive input normalization and map to the equivalent target-client syntax
 - Mihomo output from `/convert` and `/subscribe` must compile through `PolicyWorkspace` via `compile_mihomo_config()`
 - Mihomo is the first quality-bar compiler; other compilers remain experimental until semantic parity is explicit
 - Experimental compilers should report unsupported protocols without breaking the workspace loop
 - `RULE-SET` in Surge uses a direct URL (not provider name); the compiler resolves the name via `rule_providers` dict
+- Every `RULE-SET` reference, including references nested inside logical `AND` / `OR` / `NOT` rules, must resolve to a declared RuleProvider before publication
 - Surge does not accept Mihomo-only rule types such as `DOMAIN-REGEX`, `PROCESS-NAME-REGEX`, and `IN-NAME`; the compatibility compiler must skip and report them rather than emit an invalid `.conf` line
 - Community templates live under `community_templates/` (scanned root); the deduplicated community template is `community_templates/leo/leo.yaml`
 - All template IDs from the community are prefixed `local:` (e.g. `local:community_templates/leo/leo.yaml`)
@@ -191,6 +196,9 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - A stored PolicySnapshot does not automatically merge later PolicyPreset changes; updating from a preset is an explicit reset operation
 - `NodeSelector` references are expanded against the latest upstream `ProxyNode` inventory on every preview/render/Profile subscription request; unknown selectors fail closed and selectors producing an empty group are publish-blocking errors
 - Rules after the first `MATCH` or `FINAL` are unreachable and must be reported by the analyzer
+- A structurally valid artifact is not necessarily a runnable one; the analyzer reports target-client runtime feasibility (RuleProvider reachability, cold-start provider budget, core version requirements) as warnings that never block publication
+- RuleProviders hosted where the client has no direct route must declare `proxy: <group>`; `provider_egress.py` owns that decision for both the compiler and the analyzer
+- The published Subscription URL host is unknowable from the request; the page guesses `location.origin` and `SUBFLOW_PUBLIC_BASE_URL` overrides it for clients running on another host
 - A publishable Release stores immutable target artifacts plus the source-content digest, ProfileRevision, template identity, rule-source identity, and compiler/transformer versions that produced them
 - Rollback selects a previously validated Release; it does not rebuild that Release from mutable upstream dependencies
 

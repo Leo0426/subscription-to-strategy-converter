@@ -6,7 +6,7 @@
 |---|---|---|
 | `app/` | FastAPI 应用、策略领域逻辑、模型和前端静态资源。 | 是 |
 | `community_templates/` | 单一 Leo 模板、维护说明和可公开查询的规则源审计快照。 | 是 |
-| `docs/` | ADR、Agent 领域上下文和工程决策记录。 | 是 |
+| `docs/` | ADR、审计报告、Agent 领域上下文和工程决策记录。 | 是 |
 | `tests/` | API、编译、策略组装及界面契约测试。 | 是 |
 | `data/` | 本地运行时数据目录；默认包含 Profile SQLite 数据库。仅本机使用，不应提交真实订阅或 token。 | 否 |
 | `.claude/` | 本地 Agent/工具配置。 | 视内容而定 |
@@ -20,6 +20,8 @@
 | `pyproject.toml` | Python 项目元数据、依赖和 pytest 配置。 | 是 |
 | `uv.lock` | 锁定的 Python 依赖版本。 | 是 |
 | `docker-compose.yml` | Docker 本地启动入口。 | 是 |
+| `docker-compose.compatibility.yml` | 可选 Subconverter 输入兼容层的 Compose 叠加配置。 | 是 |
+| `Dockerfile` | Subflow 生产镜像的多阶段构建入口。 | 是 |
 | `.gitignore` | 本地数据、缓存和 IDE 文件忽略规则。 | 是 |
 
 ## 维护边界
