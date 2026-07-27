@@ -217,3 +217,4 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - [ADR 0008: Route intent as the default customization boundary](docs/adr/0008-route-intent-as-default-customization-boundary.md)
 - [ADR 0009: Rule packs as the default assembly boundary](docs/adr/0009-rule-packs-as-default-assembly-boundary.md)
 - [ADR 0010: Single-page policy workbench](docs/adr/0010-single-page-policy-workbench.md)
+- [ADR 0011: Service-level rule source consolidation](docs/adr/0011-service-level-rule-source-consolidation.md)
