@@ -12,7 +12,7 @@ def test_root_and_legacy_advanced_route_serve_the_same_simple_page() -> None:
     assert root.status_code == 200
     assert advanced.status_code == 200
     assert root.text == advanced.text
-    assert "/static/flow.js?v=18" in root.text
+    assert "/static/flow.js?v=19" in root.text
     assert "/static/flow.css?v=18" in root.text
     assert "/static/assets/subflow-logo.png" in root.text
 

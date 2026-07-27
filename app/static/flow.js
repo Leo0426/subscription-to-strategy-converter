@@ -340,6 +340,19 @@ async function loadNodes() {
   }
 }
 
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]", "0.0.0.0"]);
+
+// The address is built from the browser's origin, so a loopback host points the
+// proxy client back at itself instead of at this instance.
+function showReachWarning(hostname) {
+  const warning = $("#publish-reach-warning");
+  const stranded = LOOPBACK_HOSTS.has(hostname);
+  warning.textContent = stranded
+    ? `地址中的 ${hostname} 只在本机有效，OpenClash 等其他设备上的客户端会解析到它自己。请改用本机的局域网 IP，或用 SUBFLOW_PUBLIC_BASE_URL 固定对外地址。`
+    : "";
+  warning.hidden = !stranded;
+}
+
 async function generateSubscription() {
   const button = $("#generate-button");
   if (!state.nodes.length) return loadNodes();
@@ -351,8 +364,10 @@ async function generateSubscription() {
     const errors = (preview.findings || []).filter((item) => item.severity === "error");
     if (errors.length) throw new Error(`${errors.length} 个配置错误，请检查服务出口。`);
     const created = await postJson("/profiles", payload());
-    $("#published-clash-url").value = new URL(created.subscribe_urls.clash, location.origin).toString();
+    const clashUrl = new URL(created.subscribe_urls.clash, location.origin);
+    $("#published-clash-url").value = clashUrl.toString();
     $("#published-surge-url").value = new URL(created.subscribe_urls.surge, location.origin).toString();
+    showReachWarning(clashUrl.hostname);
     $("#publish-result").hidden = false;
     $("#generate-hint").textContent = "订阅已生成。";
   } catch (error) {

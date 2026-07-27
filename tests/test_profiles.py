@@ -325,3 +325,30 @@ def test_profile_draft_can_be_read_and_updated_with_its_token(tmp_path, monkeypa
     assert updated.status_code == 200
     assert updated.json()["subscribe_urls"]["clash"].endswith("&target=clash")
     assert refreshed.json()["request"]["template"] == LEO_TEMPLATE
+
+
+def test_public_base_url_pins_the_published_address(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("SUBFLOW_DB_PATH", str(tmp_path / "subflow.db"))
+    monkeypatch.setenv("SUBFLOW_PUBLIC_BASE_URL", "http://192.168.1.10:8000/")
+    client = TestClient(app)
+
+    body = client.post(
+        "/profiles",
+        json={"subscription_url": "https://example.com/sub", "template": LEO_TEMPLATE, "target": "clash"},
+    ).json()
+
+    assert body["subscribe_url"].startswith("http://192.168.1.10:8000/subscribe/")
+    assert body["subscribe_urls"]["clash"].endswith("&target=clash")
+
+
+def test_published_address_stays_relative_without_a_public_base_url(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("SUBFLOW_DB_PATH", str(tmp_path / "subflow.db"))
+    monkeypatch.delenv("SUBFLOW_PUBLIC_BASE_URL", raising=False)
+    client = TestClient(app)
+
+    body = client.post(
+        "/profiles",
+        json={"subscription_url": "https://example.com/sub", "template": LEO_TEMPLATE, "target": "clash"},
+    ).json()
+
+    assert body["subscribe_url"].startswith("/subscribe/")

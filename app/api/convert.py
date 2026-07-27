@@ -431,8 +431,18 @@ def _profile_store() -> ProfileStore:
     return ProfileStore(os.environ.get("SUBFLOW_DB_PATH", "data/subflow.db"))
 
 
+def _public_base_url() -> str:
+    """Origin that proxy clients use to reach this instance.
+
+    The page can only guess it from `location.origin`, which is wrong whenever the
+    operator browses on `127.0.0.1` but the client runs on another host (a router
+    running OpenClash, for example). Setting this pins the published address.
+    """
+    return os.environ.get("SUBFLOW_PUBLIC_BASE_URL", "").strip().rstrip("/")
+
+
 def _profile_urls(profile_id: str, token: str) -> dict[str, object]:
-    base_url = f"/subscribe/{profile_id}?token={token}"
+    base_url = f"{_public_base_url()}/subscribe/{profile_id}?token={token}"
     return {
         "id": profile_id,
         "subscribe_url": base_url,
