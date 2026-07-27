@@ -82,27 +82,39 @@ def _resolve_via_udp_dns(hostname: str) -> list[ipaddress.IPv4Address | ipaddres
     return ips
 
 
+#: JSON DoH endpoints queried by IP so fake-ip DNS cannot intercept them.
+#: Cloudflare is unreachable from some networks (where the fake-ip proxy runs);
+#: AliDNS covers those, so at least one side of the firewall always answers.
+_DOH_ENDPOINTS = (
+    "https://1.1.1.1/dns-query",
+    "https://223.5.5.5/resolve",
+)
+
+
 async def _resolve_via_doh(hostname: str) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
-    """DNS-over-HTTPS to Cloudflare 1.1.1.1 by IP, so fake-ip DNS cannot intercept it."""
-    ips: list[ipaddress.IPv4Address | ipaddress.IPv6Address] = []
+    """DNS-over-HTTPS by resolver IP; first endpoint that answers wins."""
     async with httpx.AsyncClient(timeout=5.0) as client:
-        for rdtype, rtype_id in (("A", 1), ("AAAA", 28)):
-            try:
-                resp = await client.get(
-                    "https://1.1.1.1/dns-query",
-                    params={"name": hostname, "type": rdtype},
-                    headers={"Accept": "application/dns-json"},
-                )
-                if resp.status_code == 200:
-                    for answer in resp.json().get("Answer", []):
-                        if answer.get("type") == rtype_id:
-                            try:
-                                ips.append(ipaddress.ip_address(answer["data"]))
-                            except (ValueError, KeyError):
-                                pass
-            except (httpx.HTTPError, Exception):
-                pass
-    return ips
+        for endpoint in _DOH_ENDPOINTS:
+            ips: list[ipaddress.IPv4Address | ipaddress.IPv6Address] = []
+            for rdtype, rtype_id in (("A", 1), ("AAAA", 28)):
+                try:
+                    resp = await client.get(
+                        endpoint,
+                        params={"name": hostname, "type": rdtype},
+                        headers={"Accept": "application/dns-json"},
+                    )
+                    if resp.status_code == 200:
+                        for answer in resp.json().get("Answer", []):
+                            if answer.get("type") == rtype_id:
+                                try:
+                                    ips.append(ipaddress.ip_address(answer["data"]))
+                                except (ValueError, KeyError):
+                                    pass
+                except (httpx.HTTPError, Exception):
+                    pass
+            if ips:
+                return ips
+    return []
 
 
 async def _ensure_resolved_host_is_public(hostname: str) -> None:
