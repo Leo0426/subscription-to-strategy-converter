@@ -87,8 +87,8 @@ proxy-groups:
   type: url-test
   include-all: true
   url: https://www.gstatic.com/generate_204
-  interval: 300
-  tolerance: 50
+  interval: 600
+  tolerance: 150
 - name: 故障转移
   type: fallback
   include-all: true
@@ -102,50 +102,50 @@ proxy-groups:
   include-all: true
   filter: (?i)(香港|🇭🇰|Hong Kong|(^|[^A-Za-z])(HK|HKG)([^A-Za-z]|$))
   url: https://www.gstatic.com/generate_204
-  interval: 300
-  tolerance: 50
+  interval: 600
+  tolerance: 150
 - name: 台湾自动
   type: url-test
   include-all: true
   filter: (?i)(台湾|台北|台中|🇹🇼|Taiwan|(^|[^A-Za-z])(TW|TPE)([^A-Za-z]|$))
   url: https://www.gstatic.com/generate_204
-  interval: 300
-  tolerance: 50
+  interval: 600
+  tolerance: 150
 - name: 日本自动
   type: url-test
   include-all: true
   filter: (?i)(日本|东京|大阪|🇯🇵|Japan|(^|[^A-Za-z])(JP|NRT|HND)([^A-Za-z]|$))
   url: https://www.gstatic.com/generate_204
-  interval: 300
-  tolerance: 50
+  interval: 600
+  tolerance: 150
 - name: 新加坡自动
   type: url-test
   include-all: true
   filter: (?i)(新加坡|狮城|🇸🇬|Singapore|(^|[^A-Za-z])(SG|SIN)([^A-Za-z]|$))
   url: https://www.gstatic.com/generate_204
-  interval: 300
-  tolerance: 50
+  interval: 600
+  tolerance: 150
 - name: 美国自动
   type: url-test
   include-all: true
   filter: (?i)(美国|美國|🇺🇸|United States|(^|[^A-Za-z])(US|USA|LAX|SJC|SFO)([^A-Za-z]|$))
   url: https://www.gstatic.com/generate_204
-  interval: 300
-  tolerance: 50
+  interval: 600
+  tolerance: 150
 - name: 韩国自动
   type: url-test
   include-all: true
   filter: (?i)(韩国|韓國|首尔|首爾|🇰🇷|Korea|(^|[^A-Za-z])KR([^A-Za-z]|$))
   url: https://www.gstatic.com/generate_204
-  interval: 300
-  tolerance: 50
+  interval: 600
+  tolerance: 150
 - name: 欧洲自动
   type: url-test
   include-all: true
   filter: (?i)(英国|法國|法国|德国|德國|荷兰|荷蘭|瑞士|欧洲|歐洲|🇬🇧|🇫🇷|🇩🇪|(^|[^A-Za-z])(UK|GB|DE|FR|EU)([^A-Za-z]|$))
   url: https://www.gstatic.com/generate_204
-  interval: 300
-  tolerance: 50
+  interval: 600
+  tolerance: 150
 - name: AI 服务
   type: select
   proxies:
