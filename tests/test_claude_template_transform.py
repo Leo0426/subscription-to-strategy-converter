@@ -225,7 +225,10 @@ def test_profile_uses_leo_claude_template(tmp_path, monkeypatch) -> None:
     assert created.status_code == 201
     clash = client.get(created.json()["subscribe_urls"]["clash"])
     assert clash.status_code == 200
-    assert "anthropic.mrs" in clash.text
+    # The template must keep a recognizable Claude RuleProvider; the concrete
+    # source URL may change through ADR 0011 consolidation.
+    assert "RULE-SET,Claude" in clash.text
+    assert "/Claude/" in clash.text
 
 
 def test_surge_claude_query_fails_closed_for_incompatible_leo_providers(monkeypatch) -> None:

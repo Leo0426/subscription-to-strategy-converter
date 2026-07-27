@@ -248,8 +248,65 @@ def execute_consolidation_batch(
     return changes
 
 
-async def plan_leo_consolidation(*, concurrency: int = 24, timeout: float = 15.0) -> dict[str, Any]:
-    """Fetch every Leo provider's content and build the full consolidation plan."""
+def build_subsumption_plan(records: list[Mapping[str, Any]]) -> dict[str, Any]:
+    """Zero-loss cross-family compression: remove A when a same-target B fully
+    contains A's entries. Only textual, measurable sources participate; the
+    survivor is the better-ranked source when containment is mutual.
+    """
+    measurable = [record for record in records if record.get("entries")]
+    by_targets: dict[tuple[str, ...], list[Mapping[str, Any]]] = defaultdict(list)
+    for record in measurable:
+        by_targets[tuple(sorted(record.get("targets") or ()))].append(record)
+
+    removed: dict[str, dict[str, Any]] = {}
+    for targets, members in by_targets.items():
+        ranked = sorted(members, key=rank_key)
+        for index, member in enumerate(ranked):
+            name = str(member["name"])
+            if name in removed:
+                continue
+            member_entries = frozenset(member["entries"])
+            for other in ranked:
+                if other is member or str(other["name"]) in removed:
+                    continue
+                if member_entries <= frozenset(other["entries"]) and (
+                    member_entries != frozenset(other["entries"]) or ranked.index(other) < index
+                ):
+                    removed[name] = {
+                        "name": name,
+                        "url": member["url"],
+                        "subsumed_by": other["name"],
+                        "targets": list(targets),
+                        "entry_count": len(member_entries),
+                        "byte_count": int(member.get("byte_count") or 0),
+                    }
+                    break
+
+    total = len(records)
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "summary": {
+            "provider_count_before": total,
+            "provider_count_after": total - len(removed),
+            "removed": len(removed),
+            "bytes_removed": sum(entry["byte_count"] for entry in removed.values()),
+        },
+        "units": [
+            {
+                "family": f"subsumed:{entry['name']}",
+                "targets": entry["targets"],
+                "retained": {"name": entry["subsumed_by"], "url": ""},
+                "removed": [
+                    {"name": entry["name"], "url": entry["url"], "lost_entry_count": 0, "lost_examples": []}
+                ],
+            }
+            for entry in sorted(removed.values(), key=lambda e: e["name"])
+        ],
+    }
+
+
+async def collect_leo_records(*, concurrency: int = 24, timeout: float = 15.0) -> list[dict[str, Any]]:
+    """Fetch every Leo provider's content into ranked, comparable records."""
     template = load_template(LEO_TEMPLATE_ID)
     providers = template.get("rule-providers") or {}
     targets = rule_provider_targets(template.get("rules") or [])
@@ -283,7 +340,12 @@ async def plan_leo_consolidation(*, concurrency: int = 24, timeout: float = 15.0
         records = await asyncio.gather(
             *(load_record(name, providers[name]) for name in sorted(providers))
         )
-    return build_consolidation_plan(list(records))
+    return list(records)
+
+
+async def plan_leo_consolidation(*, concurrency: int = 24, timeout: float = 15.0) -> dict[str, Any]:
+    """Fetch every Leo provider's content and build the family consolidation plan."""
+    return build_consolidation_plan(await collect_leo_records(concurrency=concurrency, timeout=timeout))
 
 
 def main() -> None:
@@ -291,6 +353,7 @@ def main() -> None:
     parser.add_argument("--concurrency", type=int, default=24)
     parser.add_argument("--timeout", type=float, default=15.0)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_REPORT_DIR)
+    parser.add_argument("--mode", choices=["family", "subsumption"], default="family")
     parser.add_argument("--execute", type=Path, help="Apply a previously generated plan JSON to leo.yaml")
     parser.add_argument("--families", type=str, help="Comma-separated family batch for --execute")
     args = parser.parse_args()
@@ -300,10 +363,16 @@ def main() -> None:
         changes = execute_consolidation_batch(plan, families=families)
         print(json.dumps(changes, ensure_ascii=False))
         return
-    plan = asyncio.run(plan_leo_consolidation(concurrency=args.concurrency, timeout=args.timeout))
+    records = asyncio.run(collect_leo_records(concurrency=args.concurrency, timeout=args.timeout))
+    fetch_failures = sum(1 for record in records if not record["byte_count"])
+    if fetch_failures > len(records) * 0.25:
+        raise SystemExit(
+            f"refusing to plan from a degraded fetch run ({fetch_failures}/{len(records)} empty)"
+        )
+    plan = build_consolidation_plan(records) if args.mode == "family" else build_subsumption_plan(records)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    path = args.output_dir / f"consolidation-plan-{stamp}.json"
+    path = args.output_dir / f"consolidation-plan-{args.mode}-{stamp}.json"
     path.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(plan["summary"], ensure_ascii=False))
     print(path)

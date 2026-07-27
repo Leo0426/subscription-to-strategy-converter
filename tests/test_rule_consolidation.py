@@ -206,3 +206,75 @@ def test_consolidation_gates_reject_a_dangling_reference() -> None:
     assert consolidation_gate_failures(before, before) == []
     failures = consolidation_gate_failures(before, broken)
     assert any("missing_provider" in failure for failure in failures)
+
+
+def test_build_subsumption_plan_removes_fully_contained_same_target_sources() -> None:
+    from app.core.rule_consolidation import build_subsumption_plan
+
+    superset = {
+        "name": "ChinaMax",
+        "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/chinamax.yaml",
+        "declared_format": "yaml",
+        "targets": ["DIRECT"],
+        "byte_count": 900,
+        "entries": frozenset({"domain,a.cn", "domain,b.cn", "domain,c.cn"}),
+    }
+    subset = {
+        "name": "ChinaLite",
+        "url": "https://example.com/china-lite.txt",
+        "declared_format": "text",
+        "targets": ["DIRECT"],
+        "byte_count": 300,
+        "entries": frozenset({"domain,a.cn", "domain,b.cn"}),
+    }
+    other_target_subset = {
+        "name": "ChinaProxy",
+        "url": "https://example.com/china-proxy.txt",
+        "declared_format": "text",
+        "targets": ["默认代理"],
+        "byte_count": 100,
+        "entries": frozenset({"domain,a.cn"}),
+    }
+    unmeasurable = {
+        "name": "ChinaMrs",
+        "url": "https://example.com/china.mrs",
+        "declared_format": "mrs",
+        "targets": ["DIRECT"],
+        "byte_count": 50,
+        "entries": frozenset(),
+    }
+
+    plan = build_subsumption_plan([superset, subset, other_target_subset, unmeasurable])
+
+    assert plan["summary"]["removed"] == 1
+    unit = plan["units"][0]
+    assert unit["removed"][0]["name"] == "ChinaLite"
+    assert unit["retained"]["name"] == "ChinaMax"
+    assert unit["removed"][0]["lost_entry_count"] == 0
+
+
+def test_build_subsumption_plan_keeps_better_ranked_of_identical_twins() -> None:
+    from app.core.rule_consolidation import build_subsumption_plan
+
+    trusted = {
+        "name": "trusted",
+        "url": "https://raw.githubusercontent.com/blackmatrix7/x/master/a.yaml",
+        "declared_format": "yaml",
+        "targets": ["DIRECT"],
+        "byte_count": 100,
+        "entries": frozenset({"domain,a.cn"}),
+    }
+    untrusted_twin = {
+        "name": "untrusted",
+        "url": "https://example.com/a.txt",
+        "declared_format": "text",
+        "targets": ["DIRECT"],
+        "byte_count": 100,
+        "entries": frozenset({"domain,a.cn"}),
+    }
+
+    plan = build_subsumption_plan([untrusted_twin, trusted])
+
+    assert plan["summary"]["removed"] == 1
+    assert plan["units"][0]["removed"][0]["name"] == "untrusted"
+    assert plan["units"][0]["retained"]["name"] == "trusted"
