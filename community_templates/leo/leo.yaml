@@ -278,13 +278,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Claude/Claude_No_Resolve.yaml
     path: ./rule_provider/leo/020.yaml
     interval: 86400
-  Claude / Domain:
-    type: http
-    behavior: classical
-    format: text
-    url: https://gh-proxy.com/raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Clash/Claude/Claude.list
-    path: ./rule_provider/leo/022.txt
-    interval: 86400
   Copilot:
     type: http
     behavior: classical
@@ -312,13 +305,6 @@ rule-providers:
     format: text
     url: https://gh-proxy.com/raw.githubusercontent.com/liandu2024/clash/refs/heads/main/list/Gemini.list
     path: ./rule_provider/leo/028.txt
-    interval: 86400
-  Grok / Domain:
-    type: http
-    behavior: classical
-    format: text
-    url: https://gh-proxy.com/raw.githubusercontent.com/liandu2024/clash/refs/heads/main/list/Grok.list
-    path: ./rule_provider/leo/029.txt
     interval: 86400
   Groq / Domain:
     type: http
@@ -474,12 +460,6 @@ rule-providers:
     url: https://kelee.one/Tool/Clash/Rule/1PasswordUS.yaml
     path: ./rule_provider/leo/071.yaml
     interval: 3600
-  ABC:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/ABC.yaml
-    path: ./rule_provider/leo/072.yaml
-    interval: 604800
   category-porn:
     type: http
     behavior: domain
@@ -494,19 +474,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ehentai.mrs
     path: ./rule_provider/leo/074.mrs
     interval: 86400
-  ExHentai:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/ameyukisora/Clash-Rule/master/provider/ExHentai.yaml
-    path: ./rule_provider/leo/075.yaml
-    interval: 86400
-  Globe / Domain:
-    type: http
-    behavior: classical
-    format: text
-    url: https://gh-proxy.com/raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Clash/Global/Global.list
-    path: ./rule_provider/leo/076.txt
-    interval: 86400
   ifast_domain:
     type: http
     behavior: domain
@@ -520,12 +487,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/ameyukisora/Clash-Rule/master/provider/JapanWeb.yaml
     path: ./rule_provider/leo/078.yaml
     interval: 86400
-  Japonx:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/Japonx.yaml
-    path: ./rule_provider/leo/079.yaml
-    interval: 604800
   LocationDKS:
     type: http
     behavior: domain
@@ -547,12 +508,6 @@ rule-providers:
     url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/pixiv.mrs
     path: ./rule_provider/leo/082.mrs
     interval: 86400
-  Pornhub:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/Pornhub.yaml
-    path: ./rule_provider/leo/086.yaml
-    interval: 604800
   Special:
     type: http
     behavior: classical
@@ -698,13 +653,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/AppleNews/AppleNews_No_Resolve.yaml
     path: ./rule_provider/leo/128.yaml
     interval: 86400
-  AppleProxy:
-    type: http
-    behavior: classical
-    format: text
-    url: https://github.com/Repcz/Tool/raw/X/mihomo/Rules/AppleServers.list
-    path: ./rule_provider/leo/129.txt
-    interval: 86400
   ApplePushNotificationService:
     type: http
     behavior: classical
@@ -733,13 +681,6 @@ rule-providers:
     url: https://gh.669588.xyz/rules/geo/geosite/icloud.mrs
     path: ./rule_provider/leo/133.mrs
     interval: 86400
-  iCloudChina:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://kelee.one/Tool/Clash/Rule/iCloudChina.yaml
-    path: ./rule_provider/leo/134.yaml
-    interval: 3600
   TestFlight:
     type: http
     behavior: classical
@@ -788,20 +729,6 @@ rule-providers:
     format: yaml
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Origin/Origin_No_Resolve.yaml
     path: ./rule_provider/leo/143.yaml
-    interval: 86400
-  Epic-2:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Epic/Epic_No_Resolve.yaml
-    path: ./rule_provider/leo/146.yaml
-    interval: 86400
-  Epic / Domain:
-    type: http
-    behavior: classical
-    format: text
-    url: https://gh-proxy.com/raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Epic/Epic.list
-    path: ./rule_provider/leo/148.txt
     interval: 86400
   EpicCN:
     type: http
@@ -1079,13 +1006,6 @@ rule-providers:
     url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/playstation.mrs
     path: ./rule_provider/leo/248.mrs
     interval: 86400
-  PlayStation / Domain:
-    type: http
-    behavior: classical
-    format: text
-    url: https://gh-proxy.com/raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Clash/PlayStation/PlayStation.list
-    path: ./rule_provider/leo/249.txt
-    interval: 86400
   Sony:
     type: http
     behavior: classical
@@ -1176,13 +1096,6 @@ rule-providers:
     format: mrs
     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/wise.mrs
     path: ./rule_provider/leo/276.mrs
-    interval: 86400
-  Xbox:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Xbox/Xbox_No_Resolve.yaml
-    path: ./rule_provider/leo/277.yaml
     interval: 86400
   XboxCN:
     type: http
@@ -2124,13 +2037,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo-lite/geoip/bilibili.mrs
     path: ./rule_provider/leo/534.mrs
     interval: 86400
-  BiliBiliIntl:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/BiliBiliIntl/BiliBiliIntl_No_Resolve.yaml
-    path: ./rule_provider/leo/537.yaml
-    interval: 86400
   biliintl:
     type: http
     behavior: domain
@@ -2169,23 +2075,11 @@ rule-providers:
     url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/DMM.yaml
     path: ./rule_provider/leo/544.yaml
     interval: 604800
-  Fox Now:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/Fox%20Now.yaml
-    path: ./rule_provider/leo/545.yaml
-    interval: 604800
   Fox+:
     type: http
     behavior: classical
     url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/Fox%2B.yaml
     path: ./rule_provider/leo/546.yaml
-    interval: 604800
-  PBS:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/PBS.yaml
-    path: ./rule_provider/leo/547.yaml
     interval: 604800
   Popcorn / Domain:
     type: http
@@ -2219,12 +2113,6 @@ rule-providers:
     behavior: classical
     url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/encoreTVB.yaml
     path: ./rule_provider/leo/557.yaml
-    interval: 604800
-  myTV SUPER:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/myTV%20SUPER.yaml
-    path: ./rule_provider/leo/558.yaml
     interval: 604800
   TVB_domain:
     type: http
@@ -2288,12 +2176,6 @@ rule-providers:
     behavior: classical
     url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/JOOX.yaml
     path: ./rule_provider/leo/568.yaml
-    interval: 604800
-  KKBOX:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@main/Clash/Provider/Media/KKBOX.yaml
-    path: ./rule_provider/leo/569.yaml
     interval: 604800
   Pandora:
     type: http
@@ -2601,13 +2483,6 @@ rule-providers:
     url: https://gh.669588.xyz/rules/geo/geoip/cloudflare.mrs
     path: ./rule_provider/leo/662.mrs
     interval: 86400
-  Cloudflarecn:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Cloudflarecn/Cloudflarecn_No_Resolve.yaml
-    path: ./rule_provider/leo/664.yaml
-    interval: 86400
   cloudfront-ip:
     type: http
     behavior: ipcidr
@@ -2676,26 +2551,12 @@ rule-providers:
     url: https://testingcf.jsdelivr.net/gh/yiteei/Share@Proxy/rules/ip/webrtc.mrs
     path: ./rule_provider/leo/682.mrs
     interval: 86400
-  Lan-3:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Lan/Lan_No_Resolve.yaml
-    path: ./rule_provider/leo/685.yaml
-    interval: 86400
   lan_ip:
     type: http
     behavior: classical
     format: text
     url: https://ruleset.skk.moe/Clash/ip/lan.txt
     path: ./rule_provider/leo/688.txt
-    interval: 43200
-  lan_non_ip:
-    type: http
-    behavior: classical
-    format: text
-    url: https://ruleset.skk.moe/Clash/non_ip/lan.txt
-    path: ./rule_provider/leo/689.txt
     interval: 43200
   networktest:
     type: http
@@ -2811,7 +2672,6 @@ rules:
 - RULE-SET,ChinaMedia,DIRECT
 - RULE-SET,Cloudflare-2,DIRECT
 - RULE-SET,cloudflare-ip,DIRECT
-- RULE-SET,Cloudflarecn,DIRECT
 - RULE-SET,cloudfront-ip,DIRECT
 - RULE-SET,cn,DIRECT
 - RULE-SET,cn-domain,DIRECT
@@ -2837,9 +2697,7 @@ rules:
 - RULE-SET,ip_httpdns,DIRECT
 - RULE-SET,ip_private,DIRECT
 - RULE-SET,ip_webrtc,DIRECT
-- RULE-SET,Lan-3,DIRECT
 - RULE-SET,lan_ip,DIRECT
-- RULE-SET,lan_non_ip,DIRECT
 - RULE-SET,media_cn_domain,DIRECT
 - RULE-SET,networktest,DIRECT
 - RULE-SET,no-fakeip,DIRECT
@@ -2866,13 +2724,11 @@ rules:
 - RULE-SET,ai_non_ip,AI 服务
 - RULE-SET,AIIP,AI 服务
 - RULE-SET,ChatGPT / Domain,AI 服务
-- RULE-SET,Claude / Domain,AI 服务
 - RULE-SET,Claude,AI 服务
 - RULE-SET,Copilot / Domain,AI 服务
 - RULE-SET,Copilot,AI 服务
 - RULE-SET,Gemini / Domain,AI 服务
 - RULE-SET,Gemini,AI 服务
-- RULE-SET,Grok / Domain,AI 服务
 - RULE-SET,Groq / Domain,AI 服务
 - RULE-SET,Meta AI / Domain,AI 服务
 - RULE-SET,OpenAI,AI 服务
@@ -2891,13 +2747,11 @@ rules:
 - RULE-SET,AppleID,Apple
 - RULE-SET,AppleMusic,Apple
 - RULE-SET,AppleNews,Apple
-- RULE-SET,AppleProxy,Apple
 - RULE-SET,ApplePushNotificationService,Apple
 - RULE-SET,AppleSoftwareUpdates,Apple
 - RULE-SET,AppleTV-3,Apple
 - RULE-SET,appleTV_domain,Apple
 - RULE-SET,icloud,Apple
-- RULE-SET,iCloudChina,Apple
 - RULE-SET,Google / Domain,Google
 - RULE-SET,Google / IP,Google
 - RULE-SET,Google Drive,Google
@@ -2967,8 +2821,6 @@ rules:
 - RULE-SET,xiaohongshu,社交通讯
 - RULE-SET,XiaoHongShu_域,社交通讯
 - RULE-SET,category-cngames,游戏服务
-- RULE-SET,Epic / Domain,游戏服务
-- RULE-SET,Epic-2,游戏服务
 - RULE-SET,EpicCN,游戏服务
 - RULE-SET,Game,游戏服务
 - RULE-SET,GameDownload,游戏服务
@@ -2979,7 +2831,6 @@ rules:
 - RULE-SET,GamesGlobal,游戏服务
 - RULE-SET,Nintendo,游戏服务
 - RULE-SET,NintendoCN,游戏服务
-- RULE-SET,PlayStation / Domain,游戏服务
 - RULE-SET,PlayStation,游戏服务
 - RULE-SET,Steam / Domain,游戏服务
 - RULE-SET,Steam-5,游戏服务
@@ -2987,7 +2838,6 @@ rules:
 - RULE-SET,steamcdn_domain,游戏服务
 - RULE-SET,steamcdn_ip,游戏服务
 - RULE-SET,SteamCN-2,游戏服务
-- RULE-SET,Xbox,游戏服务
 - RULE-SET,XboxCN,游戏服务
 - RULE-SET,Abema TV,流媒体
 - RULE-SET,Bahamut,流媒体
@@ -2995,7 +2845,6 @@ rules:
 - RULE-SET,BiliBili / Domain,流媒体
 - RULE-SET,Bilibili-5,流媒体
 - RULE-SET,bilibili_ip,流媒体
-- RULE-SET,BiliBiliIntl,流媒体
 - RULE-SET,biliintl,流媒体
 - RULE-SET,biliintl_domain,流媒体
 - RULE-SET,Crunchyroll / Domain,流媒体
@@ -3012,7 +2861,6 @@ rules:
 - RULE-SET,EmbyIP,流媒体
 - RULE-SET,encoreTVB,流媒体
 - RULE-SET,F1 TV,流媒体
-- RULE-SET,Fox Now,流媒体
 - RULE-SET,Fox+,流媒体
 - RULE-SET,HBO / Domain,流媒体
 - RULE-SET,HBO-3,流媒体
@@ -3022,14 +2870,12 @@ rules:
 - RULE-SET,IQ,流媒体
 - RULE-SET,IQIYI,流媒体
 - RULE-SET,JOOX,流媒体
-- RULE-SET,KKBOX,流媒体
 - RULE-SET,KKTV,流媒体
 - RULE-SET,Letv,流媒体
 - RULE-SET,Max,流媒体
 - RULE-SET,media!cn_domain,流媒体
 - RULE-SET,media,流媒体
 - RULE-SET,mediaip,流媒体
-- RULE-SET,myTV SUPER,流媒体
 - RULE-SET,Netease Music,流媒体
 - RULE-SET,NetEaseMusic_domain,流媒体
 - RULE-SET,NetEaseMusic_ip,流媒体
@@ -3040,7 +2886,6 @@ rules:
 - RULE-SET,NewsMedia,流媒体
 - RULE-SET,Niconico,流媒体
 - RULE-SET,Pandora,流媒体
-- RULE-SET,PBS,流媒体
 - RULE-SET,Popcorn / Domain,流媒体
 - RULE-SET,PrimeVideo-3,流媒体
 - RULE-SET,site_youtube,流媒体
@@ -3067,7 +2912,6 @@ rules:
 - RULE-SET,YouTube-6,流媒体
 - RULE-SET,115_domain,默认代理
 - RULE-SET,1Password,默认代理
-- RULE-SET,ABC,默认代理
 - RULE-SET,Accelerator,默认代理
 - RULE-SET,Alibaba,默认代理
 - RULE-SET,alibaba_domain,默认代理
@@ -3090,7 +2934,6 @@ rules:
 - RULE-SET,ebay_domain,默认代理
 - RULE-SET,Ecommerce,默认代理
 - RULE-SET,ehentai_domain,默认代理
-- RULE-SET,ExHentai,默认代理
 - RULE-SET,fcm_domain,默认代理
 - RULE-SET,Geo-!CN,默认代理
 - RULE-SET,geolocation-!cn-2,默认代理
@@ -3098,14 +2941,12 @@ rules:
 - RULE-SET,Global,默认代理
 - RULE-SET,global_non_ip,默认代理
 - RULE-SET,GlobalMedia,默认代理
-- RULE-SET,Globe / Domain,默认代理
 - RULE-SET,GOG,默认代理
 - RULE-SET,GOGCN,默认代理
 - RULE-SET,greatfire,默认代理
 - RULE-SET,ifast_domain,默认代理
 - RULE-SET,InternationalDownloadCDN,默认代理
 - RULE-SET,JapanWeb,默认代理
-- RULE-SET,Japonx,默认代理
 - RULE-SET,LocationDKS,默认代理
 - RULE-SET,miHoYo,默认代理
 - RULE-SET,MSN,默认代理
@@ -3115,7 +2956,6 @@ rules:
 - RULE-SET,Nvidia / Domain,默认代理
 - RULE-SET,Origin,默认代理
 - RULE-SET,Pixiv,默认代理
-- RULE-SET,Pornhub,默认代理
 - RULE-SET,PrivateTracker,默认代理
 - RULE-SET,Proxy / Domain,默认代理
 - RULE-SET,Proxy-8,默认代理

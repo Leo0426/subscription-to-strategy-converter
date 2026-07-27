@@ -156,7 +156,7 @@ def test_subscribe_returns_yaml(client: TestClient, monkeypatch: pytest.MonkeyPa
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/yaml")
     assert "mixed-port: 7890" in response.text
-    assert "RULE-SET,Claude / Domain,AI 服务" in response.text
+    assert "RULE-SET,Claude,AI 服务" in response.text
     assert "name: 香港 01" in response.text
 
 
