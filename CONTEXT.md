@@ -168,6 +168,7 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - `ProxyNode` is the only internal representation of a proxy — never pass raw dicts across module boundaries
 - Clash fields not yet modeled by `ProxyNode` must survive Mihomo round trips through the private `_clash_passthrough` payload; policy code must not depend on that payload
 - Subconverter is an opt-in input compatibility Adapter used only after direct Clash/Surge parsing fails; it never owns templates, rules, target rendering, or the Profile lifecycle
+- Every URL forwarded to an external fetcher (subscription source, Subconverter) must pass the same DNS-rebinding check as `fetch_subscription()`; a hostname that resolves to a private/loopback IP is rejected before the request is made
 - Shadowsocks transport options required for connectivity, including Surge `obfs` and `obfs-host`, must survive input normalization and map to the equivalent target-client syntax
 - Mihomo output from `/convert` and `/subscribe` must compile through `PolicyWorkspace` via `compile_mihomo_config()`
 - Mihomo is the first quality-bar compiler; other compilers remain experimental until semantic parity is explicit

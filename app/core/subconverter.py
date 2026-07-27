@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 
 import httpx
 
-from app.core.fetcher import FetchError, _validate_url
+from app.core.fetcher import FetchError, _ensure_resolved_host_is_public, _validate_url
 
 
 class SubconverterError(ValueError):
@@ -40,6 +40,7 @@ async def convert_subscription_to_clash(url: str) -> str:
     """Normalize one public subscription URL to a node-only Clash document."""
     try:
         _validate_url(url)
+        await _ensure_resolved_host_is_public(urlparse(url).hostname)  # type: ignore[arg-type]
     except FetchError as exc:
         raise SubconverterError(str(exc)) from exc
 
@@ -54,11 +55,9 @@ async def convert_subscription_to_clash(url: str) -> str:
         raise SubconverterError(f"subconverter request failed: {exc}") from exc
 
     if not 200 <= response.status_code < 300:
-        detail = response.text.strip()[:240]
-        suffix = f": {detail}" if detail else ""
-        raise SubconverterError(
-            f"subconverter returned HTTP {response.status_code}{suffix}"
-        )
+        # Never echo the upstream response body: it may contain content fetched
+        # from wherever `url` pointed, including internal network responses.
+        raise SubconverterError(f"subconverter returned HTTP {response.status_code}")
 
     if not response.text.strip():
         raise SubconverterError("subconverter returned empty content")
