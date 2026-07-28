@@ -1,7 +1,9 @@
+from dataclasses import dataclass
 from functools import lru_cache
 import json
 import os
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
@@ -13,9 +15,10 @@ from app.core.platforms.singbox import build_singbox_config
 from app.core.platforms.surge import build_surge_config
 from app.core.policy_analyzer import analyze_workspace
 from app.core.policy_graph import build_policy_graph
-from app.core.policy_presets import get_policy_preset, list_policy_presets
-from app.core.rule_packs import assemble_rule_packs, list_rule_packs
-from app.core.intent_compiler import compile_route_intent, intent_catalog
+from app.core.policy_presets import list_policy_presets
+from app.core.policy_resolution import PolicyResolutionError, resolve_product_policy
+from app.core.rule_packs import list_rule_packs
+from app.core.intent_compiler import intent_catalog
 from app.core.profiles import ProfileStore
 from app.core.policy_simulator import simulate_destination
 from app.core.policy_workspace import (
@@ -60,32 +63,10 @@ claude_policy_adapter = TypeAdapter(ClaudePolicy)
 
 
 def _resolve_product_request(request: ConvertRequest) -> ConvertRequest:
-    if request.preset is None and request.route_intent is None and request.rule_packs is None:
-        return request
-    preset = get_policy_preset(request.preset) if request.preset else None
-    if request.preset and preset is None:
-        raise HTTPException(status_code=422, detail=f"unknown policy preset: {request.preset}")
-    policy_data = (preset or get_policy_preset("general"))["selected_policy"]
     try:
-        assembled_policy = (
-            assemble_rule_packs(request.rule_packs)
-            if request.rule_packs is not None
-            else SelectedPolicy.model_validate(policy_data)
-        )
-    except ValueError as exc:
+        return resolve_product_policy(request)
+    except PolicyResolutionError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    selected_policy = request.selected_policy or assembled_policy
-    if request.route_intent is not None:
-        try:
-            selected_policy = compile_route_intent(selected_policy, request.route_intent)
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return request.model_copy(
-        update={
-            "template": LEO_TEMPLATE_ID,
-            "selected_policy": selected_policy,
-        }
-    )
 
 
 @router.get("/templates")
@@ -180,8 +161,7 @@ async def template_detail(
     template: str = Query(default=LEO_TEMPLATE_ID),
     powerfullz: str | None = Query(default=None),
 ) -> dict:
-    if template != LEO_TEMPLATE_ID:
-        raise HTTPException(status_code=400, detail="only leo.yaml template is supported")
+    _require_leo_template(template)
     if powerfullz:
         raise HTTPException(status_code=400, detail="powerfullz options are not supported with leo.yaml")
     try:
@@ -222,30 +202,61 @@ async def template_detail(
 
 _SUPPORTED_TARGETS = {"mihomo", "clash", "singbox", "surge"}
 _TARGET_ALIASES = {"clash": "mihomo"}
+_LEO_TARGETS = {"mihomo", "clash", "surge"}
 
 
-async def _build_config(
-    subscription_url: str,
-    template_name: str,
-    target: str,
-    custom_strategy: CustomStrategy | None = None,
-    selected_policy: SelectedPolicy | None = None,
-    powerfullz: PowerfullzOptions | None = None,
-    claude_policy: ClaudePolicy | None = None,
-    service_routes: list[ServiceRoute] | None = None,
-) -> tuple[list[ProxyNode], dict, dict]:
+def _require_leo_template(template_name: str) -> None:
     if template_name != LEO_TEMPLATE_ID:
         raise HTTPException(status_code=400, detail="only leo.yaml template is supported")
-    if target not in {"mihomo", "clash", "surge"}:
+
+
+def _require_supported_target(target: str) -> None:
+    if target not in _LEO_TARGETS:
         raise HTTPException(status_code=400, detail="leo.yaml only supports Clash/Mihomo and Surge targets")
-    if target not in _SUPPORTED_TARGETS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"unsupported target '{target}'",
+
+
+@dataclass(frozen=True, slots=True)
+class RenderInputs:
+    """The complete, named input to `_build_config`/`_render_config`.
+
+    Collapses the render pipeline's parameters into one type so call sites cannot
+    mismatch positional order when passing the same five optional overrides.
+    """
+
+    subscription_url: str
+    template_name: str
+    target: str
+    custom_strategy: CustomStrategy | None = None
+    selected_policy: SelectedPolicy | None = None
+    powerfullz: PowerfullzOptions | None = None
+    claude_policy: ClaudePolicy | None = None
+    service_routes: list[ServiceRoute] | None = None
+
+    @classmethod
+    def from_request(
+        cls,
+        request: ConvertRequest,
+        *,
+        template_name: str | None = None,
+        target: str | None = None,
+    ) -> "RenderInputs":
+        return cls(
+            subscription_url=str(request.subscription_url),
+            template_name=template_name or request.template,
+            target=target or request.target,
+            custom_strategy=request.custom_strategy,
+            selected_policy=request.selected_policy,
+            claude_policy=request.claude_policy,
+            service_routes=request.service_routes,
         )
 
+
+async def _build_config(inputs: RenderInputs) -> tuple[list[ProxyNode], dict, dict]:
+    _require_leo_template(inputs.template_name)
+    _require_supported_target(inputs.target)
+
     try:
-        validated_url = str(http_url_adapter.validate_python(subscription_url))
+        validated_url = str(http_url_adapter.validate_python(inputs.subscription_url))
     except ValidationError as exc:
         raise HTTPException(status_code=422, detail=exc.errors()) from exc
 
@@ -255,12 +266,12 @@ async def _build_config(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     try:
-        template = await load_any_template(template_name, powerfullz)
-        config = apply_template(template, nodes, custom_strategy, selected_policy)
-        if service_routes is not None:
-            config = transform_service_routes(config, nodes, service_routes, target=target)
+        template = await load_any_template(inputs.template_name, inputs.powerfullz)
+        config = apply_template(template, nodes, inputs.custom_strategy, inputs.selected_policy)
+        if inputs.service_routes is not None:
+            config = transform_service_routes(config, nodes, inputs.service_routes, target=inputs.target)
         else:
-            config = transform_claude_policy(config, nodes, claude_policy, target=target)
+            config = transform_claude_policy(config, nodes, inputs.claude_policy, target=inputs.target)
     except (TemplateError, TemplatePolicyTransformError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -291,34 +302,23 @@ def _render_output(target: str, nodes: list[ProxyNode], config: dict) -> tuple[s
     return render_yaml(compile_mihomo_config(config, nodes)), []
 
 
-async def _render_config(
-    subscription_url: str,
-    template_name: str,
-    target: str,
-    custom_strategy: CustomStrategy | None = None,
-    selected_policy: SelectedPolicy | None = None,
-    powerfullz: PowerfullzOptions | None = None,
-    claude_policy: ClaudePolicy | None = None,
-    service_routes: list[ServiceRoute] | None = None,
-) -> tuple[int, str, list[dict]]:
-    nodes, config, _ = await _build_config(
-        subscription_url,
-        template_name,
-        target,
-        custom_strategy,
-        selected_policy,
-        powerfullz,
-        claude_policy,
-        service_routes,
-    )
-    output, warnings = _render_output(target, nodes, config)
-    routes = service_routes or (
-        [ServiceRoute(service="claude", enabled=claude_policy.enabled, egress=claude_policy.egress, fallback=claude_policy.fallback)]
-        if claude_policy is not None
+async def _render_config(inputs: RenderInputs) -> tuple[int, str, list[dict]]:
+    nodes, config, _ = await _build_config(inputs)
+    output, warnings = _render_output(inputs.target, nodes, config)
+    routes = inputs.service_routes or (
+        [
+            ServiceRoute(
+                service="claude",
+                enabled=inputs.claude_policy.enabled,
+                egress=inputs.claude_policy.egress,
+                fallback=inputs.claude_policy.fallback,
+            )
+        ]
+        if inputs.claude_policy is not None
         else []
     )
     has_claude_route = any(route.enabled and route.service == "claude" for route in routes)
-    if target == "surge" and has_claude_route and warnings:
+    if inputs.target == "surge" and has_claude_route and warnings:
         protocols = sorted(
             {str(warning.get("value")) for warning in warnings if warning.get("code") == "unsupported_protocol"}
         )
@@ -350,16 +350,7 @@ async def preview_subscription(request: ConvertRequest) -> dict:
 @router.post("/workspace/preview")
 async def workspace_preview(request: ConvertRequest) -> dict:
     request = _resolve_product_request(request)
-    nodes, config, _ = await _build_config(
-        str(request.subscription_url),
-        request.template,
-        request.target,
-        request.custom_strategy,
-        request.selected_policy,
-        None,
-        request.claude_policy,
-        service_routes=request.service_routes,
-    )
+    nodes, config, _ = await _build_config(RenderInputs.from_request(request))
     workspace = config_to_workspace(config, nodes, request.target)
     return {
         "node_count": len(nodes),
@@ -377,17 +368,8 @@ async def workspace_preview(request: ConvertRequest) -> dict:
 @router.post("/render", response_class=PlainTextResponse)
 async def render_request(request: ConvertRequest) -> PlainTextResponse:
     request = _resolve_product_request(request)
-    template_name = LEO_TEMPLATE_ID
-    _, output, warnings = await _render_config(
-        str(request.subscription_url),
-        template_name,
-        request.target,
-        request.custom_strategy,
-        request.selected_policy,
-        None,
-        request.claude_policy,
-        request.service_routes,
-    )
+    inputs = RenderInputs.from_request(request, template_name=LEO_TEMPLATE_ID)
+    _, output, warnings = await _render_config(inputs)
     headers = {"Content-Disposition": f'inline; filename="{_target_filename(request.target)}"'}
     if warnings:
         headers["X-Compile-Warnings"] = json.dumps(warnings, ensure_ascii=True)
@@ -456,8 +438,6 @@ def _profile_urls(profile_id: str, token: str) -> dict[str, object]:
 @router.post("/profiles", status_code=201)
 async def create_profile(request: ConvertRequest) -> dict[str, object]:
     request = _resolve_product_request(request)
-    if request.target not in {"mihomo", "clash", "surge"}:
-        raise HTTPException(status_code=422, detail="leo.yaml profiles only support Clash/Mihomo and Surge")
     _validate_profile_service_routes(request)
     stored_request = request
     created = _profile_store().create(stored_request.model_dump(mode="json"))
@@ -495,8 +475,6 @@ async def update_profile(
     token: str = Query(...),
 ) -> dict[str, object]:
     request = _resolve_product_request(request)
-    if request.target not in {"mihomo", "clash", "surge"}:
-        raise HTTPException(status_code=422, detail="leo.yaml profiles only support Clash/Mihomo and Surge")
     _validate_profile_service_routes(request)
     stored_request = request
     if not _profile_store().update(
@@ -521,20 +499,11 @@ async def subscribe_profile(
 
     request = ConvertRequest.model_validate(profile.request)
     render_target = target or request.target
-    if render_target not in {"mihomo", "clash", "surge"}:
-        raise HTTPException(status_code=400, detail="leo.yaml only supports Clash/Mihomo and Surge targets")
+    _require_supported_target(render_target)
     template_name = _profile_template(request, render_target)
+    inputs = RenderInputs.from_request(request, template_name=template_name, target=render_target)
     try:
-        _, config, warnings = await _render_config(
-            str(request.subscription_url),
-            template_name,
-            render_target,
-            request.custom_strategy,
-            request.selected_policy,
-            None,
-            request.claude_policy,
-            request.service_routes,
-        )
+        _, config, warnings = await _render_config(inputs)
     except HTTPException as exc:
         external_failures = (SubscriptionError, TemplateError)
         artifact_target = _TARGET_ALIASES.get(render_target, render_target)
@@ -603,6 +572,15 @@ def _validate_profile_service_routes(request: ConvertRequest) -> None:
             _validate_profile_claude_templates(request)
 
 
+def _parse_json_query(adapter: TypeAdapter, raw: str | None, label: str) -> Any:
+    if not raw:
+        return None
+    try:
+        return adapter.validate_json(raw)
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=f"invalid {label}") from exc
+
+
 def _target_filename(target: str) -> str:
     if target == "surge":
         return "surge.conf"
@@ -627,10 +605,8 @@ async def subscribe(
     powerfullz: str | None = Query(default=None),
     claude: str | None = Query(default=None),
 ) -> PlainTextResponse:
-    if template != LEO_TEMPLATE_ID:
-        raise HTTPException(status_code=400, detail="only leo.yaml template is supported")
-    if target not in {"mihomo", "clash", "surge"}:
-        raise HTTPException(status_code=400, detail="leo.yaml only supports Clash/Mihomo and Surge targets")
+    _require_leo_template(template)
+    _require_supported_target(target)
     if powerfullz:
         raise HTTPException(status_code=400, detail="powerfullz options are not supported with leo.yaml")
     if session_id:
@@ -641,22 +617,13 @@ async def subscribe(
             policy_ids = session_data.get("policy_ids") or policy_ids
             powerfullz = session_data.get("powerfullz") or powerfullz
             claude = session_data.get("claude") or claude
-    custom_strategy = None
-    if strategy:
-        try:
-            custom_strategy = custom_strategy_adapter.validate_json(strategy)
-        except ValidationError as exc:
-            raise HTTPException(status_code=422, detail="invalid custom strategy") from exc
 
-    selected_policy = None
-    if policy:
+    custom_strategy = _parse_json_query(custom_strategy_adapter, strategy, "custom strategy")
+
+    selected_policy = _parse_json_query(selected_policy_adapter, policy, "selected policy")
+    if selected_policy is None and policy_ids:
+        raw_policy_ids = _parse_json_query(TypeAdapter(dict), policy_ids, "selected policy ids")
         try:
-            selected_policy = selected_policy_adapter.validate_json(policy)
-        except ValidationError as exc:
-            raise HTTPException(status_code=422, detail="invalid selected policy") from exc
-    elif policy_ids:
-        try:
-            raw_policy_ids = TypeAdapter(dict).validate_json(policy_ids)
             selected_policy = selected_policy_adapter.validate_python(
                 selected_policy_from_ids(
                     raw_policy_ids.get("proxy_groups"),
@@ -668,42 +635,20 @@ async def subscribe(
         except (TypeError, ValidationError) as exc:
             raise HTTPException(status_code=422, detail="invalid selected policy ids") from exc
 
-    powerfullz_options = None
-    if powerfullz:
-        try:
-            powerfullz_options = powerfullz_options_adapter.validate_json(powerfullz)
-        except ValidationError as exc:
-            raise HTTPException(status_code=422, detail="invalid powerfullz options") from exc
+    powerfullz_options = _parse_json_query(powerfullz_options_adapter, powerfullz, "powerfullz options")
+    claude_policy = _parse_json_query(claude_policy_adapter, claude, "Claude policy")
 
-    claude_policy = None
-    if claude:
-        try:
-            claude_policy = claude_policy_adapter.validate_json(claude)
-        except ValidationError as exc:
-            raise HTTPException(status_code=422, detail="invalid Claude policy") from exc
-
-    _, config, warnings = await _render_config(
-        subscription_url,
-        template,
-        target,
-        custom_strategy,
-        selected_policy,
-        powerfullz_options,
-        claude_policy,
+    inputs = RenderInputs(
+        subscription_url=subscription_url,
+        template_name=template,
+        target=target,
+        custom_strategy=custom_strategy,
+        selected_policy=selected_policy,
+        powerfullz=powerfullz_options,
+        claude_policy=claude_policy,
     )
-    if target == "singbox":
-        media_type = "application/json; charset=utf-8"
-        filename = "singbox.json"
-    elif target == "surge":
-        media_type = "text/plain; charset=utf-8"
-        filename = "surge.conf"
-    elif target == "clash":
-        media_type = "text/yaml; charset=utf-8"
-        filename = "clash.yaml"
-    else:
-        media_type = "text/yaml; charset=utf-8"
-        filename = "mihomo.yaml"
-    headers: dict[str, str] = {"Content-Disposition": f'inline; filename="{filename}"'}
+    _, config, warnings = await _render_config(inputs)
+    headers: dict[str, str] = {"Content-Disposition": f'inline; filename="{_target_filename(target)}"'}
     if warnings:
         headers["X-Compile-Warnings"] = json.dumps(warnings, ensure_ascii=True)
-    return PlainTextResponse(config, media_type=media_type, headers=headers)
+    return PlainTextResponse(config, media_type=_target_media_type(target), headers=headers)
