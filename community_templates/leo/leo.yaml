@@ -1715,7 +1715,6 @@ rules:
 - GEOSITE,category-scholar-!cn,默认代理
 - GEOSITE,ehentai,默认代理
 - GEOSITE,pixiv,默认代理
-- DOMAIN-SUFFIX,qichiyu.com,默认代理
 - AND,((NOT,((OR,((PROCESS-NAME,mihomo),(PROCESS-NAME,ClashMeta))))),(DST-PORT,853)),默认代理
 - GEOSITE,category-httpdns-cn,默认代理
 - IP-CIDR,203.107.1.0/24,默认代理,no-resolve
