@@ -47,8 +47,6 @@ New issues should state which pain points they address.
 | **Profile** | A mutable policy intent containing one authorized source, ServiceRoutes, and target-specific publication choices |
 | **ServiceRoute** | One entry in a RouteIntent that maps a catalog service to a primary NodePool, optional fallback NodePool, and final target |
 | **RuleSource** | A policy-rule input identified by its origin, format, version, and content digest |
-| **ProfileRevision** | An immutable snapshot of one Profile intent used as the input to validation and publication |
-| **Release** | An immutable, validated set of stored target artifacts and provenance produced from one ProfileRevision and eligible for publication or rollback |
 | **ProxyGroup** | A named group of nodes or groups with a dispatch strategy (select / url-test / fallback / load-balance) |
 | **RuleProvider** | An external rule-set URL referenced by name in rules (Clash: `rule-providers`) |
 | **TemplatePolicyTransform** | A structure-aware operation that preserves a selected template and changes only a recognized service-policy subgraph |
@@ -71,7 +69,7 @@ PolicySnapshot
 PolicyWorkspace
     ↓ analyze + simulate + target validation
 Clash/Mihomo artifact + Surge compatibility artifact
-    ↓ immutable Release
+    ↓ persisted as the Profile's last-successful artifact (ADR 0002)
 Token-protected Subscription URLs
 ```
 
@@ -95,6 +93,7 @@ Token-protected Subscription URLs
 | `app/core/policy_simulator.py` | `simulate_destination()` → `SimulationTrace` |
 | `app/core/policy_catalog.py` | Extracts and deduplicates policy entries across community templates |
 | `app/core/rule_packs.py` | Exposes concrete business rule cards and assembles a RulePackSelection into a PolicySnapshot |
+| `app/core/policy_resolution.py` | Applies the PolicyPreset/RulePackSelection/RouteIntent precedence to a ConvertRequest; raises `PolicyResolutionError` |
 | `app/core/intent_compiler.py` | Compiles product-facing NodePools and ServiceRoutes into NodeSelectors, ProxyGroups, and ordered rules |
 | `app/core/template_policy_transform.py` | ServiceRoute transformation boundary with Claude template analysis and compatibility adapters |
 | `app/core/profiles.py` | Persistent Profile store with token authorization and last-successful artifact caching |
@@ -203,19 +202,24 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - IP-layer RULE-SETs may route to a service group only for services with genuine domainless direct-IP traffic (Telegram, Discord voice) and must carry `no-resolve`; shared-infrastructure services (AI, Google, streaming) get no IP-layer routing at all, because their front IPs carry unrelated services and a resolving IP rule splits one page across two egresses — geo/private fallbacks targeting DIRECT legitimately resolve
 - RuleProviders hosted where the client has no direct route must declare `proxy: <group>`; `provider_egress.py` owns that decision for both the compiler and the analyzer
 - The published Subscription URL host is unknowable from the request; the page guesses `location.origin` and `SUBFLOW_PUBLIC_BASE_URL` overrides it for clients running on another host
-- A publishable Release stores immutable target artifacts plus the source-content digest, ProfileRevision, template identity, rule-source identity, and compiler/transformer versions that produced them
-- Rollback selects a previously validated Release; it does not rebuild that Release from mutable upstream dependencies
+- There is no Release/ProfileRevision history or rollback; a Profile keeps only its current intent and last-successful artifact per target (ADR 0012)
 
 ## ADRs
 
-- [ADR 0001: Workspace-first Mihomo MVP](docs/adr/0001-workspace-first-mihomo-mvp.md)
+Current (accepted, authoritative for their area):
+
 - [ADR 0002: Persistent profiles and stale fallback](docs/adr/0002-persistent-profiles-and-stale-fallback.md)
-- [ADR 0003: Versioned Claude rules with multi-target profiles](docs/adr/0003-versioned-claude-rules-with-multi-target-profiles.md)
 - [ADR 0004: Template-driven Claude policy transforms](docs/adr/0004-template-driven-claude-policy-transforms.md)
-- [ADR 0005: Guided Profile publishing experience](docs/adr/0005-guided-profile-publishing-experience.md)
 - [ADR 0006: Policy release control plane over protocol conversion](docs/adr/0006-policy-release-control-plane-over-protocol-conversion.md)
 - [ADR 0007: One canonical base with composable policy presets](docs/adr/0007-one-canonical-base-with-composable-policy-presets.md)
-- [ADR 0008: Route intent as the default customization boundary](docs/adr/0008-route-intent-as-default-customization-boundary.md)
 - [ADR 0009: Rule packs as the default assembly boundary](docs/adr/0009-rule-packs-as-default-assembly-boundary.md)
 - [ADR 0010: Single-page policy workbench](docs/adr/0010-single-page-policy-workbench.md)
 - [ADR 0011: Service-level rule source consolidation](docs/adr/0011-service-level-rule-source-consolidation.md)
+- [ADR 0012: No Release/ProfileRevision rollback history](docs/adr/0012-no-release-rollback-history.md)
+
+Superseded (kept only as decision history; do not treat as current guidance):
+
+- [ADR 0001: Workspace-first Mihomo MVP](docs/adr/0001-workspace-first-mihomo-mvp.md) — superseded by ADR 0005
+- [ADR 0003: Versioned Claude rules with multi-target profiles](docs/adr/0003-versioned-claude-rules-with-multi-target-profiles.md) — superseded by ADR 0004
+- [ADR 0005: Guided Profile publishing experience](docs/adr/0005-guided-profile-publishing-experience.md) — superseded by ADR 0010
+- [ADR 0008: Route intent as the default customization boundary](docs/adr/0008-route-intent-as-default-customization-boundary.md) — superseded by ADR 0009
