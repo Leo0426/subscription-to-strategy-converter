@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-28T06:45:30.387955+00:00",
+  "generated_at": "2026-07-28T07:01:28.838001+00:00",
   "summary": {
     "total": 176,
     "valid": 176,
@@ -101,15 +101,15 @@
       "Apple <> Microsoft": 1,
       "Apple <> 流媒体": 3,
       "Apple <> 默认代理": 1469,
+      "DIRECT <> Google": 2,
       "DIRECT <> REJECT": 1058,
       "DIRECT <> 流媒体": 5,
-      "DIRECT <> 默认代理": 24,
-      "Google <> REJECT": 2,
+      "DIRECT <> 默认代理": 40,
       "Google <> 流媒体": 1,
       "Google <> 默认代理": 645,
       "Microsoft <> 游戏服务": 37,
       "Microsoft <> 默认代理": 424,
-      "REJECT <> 默认代理": 42,
+      "REJECT <> 默认代理": 26,
       "开发服务 <> 默认代理": 27,
       "流媒体 <> 社交通讯": 1,
       "流媒体 <> 默认代理": 736,
@@ -756,15 +756,15 @@
       "Apple -> Microsoft": 1,
       "Apple -> 流媒体": 3,
       "Apple -> 默认代理": 1469,
+      "DIRECT -> Google": 2,
       "DIRECT -> 流媒体": 4,
-      "DIRECT -> 默认代理": 22,
+      "DIRECT -> 默认代理": 38,
       "Google -> 流媒体": 1,
       "Google -> 默认代理": 644,
       "Microsoft -> 游戏服务": 37,
       "Microsoft -> 默认代理": 424,
       "REJECT -> DIRECT": 1058,
-      "REJECT -> Google": 2,
-      "REJECT -> 默认代理": 42,
+      "REJECT -> 默认代理": 26,
       "开发服务 -> 默认代理": 27,
       "流媒体 -> 默认代理": 732,
       "游戏服务 -> 默认代理": 432,
@@ -775,9 +775,9 @@
       "默认代理 -> 流媒体": 1
     },
     "risk_directions": {
-      "earlier_target_overrides_later": 4563,
+      "earlier_target_overrides_later": 4581,
       "reject_overrides_direct": 1058,
-      "reject_overrides_service": 44
+      "reject_overrides_service": 26
     },
     "transition_examples": {
       "AI 服务 -> 默认代理": [
@@ -930,6 +930,34 @@
             "provider": "Global",
             "target": "默认代理",
             "rule_index": 150
+          }
+        }
+      ],
+      "DIRECT -> Google": [
+        {
+          "entry": "domain-suffix,googletraveladservices.com",
+          "winner": {
+            "provider": "UnBan",
+            "target": "DIRECT",
+            "rule_index": 5
+          },
+          "shadowed": {
+            "provider": "Google-2",
+            "target": "Google",
+            "rule_index": 43
+          }
+        },
+        {
+          "entry": "domain-suffix,redirector.gvt1.com",
+          "winner": {
+            "provider": "UnBan",
+            "target": "DIRECT",
+            "rule_index": 5
+          },
+          "shadowed": {
+            "provider": "Google-2",
+            "target": "Google",
+            "rule_index": 43
           }
         }
       ],
@@ -1191,34 +1219,6 @@
             "provider": "cn",
             "target": "DIRECT",
             "rule_index": 14
-          }
-        }
-      ],
-      "REJECT -> Google": [
-        {
-          "entry": "domain-suffix,googletraveladservices.com",
-          "winner": {
-            "provider": "UnBan",
-            "target": "REJECT",
-            "rule_index": 5
-          },
-          "shadowed": {
-            "provider": "Google-2",
-            "target": "Google",
-            "rule_index": 43
-          }
-        },
-        {
-          "entry": "domain-suffix,redirector.gvt1.com",
-          "winner": {
-            "provider": "UnBan",
-            "target": "REJECT",
-            "rule_index": 5
-          },
-          "shadowed": {
-            "provider": "Google-2",
-            "target": "Google",
-            "rule_index": 43
           }
         }
       ],
@@ -2296,7 +2296,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/115.mrs",
-      "elapsed_ms": 818
+      "elapsed_ms": 938
     },
     {
       "name": "1Password",
@@ -2326,7 +2326,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://kelee.one/Tool/Clash/Rule/1PasswordUS.yaml",
-      "elapsed_ms": 1063
+      "elapsed_ms": 2723
     },
     {
       "name": "AI-CN",
@@ -2356,7 +2356,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-ai-cn.mrs",
-      "elapsed_ms": 1137
+      "elapsed_ms": 2386
     },
     {
       "name": "Abema TV",
@@ -2386,7 +2386,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/Abema%20TV.yaml",
-      "elapsed_ms": 708
+      "elapsed_ms": 618
     },
     {
       "name": "Accelerator",
@@ -2416,7 +2416,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-game-accelerator-cn.mrs",
-      "elapsed_ms": 1135
+      "elapsed_ms": 1096
     },
     {
       "name": "AdvertisingIP",
@@ -2446,7 +2446,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/666OS/rules/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/ip/Advertising.mrs",
-      "elapsed_ms": 1122
+      "elapsed_ms": 1191
     },
     {
       "name": "Amazon",
@@ -2476,7 +2476,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/Amazon.yaml",
-      "elapsed_ms": 698
+      "elapsed_ms": 613
     },
     {
       "name": "Amazon_ip",
@@ -2506,7 +2506,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/IP/amazon-ip.mrs",
-      "elapsed_ms": 2354
+      "elapsed_ms": 1103
     },
     {
       "name": "AppStore",
@@ -2536,7 +2536,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://kelee.one/Tool/Clash/Rule/AppStore.yaml",
-      "elapsed_ms": 1029
+      "elapsed_ms": 2635
     },
     {
       "name": "Apple-4",
@@ -2566,7 +2566,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Apple/Apple_Classical_No_Resolve.yaml",
-      "elapsed_ms": 1346
+      "elapsed_ms": 757
     },
     {
       "name": "Apple-IP",
@@ -2596,7 +2596,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo-lite/geoip/apple.mrs",
-      "elapsed_ms": 1768
+      "elapsed_ms": 1774
     },
     {
       "name": "BBC iPlayer",
@@ -2626,7 +2626,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/BBC%20iPlayer.yaml",
-      "elapsed_ms": 159
+      "elapsed_ms": 135
     },
     {
       "name": "Bahamut",
@@ -2656,7 +2656,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/Bahamut.yaml",
-      "elapsed_ms": 80
+      "elapsed_ms": 77
     },
     {
       "name": "Bilibili-5",
@@ -2686,7 +2686,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/BiliBili/BiliBili_No_Resolve.yaml",
-      "elapsed_ms": 109
+      "elapsed_ms": 108
     },
     {
       "name": "Bing",
@@ -2716,7 +2716,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/bing.mrs",
-      "elapsed_ms": 527
+      "elapsed_ms": 1579
     },
     {
       "name": "Blizzard / Domain",
@@ -2746,7 +2746,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Blizzard/Blizzard.list",
-      "elapsed_ms": 116
+      "elapsed_ms": 103
     },
     {
       "name": "Category-DoH",
@@ -2776,7 +2776,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-doh.mrs",
-      "elapsed_ms": 203
+      "elapsed_ms": 1543
     },
     {
       "name": "ChinaAPP",
@@ -2806,7 +2806,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://fastly.jsdelivr.net/gh/0xWans/my-backup@fdcc41d26806332a9eba870c230b1669610006ba/clash/rules/Process/ChinaAPP.yaml",
-      "elapsed_ms": 1686
+      "elapsed_ms": 1644
     },
     {
       "name": "ChinaDownloadCDN",
@@ -2836,7 +2836,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://kelee.one/Tool/Clash/Rule/ChinaDownloadCDN.yaml",
-      "elapsed_ms": 92
+      "elapsed_ms": 1564
     },
     {
       "name": "ChinaIPs",
@@ -2866,7 +2866,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/ChinaIPs/ChinaIPs_Classical_No_Resolve.yaml",
-      "elapsed_ms": 304
+      "elapsed_ms": 317
     },
     {
       "name": "Claude",
@@ -2896,7 +2896,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Claude/Claude_No_Resolve.yaml",
-      "elapsed_ms": 199
+      "elapsed_ms": 180
     },
     {
       "name": "Cloudflare-2",
@@ -2926,7 +2926,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Cloudflare/Cloudflare_No_Resolve.yaml",
-      "elapsed_ms": 104
+      "elapsed_ms": 1013
     },
     {
       "name": "Communication",
@@ -2956,7 +2956,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-communication.mrs",
-      "elapsed_ms": 1264
+      "elapsed_ms": 615
     },
     {
       "name": "Crunchyroll / Domain",
@@ -2986,7 +2986,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/liandu2024/clash/3fa176d30b02f2f105ee3de9a5126bdd47b5e0f5/list/Crunchyroll.list",
-      "elapsed_ms": 1118
+      "elapsed_ms": 109
     },
     {
       "name": "Crypto-2",
@@ -3016,7 +3016,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Crypto.yaml",
-      "elapsed_ms": 1092
+      "elapsed_ms": 89
     },
     {
       "name": "DAZN",
@@ -3046,7 +3046,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/DAZN.yaml",
-      "elapsed_ms": 1100
+      "elapsed_ms": 151
     },
     {
       "name": "DMM",
@@ -3076,7 +3076,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/DMM.yaml",
-      "elapsed_ms": 1164
+      "elapsed_ms": 71
     },
     {
       "name": "DNS-IP",
@@ -3106,7 +3106,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://gcore.jsdelivr.net/gh/Aethersailor/Custom_OpenClash_Rules@ed3c535fd747589fdb9e1a60f4df77122a839d70/rule/Encrypted_DNS_IP.mrs",
-      "elapsed_ms": 3065
+      "elapsed_ms": 648
     },
     {
       "name": "DNSLeak",
@@ -3136,7 +3136,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://fastly.jsdelivr.net/gh/0xWans/my-backup@fdcc41d26806332a9eba870c230b1669610006ba/clash/rules/DNSLeak.mrs",
-      "elapsed_ms": 826
+      "elapsed_ms": 354
     },
     {
       "name": "Discord-2",
@@ -3166,7 +3166,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Discord/Discord_No_Resolve.yaml",
-      "elapsed_ms": 116
+      "elapsed_ms": 102
     },
     {
       "name": "Discovery Plus",
@@ -3196,7 +3196,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/Discovery%20Plus.yaml",
-      "elapsed_ms": 94
+      "elapsed_ms": 70
     },
     {
       "name": "Disney-5",
@@ -3226,7 +3226,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Disney/Disney_No_Resolve.yaml",
-      "elapsed_ms": 120
+      "elapsed_ms": 101
     },
     {
       "name": "Docker",
@@ -3256,7 +3256,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/docker.mrs",
-      "elapsed_ms": 218
+      "elapsed_ms": 537
     },
     {
       "name": "EA / Domain",
@@ -3286,7 +3286,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/EA/EA.list",
-      "elapsed_ms": 101
+      "elapsed_ms": 112
     },
     {
       "name": "Ecommerce",
@@ -3316,7 +3316,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-ecommerce.mrs",
-      "elapsed_ms": 604
+      "elapsed_ms": 2143
     },
     {
       "name": "Emby-5",
@@ -3346,7 +3346,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Emby/Emby_No_Resolve.yaml",
-      "elapsed_ms": 99
+      "elapsed_ms": 190
     },
     {
       "name": "EmbyIP",
@@ -3376,7 +3376,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/666OS/rules/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/ip/Emby.mrs",
-      "elapsed_ms": 280
+      "elapsed_ms": 508
     },
     {
       "name": "EpicCN",
@@ -3406,7 +3406,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/classical/epicgames%40cn.yaml",
-      "elapsed_ms": 203
+      "elapsed_ms": 2118
     },
     {
       "name": "F1 TV",
@@ -3436,7 +3436,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/F1%20TV.yaml",
-      "elapsed_ms": 73
+      "elapsed_ms": 130
     },
     {
       "name": "Facebook-IP",
@@ -3466,7 +3466,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/facebook.mrs",
-      "elapsed_ms": 210
+      "elapsed_ms": 2216
     },
     {
       "name": "Facebook-zj",
@@ -3496,7 +3496,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Facebook/Facebook_No_Resolve.yaml",
-      "elapsed_ms": 101
+      "elapsed_ms": 111
     },
     {
       "name": "Fox+",
@@ -3526,7 +3526,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/Fox%2B.yaml",
-      "elapsed_ms": 107
+      "elapsed_ms": 72
     },
     {
       "name": "GOG",
@@ -3556,7 +3556,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/gog.mrs",
-      "elapsed_ms": 505
+      "elapsed_ms": 2190
     },
     {
       "name": "GOGCN",
@@ -3586,7 +3586,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/gog%40cn.mrs",
-      "elapsed_ms": 484
+      "elapsed_ms": 2111
     },
     {
       "name": "Game",
@@ -3616,7 +3616,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Game/Game.yaml",
-      "elapsed_ms": 178
+      "elapsed_ms": 110
     },
     {
       "name": "GitHub-5",
@@ -3646,7 +3646,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/GitHub/GitHub_No_Resolve.yaml",
-      "elapsed_ms": 169
+      "elapsed_ms": 104
     },
     {
       "name": "Global",
@@ -3676,7 +3676,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Global/Global_Classical_No_Resolve.yaml",
-      "elapsed_ms": 421
+      "elapsed_ms": 280
     },
     {
       "name": "GlobalMedia",
@@ -3706,7 +3706,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/GlobalMedia/GlobalMedia_Classical_No_Resolve.yaml",
-      "elapsed_ms": 182
+      "elapsed_ms": 1671
     },
     {
       "name": "Google-2",
@@ -3736,7 +3736,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Google/Google.yaml",
-      "elapsed_ms": 250
+      "elapsed_ms": 1638
     },
     {
       "name": "Google_IP-4",
@@ -3766,7 +3766,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@42c2a789e19516f0a8bb2bca8eb1541505599940/geo-lite/geoip/google.mrs",
-      "elapsed_ms": 1990
+      "elapsed_ms": 2072
     },
     {
       "name": "HBO-3",
@@ -3796,7 +3796,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/HBO/HBO_No_Resolve.yaml",
-      "elapsed_ms": 1452
+      "elapsed_ms": 188
     },
     {
       "name": "HTTPDNS",
@@ -3826,7 +3826,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/HTTPDNS.yaml",
-      "elapsed_ms": 106
+      "elapsed_ms": 1398
     },
     {
       "name": "Hulu",
@@ -3856,7 +3856,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/Hulu.yaml",
-      "elapsed_ms": 75
+      "elapsed_ms": 237
     },
     {
       "name": "Hulu Japan",
@@ -3886,7 +3886,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/Hulu%20Japan.yaml",
-      "elapsed_ms": 76
+      "elapsed_ms": 118
     },
     {
       "name": "IQ",
@@ -3916,7 +3916,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/IQ.yaml",
-      "elapsed_ms": 1360
+      "elapsed_ms": 295
     },
     {
       "name": "IQIYI",
@@ -3946,7 +3946,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/IQIYI.yaml",
-      "elapsed_ms": 1349
+      "elapsed_ms": 318
     },
     {
       "name": "Instagram",
@@ -3976,7 +3976,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Instagram/Instagram_No_Resolve.yaml",
-      "elapsed_ms": 1345
+      "elapsed_ms": 139
     },
     {
       "name": "JOOX",
@@ -4006,7 +4006,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/JOOX.yaml",
-      "elapsed_ms": 1328
+      "elapsed_ms": 383
     },
     {
       "name": "JapanWeb",
@@ -4036,7 +4036,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/ameyukisora/Clash-Rule/fd849948e4073ff94e4c04d5199c407bfff14e51/provider/JapanWeb.yaml",
-      "elapsed_ms": 1329
+      "elapsed_ms": 104
     },
     {
       "name": "KKTV",
@@ -4066,7 +4066,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/KKTV.yaml",
-      "elapsed_ms": 1567
+      "elapsed_ms": 266
     },
     {
       "name": "Letv",
@@ -4096,7 +4096,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/Letv.yaml",
-      "elapsed_ms": 1353
+      "elapsed_ms": 351
     },
     {
       "name": "Line TV",
@@ -4126,7 +4126,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/Line%20TV.yaml",
-      "elapsed_ms": 253
+      "elapsed_ms": 236
     },
     {
       "name": "Microsoft-6",
@@ -4156,7 +4156,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Microsoft/Microsoft_No_Resolve.yaml",
-      "elapsed_ms": 174
+      "elapsed_ms": 107
     },
     {
       "name": "NetEaseMusic_ip",
@@ -4186,7 +4186,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/IP/NetEaseMusic-ip.mrs",
-      "elapsed_ms": 200
+      "elapsed_ms": 322
     },
     {
       "name": "Netease Music",
@@ -4216,7 +4216,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/Netease%20Music.yaml",
-      "elapsed_ms": 70
+      "elapsed_ms": 216
     },
     {
       "name": "Netflix-6",
@@ -4246,7 +4246,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Netflix/Netflix_Classical_No_Resolve.yaml",
-      "elapsed_ms": 112
+      "elapsed_ms": 114
     },
     {
       "name": "Netflix_IP-2",
@@ -4276,7 +4276,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@42c2a789e19516f0a8bb2bca8eb1541505599940/geo-lite/geoip/netflix.mrs",
-      "elapsed_ms": 684
+      "elapsed_ms": 275
     },
     {
       "name": "NewsMedia",
@@ -4306,7 +4306,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/666OS/rules/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/domain/NewsMedia.mrs",
-      "elapsed_ms": 217
+      "elapsed_ms": 533
     },
     {
       "name": "Niconico",
@@ -4336,7 +4336,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/Niconico.yaml",
-      "elapsed_ms": 99
+      "elapsed_ms": 73
     },
     {
       "name": "Nintendo",
@@ -4366,7 +4366,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Nintendo/Nintendo_No_Resolve.yaml",
-      "elapsed_ms": 102
+      "elapsed_ms": 106
     },
     {
       "name": "NintendoCN",
@@ -4396,7 +4396,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/nintendo%40cn.mrs",
-      "elapsed_ms": 217
+      "elapsed_ms": 1889
     },
     {
       "name": "Nvidia / Domain",
@@ -4426,7 +4426,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Nvidia/Nvidia.list",
-      "elapsed_ms": 97
+      "elapsed_ms": 193
     },
     {
       "name": "Pandora",
@@ -4456,7 +4456,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/Pandora.yaml",
-      "elapsed_ms": 76
+      "elapsed_ms": 83
     },
     {
       "name": "PayPal",
@@ -4486,7 +4486,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/PayPal.yaml",
-      "elapsed_ms": 72
+      "elapsed_ms": 76
     },
     {
       "name": "Pixiv",
@@ -4516,7 +4516,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/pixiv.mrs",
-      "elapsed_ms": 961
+      "elapsed_ms": 1051
     },
     {
       "name": "PlayStation",
@@ -4546,7 +4546,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/playstation.mrs",
-      "elapsed_ms": 465
+      "elapsed_ms": 800
     },
     {
       "name": "Popcorn / Domain",
@@ -4576,7 +4576,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/liandu2024/clash/3fa176d30b02f2f105ee3de9a5126bdd47b5e0f5/list/Popcorn.list",
-      "elapsed_ms": 101
+      "elapsed_ms": 199
     },
     {
       "name": "PrimeVideo-3",
@@ -4606,7 +4606,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/PrimeVideo/PrimeVideo_No_Resolve.yaml",
-      "elapsed_ms": 109
+      "elapsed_ms": 111
     },
     {
       "name": "PrivateTracker",
@@ -4636,7 +4636,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/PrivateTracker/PrivateTracker_No_Resolve.yaml",
-      "elapsed_ms": 108
+      "elapsed_ms": 202
     },
     {
       "name": "ProxyIP",
@@ -4666,7 +4666,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/666OS/rules/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/ip/Proxy.mrs",
-      "elapsed_ms": 300
+      "elapsed_ms": 1263
     },
     {
       "name": "Reddit / Domain",
@@ -4696,7 +4696,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/metacubex/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/reddit.mrs",
-      "elapsed_ms": 684
+      "elapsed_ms": 1852
     },
     {
       "name": "Scholar",
@@ -4726,7 +4726,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Scholar.yaml",
-      "elapsed_ms": 112
+      "elapsed_ms": 81
     },
     {
       "name": "Shopee_domain",
@@ -4756,7 +4756,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/shopee.mrs",
-      "elapsed_ms": 121
+      "elapsed_ms": 104
     },
     {
       "name": "Shopify_domain",
@@ -4786,7 +4786,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/shopify.mrs",
-      "elapsed_ms": 181
+      "elapsed_ms": 94
     },
     {
       "name": "SocialMedia-2",
@@ -4816,7 +4816,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-social-media-!cn.mrs",
-      "elapsed_ms": 297
+      "elapsed_ms": 1067
     },
     {
       "name": "SocialMediaIP",
@@ -4846,7 +4846,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/666OS/rules/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/ip/SocialMedia.mrs",
-      "elapsed_ms": 520
+      "elapsed_ms": 943
     },
     {
       "name": "Sony",
@@ -4906,7 +4906,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/Soundcloud.yaml",
-      "elapsed_ms": 72
+      "elapsed_ms": 70
     },
     {
       "name": "Special",
@@ -4936,7 +4936,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Special.yaml",
-      "elapsed_ms": 76
+      "elapsed_ms": 152
     },
     {
       "name": "Spotify-5",
@@ -4966,7 +4966,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Spotify/Spotify_No_Resolve.yaml",
-      "elapsed_ms": 99
+      "elapsed_ms": 98
     },
     {
       "name": "Steam-5",
@@ -4996,7 +4996,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Steam/Steam_No_Resolve.yaml",
-      "elapsed_ms": 436
+      "elapsed_ms": 93
     },
     {
       "name": "SteamCN-2",
@@ -5026,7 +5026,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/SteamCN/SteamCN_No_Resolve.yaml",
-      "elapsed_ms": 106
+      "elapsed_ms": 173
     },
     {
       "name": "TEST / Domain",
@@ -5056,7 +5056,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/liandu2024/clash/3fa176d30b02f2f105ee3de9a5126bdd47b5e0f5/list/Check.list",
-      "elapsed_ms": 365
+      "elapsed_ms": 157
     },
     {
       "name": "TVB_domain",
@@ -5086,7 +5086,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/Domain/tvb.mrs",
-      "elapsed_ms": 105
+      "elapsed_ms": 147
     },
     {
       "name": "TeamViewer",
@@ -5146,7 +5146,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Teams/Teams.yaml",
-      "elapsed_ms": 105
+      "elapsed_ms": 98
     },
     {
       "name": "Tencent Video",
@@ -5176,7 +5176,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/Tencent%20Video.yaml",
-      "elapsed_ms": 74
+      "elapsed_ms": 79
     },
     {
       "name": "Tencent-2",
@@ -5206,7 +5206,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Tencent/Tencent_No_Resolve.yaml",
-      "elapsed_ms": 106
+      "elapsed_ms": 322
     },
     {
       "name": "TikTok-4",
@@ -5236,7 +5236,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/TikTok/TikTok_No_Resolve.yaml",
-      "elapsed_ms": 213
+      "elapsed_ms": 314
     },
     {
       "name": "Tumblr",
@@ -5266,7 +5266,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/tumblr.mrs",
-      "elapsed_ms": 348
+      "elapsed_ms": 541
     },
     {
       "name": "Twitch",
@@ -5296,7 +5296,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Twitch/Twitch_No_Resolve.yaml",
-      "elapsed_ms": 175
+      "elapsed_ms": 109
     },
     {
       "name": "Twitter-4",
@@ -5326,7 +5326,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Twitter/Twitter_No_Resolve.yaml",
-      "elapsed_ms": 138
+      "elapsed_ms": 352
     },
     {
       "name": "UBI / Domain",
@@ -5356,7 +5356,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/UBI/UBI.list",
-      "elapsed_ms": 137
+      "elapsed_ms": 128
     },
     {
       "name": "UbisoftCN",
@@ -5386,7 +5386,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/ubisoft%40cn.mrs",
-      "elapsed_ms": 227
+      "elapsed_ms": 707
     },
     {
       "name": "UnBan",
@@ -5394,12 +5394,12 @@
       "behavior": "classical",
       "declared_format": "yaml",
       "targets": [
-        "REJECT"
+        "DIRECT"
       ],
       "routes": [
         {
           "index": 5,
-          "target": "REJECT"
+          "target": "DIRECT"
         }
       ],
       "upstream": "github:ACL4SSR",
@@ -5416,7 +5416,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/4b461ca03b430c46d33b505cf4384e2f4f1be4b1/Clash/Providers/UnBan.yaml",
-      "elapsed_ms": 125
+      "elapsed_ms": 192
     },
     {
       "name": "ViuTV",
@@ -5446,7 +5446,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/ViuTV.yaml",
-      "elapsed_ms": 84
+      "elapsed_ms": 92
     },
     {
       "name": "WeChat",
@@ -5476,7 +5476,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/WeChat/WeChat_No_Resolve.yaml",
-      "elapsed_ms": 114
+      "elapsed_ms": 98
     },
     {
       "name": "WeTV",
@@ -5506,7 +5506,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/WeTV.yaml",
-      "elapsed_ms": 80
+      "elapsed_ms": 81
     },
     {
       "name": "WebRTC_端/域",
@@ -5536,7 +5536,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@cc151b84526587da56406ef15f7c77ec653cc72c/box_bll/clash/rules/WebRTC.list",
-      "elapsed_ms": 76
+      "elapsed_ms": 74
     },
     {
       "name": "WhatsApp / Domain",
@@ -5566,7 +5566,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Whatsapp/Whatsapp.list",
-      "elapsed_ms": 105
+      "elapsed_ms": 108
     },
     {
       "name": "Wise_domain",
@@ -5596,7 +5596,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/wise.mrs",
-      "elapsed_ms": 105
+      "elapsed_ms": 98
     },
     {
       "name": "XPTV",
@@ -5626,7 +5626,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/666OS/rules/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/domain/XPTV.mrs",
-      "elapsed_ms": 216
+      "elapsed_ms": 527
     },
     {
       "name": "XPTVIP",
@@ -5656,7 +5656,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/666OS/rules/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/ip/XPTV.mrs",
-      "elapsed_ms": 2669
+      "elapsed_ms": 565
     },
     {
       "name": "XboxCN",
@@ -5686,7 +5686,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/xbox%40cn.mrs",
-      "elapsed_ms": 479
+      "elapsed_ms": 663
     },
     {
       "name": "Xunlei",
@@ -5716,7 +5716,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/xunlei.mrs",
-      "elapsed_ms": 204
+      "elapsed_ms": 615
     },
     {
       "name": "YouTube-6",
@@ -5746,7 +5746,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/YouTube/YouTube_No_Resolve.yaml",
-      "elapsed_ms": 104
+      "elapsed_ms": 102
     },
     {
       "name": "Youku",
@@ -5806,7 +5806,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/05cb71a6617dcbceae1457f7168339704017f5aa/ads.list",
-      "elapsed_ms": 427
+      "elapsed_ms": 605
     },
     {
       "name": "ai-4",
@@ -5836,7 +5836,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-ai-!cn.list",
-      "elapsed_ms": 104
+      "elapsed_ms": 107
     },
     {
       "name": "aliyun_domain",
@@ -5866,7 +5866,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/aliyun.mrs",
-      "elapsed_ms": 1568
+      "elapsed_ms": 103
     },
     {
       "name": "bank_cn_domain",
@@ -5896,7 +5896,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-bank-cn.mrs",
-      "elapsed_ms": 102
+      "elapsed_ms": 121
     },
     {
       "name": "bilibili_ip",
@@ -5926,7 +5926,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo-lite/geoip/bilibili.mrs",
-      "elapsed_ms": 356
+      "elapsed_ms": 115
     },
     {
       "name": "biliintl",
@@ -5956,7 +5956,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo-lite/geosite/biliintl.mrs",
-      "elapsed_ms": 218
+      "elapsed_ms": 2629
     },
     {
       "name": "biliintl_domain",
@@ -5986,7 +5986,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/bilibili%40!cn.mrs",
-      "elapsed_ms": 190
+      "elapsed_ms": 105
     },
     {
       "name": "category-porn",
@@ -6016,7 +6016,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-porn.mrs",
-      "elapsed_ms": 1459
+      "elapsed_ms": 2539
     },
     {
       "name": "cdn_domainset",
@@ -6046,7 +6046,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://ruleset.skk.moe/Clash/domainset/cdn.txt",
-      "elapsed_ms": 3025
+      "elapsed_ms": 3038
     },
     {
       "name": "cdn_non_ip",
@@ -6076,7 +6076,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://ruleset.skk.moe/Clash/non_ip/cdn.txt",
-      "elapsed_ms": 2682
+      "elapsed_ms": 2864
     },
     {
       "name": "china_ip_ipv6",
@@ -6106,7 +6106,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://ruleset.skk.moe/Clash/ip/china_ip_ipv6.txt",
-      "elapsed_ms": 2495
+      "elapsed_ms": 2832
     },
     {
       "name": "cloudflare-ip",
@@ -6136,7 +6136,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/cloudflare.mrs",
-      "elapsed_ms": 2289
+      "elapsed_ms": 2522
     },
     {
       "name": "cloudfront-ip",
@@ -6166,7 +6166,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/cloudfront.mrs",
-      "elapsed_ms": 2190
+      "elapsed_ms": 2568
     },
     {
       "name": "cn",
@@ -6196,7 +6196,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/05cb71a6617dcbceae1457f7168339704017f5aa/cn.list",
-      "elapsed_ms": 1195
+      "elapsed_ms": 1319
     },
     {
       "name": "cn_v6",
@@ -6226,7 +6226,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/ameyukisora/Clash-Rule/fd849948e4073ff94e4c04d5199c407bfff14e51/autoupdate/cn_v6.mrs",
-      "elapsed_ms": 1008
+      "elapsed_ms": 1239
     },
     {
       "name": "cnip",
@@ -6256,7 +6256,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/05cb71a6617dcbceae1457f7168339704017f5aa/cnip.list",
-      "elapsed_ms": 1003
+      "elapsed_ms": 1115
     },
     {
       "name": "custom_direct",
@@ -6286,7 +6286,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/JohnsonRan/CRules/e60d312c610b84c0fdddd0e91aabf5e49da02be7/rules/custom.yaml",
-      "elapsed_ms": 1328
+      "elapsed_ms": 1103
     },
     {
       "name": "custom_proxy",
@@ -6316,7 +6316,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/JohnsonRan/CRules/e60d312c610b84c0fdddd0e91aabf5e49da02be7/rules/customProxy.yaml",
-      "elapsed_ms": 166
+      "elapsed_ms": 188
     },
     {
       "name": "custom_reject",
@@ -6346,7 +6346,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/JohnsonRan/CRules/e60d312c610b84c0fdddd0e91aabf5e49da02be7/rules/reject.txt",
-      "elapsed_ms": 111
+      "elapsed_ms": 145
     },
     {
       "name": "douyin-zj",
@@ -6376,7 +6376,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/DouYin/DouYin_No_Resolve.yaml",
-      "elapsed_ms": 100
+      "elapsed_ms": 142
     },
     {
       "name": "download_domainset",
@@ -6406,7 +6406,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://ruleset.skk.moe/Clash/domainset/download.txt",
-      "elapsed_ms": 454
+      "elapsed_ms": 334
     },
     {
       "name": "ebay_domain",
@@ -6436,7 +6436,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/ebay.mrs",
-      "elapsed_ms": 263
+      "elapsed_ms": 141
     },
     {
       "name": "ecs-no-cn",
@@ -6466,7 +6466,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/JohnsonRan/CRules/e60d312c610b84c0fdddd0e91aabf5e49da02be7/rules/ecs-no-cn.txt",
-      "elapsed_ms": 107
+      "elapsed_ms": 139
     },
     {
       "name": "ehentai_domain",
@@ -6496,7 +6496,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/ehentai.mrs",
-      "elapsed_ms": 162
+      "elapsed_ms": 122
     },
     {
       "name": "encoreTVB",
@@ -6526,7 +6526,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/encoreTVB.yaml",
-      "elapsed_ms": 153
+      "elapsed_ms": 75
     },
     {
       "name": "fakeip-filter-2",
@@ -6556,7 +6556,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/ameyukisora/Clash-Rule/fd849948e4073ff94e4c04d5199c407bfff14e51/provider/fakeip-filter.yaml",
-      "elapsed_ms": 156
+      "elapsed_ms": 123
     },
     {
       "name": "fakeip_filter_domain",
@@ -6586,7 +6586,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/Domain/fakeip-filter.mrs",
-      "elapsed_ms": 153
+      "elapsed_ms": 515
     },
     {
       "name": "fastly-ip",
@@ -6616,7 +6616,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/fastly.mrs",
-      "elapsed_ms": 292
+      "elapsed_ms": 545
     },
     {
       "name": "fcm_domain",
@@ -6646,7 +6646,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/googlefcm.mrs",
-      "elapsed_ms": 448
+      "elapsed_ms": 122
     },
     {
       "name": "games-cn",
@@ -6676,7 +6676,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/05cb71a6617dcbceae1457f7168339704017f5aa/games-cn.list",
-      "elapsed_ms": 344
+      "elapsed_ms": 113
     },
     {
       "name": "geoip_twitter",
@@ -6706,7 +6706,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/twitter.mrs",
-      "elapsed_ms": 109
+      "elapsed_ms": 210
     },
     {
       "name": "gitbook_domain",
@@ -6736,7 +6736,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/gitbook.mrs",
-      "elapsed_ms": 110
+      "elapsed_ms": 240
     },
     {
       "name": "ifast_domain",
@@ -6766,7 +6766,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/ifast.mrs",
-      "elapsed_ms": 105
+      "elapsed_ms": 551
     },
     {
       "name": "ip_httpdns",
@@ -6796,7 +6796,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/yiteei/Share@d46fd38f37f03d0000c007bb0749ab4c883d5da6/rules/ip/httpdns.mrs",
-      "elapsed_ms": 77
+      "elapsed_ms": 217
     },
     {
       "name": "ip_telegram",
@@ -6826,7 +6826,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/telegram.mrs",
-      "elapsed_ms": 75
+      "elapsed_ms": 305
     },
     {
       "name": "ip_webrtc",
@@ -6856,7 +6856,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/yiteei/Share@d46fd38f37f03d0000c007bb0749ab4c883d5da6/rules/ip/webrtc.mrs",
-      "elapsed_ms": 75
+      "elapsed_ms": 1350
     },
     {
       "name": "iptv_domain",
@@ -6886,7 +6886,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/Domain/iptv.mrs",
-      "elapsed_ms": 207
+      "elapsed_ms": 206
     },
     {
       "name": "lan_ip",
@@ -6916,7 +6916,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://ruleset.skk.moe/Clash/ip/lan.txt",
-      "elapsed_ms": 122
+      "elapsed_ms": 164
     },
     {
       "name": "line_domain",
@@ -6946,7 +6946,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/line.mrs",
-      "elapsed_ms": 121
+      "elapsed_ms": 125
     },
     {
       "name": "mediaip",
@@ -6975,8 +6975,8 @@
       "normalized_sha256": "",
       "status": "valid",
       "status_code": 200,
-      "final_url": "https://release-assets.githubusercontent.com/github-production-release-asset/624368088/3f05758b-4bcc-430f-bca7-1c274131654e?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-07-28T07%3A27%3A39Z&rscd=attachment%3B+filename%3Dmediaip.mrs&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-07-28T06%3A27%3A35Z&ske=2026-07-28T07%3A27%3A39Z&sks=b&skv=2018-11-09&sig=ZKzvrkXQ0ZDI6AsaviVhV7emKW%2B1I0202pdtPX04FDI%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc4NTIyMTM5MCwibmJmIjoxNzg1MjIxMDkwLCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.BNvcCbAja_iTKmWMhrk9LAH7xn9ctcnl7qZD37ICSyw&response-content-disposition=attachment%3B%20filename%3Dmediaip.mrs&response-content-type=application%2Foctet-stream",
-      "elapsed_ms": 1042
+      "final_url": "https://release-assets.githubusercontent.com/github-production-release-asset/624368088/3f05758b-4bcc-430f-bca7-1c274131654e?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-07-28T07%3A51%3A51Z&rscd=attachment%3B+filename%3Dmediaip.mrs&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-07-28T06%3A51%3A33Z&ske=2026-07-28T07%3A51%3A51Z&sks=b&skv=2018-11-09&sig=NntW94qT1Q17Z0jlXpifCIqOmA03GHuD7d5McqDjwcI%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc4NTIyMjM4NiwibmJmIjoxNzg1MjIyMDg2LCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.9HvSGoPDf4hy0bmgJdMBe071Ypyx-gM1daid3r4BjCw&response-content-disposition=attachment%3B%20filename%3Dmediaip.mrs&response-content-type=application%2Foctet-stream",
+      "elapsed_ms": 1316
     },
     {
       "name": "miHoYo",
@@ -7006,7 +7006,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/miHoYo.yaml",
-      "elapsed_ms": 80
+      "elapsed_ms": 84
     },
     {
       "name": "myignore",
@@ -7036,7 +7036,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/Pililink/AirRules/e1f177e32be784989d35c78390f762c5c784d600/clash/ruleset/ignore.list",
-      "elapsed_ms": 146
+      "elapsed_ms": 125
     },
     {
       "name": "no-fakeip",
@@ -7066,7 +7066,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/JohnsonRan/CRules/e60d312c610b84c0fdddd0e91aabf5e49da02be7/rules/no-fakeip.txt",
-      "elapsed_ms": 151
+      "elapsed_ms": 132
     },
     {
       "name": "private-2",
@@ -7096,7 +7096,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/05cb71a6617dcbceae1457f7168339704017f5aa/private.list",
-      "elapsed_ms": 151
+      "elapsed_ms": 125
     },
     {
       "name": "privateip-2",
@@ -7126,7 +7126,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/05cb71a6617dcbceae1457f7168339704017f5aa/privateip.list",
-      "elapsed_ms": 156
+      "elapsed_ms": 463
     },
     {
       "name": "signal_domain",
@@ -7156,7 +7156,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/signal.mrs",
-      "elapsed_ms": 154
+      "elapsed_ms": 117
     },
     {
       "name": "site_webrtc",
@@ -7186,7 +7186,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/yiteei/Share@d46fd38f37f03d0000c007bb0749ab4c883d5da6/rules/site/webrtc.mrs",
-      "elapsed_ms": 72
+      "elapsed_ms": 91
     },
     {
       "name": "speedtest-3",
@@ -7216,7 +7216,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://ruleset.skk.moe/Clash/domainset/speedtest.txt",
-      "elapsed_ms": 239
+      "elapsed_ms": 626
     },
     {
       "name": "steamcdn_ip",
@@ -7246,7 +7246,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/IP/steamCDN-ip.mrs",
-      "elapsed_ms": 185
+      "elapsed_ms": 123
     },
     {
       "name": "stream_non_ip",
@@ -7276,7 +7276,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://ruleset.skk.moe/Clash/non_ip/stream.txt",
-      "elapsed_ms": 74
+      "elapsed_ms": 472
     },
     {
       "name": "talkatone_domain",
@@ -7306,7 +7306,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/Domain/Talkatone-domain.mrs",
-      "elapsed_ms": 168
+      "elapsed_ms": 250
     },
     {
       "name": "talkatone_ip",
@@ -7336,7 +7336,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/IP/Talkatone-ip.mrs",
-      "elapsed_ms": 164
+      "elapsed_ms": 113
     },
     {
       "name": "telegram_domain",
@@ -7366,7 +7366,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Telegram/Telegram.yaml",
-      "elapsed_ms": 203
+      "elapsed_ms": 118
     },
     {
       "name": "tencent!cn_domain",
@@ -7396,7 +7396,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/tencent%40!cn.mrs",
-      "elapsed_ms": 488
+      "elapsed_ms": 164
     },
     {
       "name": "tg_site",
@@ -7426,7 +7426,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/telegram.mrs",
-      "elapsed_ms": 300
+      "elapsed_ms": 562
     },
     {
       "name": "threads_domain",
@@ -7456,7 +7456,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/threads.mrs",
-      "elapsed_ms": 194
+      "elapsed_ms": 132
     },
     {
       "name": "trackerslist",
@@ -7486,7 +7486,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/05cb71a6617dcbceae1457f7168339704017f5aa/trackerslist.mrs",
-      "elapsed_ms": 290
+      "elapsed_ms": 737
     },
     {
       "name": "xiaohongshu",
@@ -7516,7 +7516,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/XiaoHongShu/XiaoHongShu_No_Resolve.yaml",
-      "elapsed_ms": 168
+      "elapsed_ms": 118
     },
     {
       "name": "xiaomi_domain",
@@ -7546,7 +7546,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/xiaomi.mrs",
-      "elapsed_ms": 161
+      "elapsed_ms": 114
     }
   ],
   "quality_score": {

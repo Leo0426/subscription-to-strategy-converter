@@ -1433,7 +1433,7 @@ rules:
 - RULE-SET,AdvertisingIP,REJECT,no-resolve
 - RULE-SET,custom_reject,REJECT
 - DOMAIN-SUFFIX,gvt1.com,Google
-- RULE-SET,UnBan,REJECT
+- RULE-SET,UnBan,DIRECT
 - RULE-SET,Category-DoH,DIRECT
 - RULE-SET,cdn_non_ip,默认代理
 - RULE-SET,china_ip_ipv6,DIRECT
