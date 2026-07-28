@@ -148,12 +148,16 @@ def test_supply_chain_facts_classifies_origin_pinning_and_intermediaries() -> No
     sha = supply_chain_facts(
         "https://raw.githubusercontent.com/owner/repo/0123456789abcdef0123456789abcdef01234567/rules.yaml"
     )
-    cdn_branch = supply_chain_facts("https://testingcf.jsdelivr.net/gh/owner@master/rules.txt")
-    cdn_version = supply_chain_facts("https://cdn.jsdelivr.net/gh/owner@1.2.3/rules.txt")
+    cdn_branch = supply_chain_facts("https://testingcf.jsdelivr.net/gh/owner/repo@master/rules.txt")
+    cdn_version = supply_chain_facts("https://cdn.jsdelivr.net/gh/owner/repo@1.2.3/rules.txt")
     proxied = supply_chain_facts(
         "https://gh-proxy.com/https://raw.githubusercontent.com/owner/repo/master/rules.txt"
     )
     first_party = supply_chain_facts("https://ruleset.skk.moe/Clash/domainset/reject.txt")
+    ghcom_raw_branch = supply_chain_facts("https://github.com/owner/repo/raw/refs/heads/master/rules.txt")
+    ghcom_raw_sha = supply_chain_facts(
+        "https://github.com/owner/repo/raw/0123456789abcdef0123456789abcdef01234567/rules.txt"
+    )
 
     assert branch == {"upstream": "github:MetaCubeX", "pinned": False, "via_intermediary": False}
     assert tag["pinned"] is True and tag["via_intermediary"] is False
@@ -162,6 +166,8 @@ def test_supply_chain_facts_classifies_origin_pinning_and_intermediaries() -> No
     assert cdn_version["pinned"] is True
     assert proxied == {"upstream": "github:owner", "pinned": False, "via_intermediary": True}
     assert first_party == {"upstream": "ruleset.skk.moe", "pinned": False, "via_intermediary": False}
+    assert ghcom_raw_branch["pinned"] is False
+    assert ghcom_raw_sha["pinned"] is True
 
 
 def test_score_rule_source_report_scores_supply_chain_and_cold_start_cost() -> None:

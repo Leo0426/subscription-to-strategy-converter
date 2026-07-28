@@ -284,12 +284,16 @@ _VERSION_TAG = re.compile(r"^v?\d+(\.\d+)+$")
 
 
 def _github_ref_is_pinned(segments: list[str]) -> bool:
-    """segments: [owner, repo, ref, ...] or [owner, repo, "refs", "heads"|"tags", ref, ...]."""
+    """segments: [owner, repo, ref, ...], [owner, repo, "refs", "heads"|"tags", ref, ...],
+    or the github.com/<owner>/<repo>/raw/... variant of either (one extra leading "raw")."""
     if len(segments) < 3:
         return False
-    if segments[2] == "refs" and len(segments) >= 5:
-        return segments[3] == "tags"
-    return bool(_COMMIT_SHA.match(segments[2]) or _VERSION_TAG.match(segments[2]))
+    tail = segments[3:] if segments[2] == "raw" else segments[2:]
+    if not tail:
+        return False
+    if tail[0] == "refs" and len(tail) >= 3:
+        return tail[1] == "tags"
+    return bool(_COMMIT_SHA.match(tail[0]) or _VERSION_TAG.match(tail[0]))
 
 
 def supply_chain_facts(url: str) -> dict[str, Any]:
@@ -300,7 +304,7 @@ def supply_chain_facts(url: str) -> dict[str, Any]:
       pushes cannot silently change what clients download.
     - `via_intermediary`: the content passes through a third-party proxy front
       (gh-proxy style) that could rewrite it in transit; official CDNs with a
-      declared upstream (jsDelivr `gh/<owner>@<ref>`) are not intermediaries.
+      declared upstream (jsDelivr `gh/<owner>/<repo>@<ref>`) are not intermediaries.
     """
     parsed = urlparse(url)
     host = (parsed.hostname or "").lower()
@@ -310,8 +314,9 @@ def supply_chain_facts(url: str) -> dict[str, Any]:
         upstream = f"github:{segments[0]}" if segments else host
         return {"upstream": upstream, "pinned": _github_ref_is_pinned(segments), "via_intermediary": False}
 
-    if host.endswith(".jsdelivr.net") and len(segments) >= 2 and segments[0] == "gh":
-        owner, _, ref = segments[1].partition("@")
+    if host.endswith(".jsdelivr.net") and len(segments) >= 3 and segments[0] == "gh":
+        owner = segments[1]
+        _, _, ref = segments[2].partition("@")
         pinned = bool(_COMMIT_SHA.match(ref) or _VERSION_TAG.match(ref))
         return {"upstream": f"github:{owner}", "pinned": pinned, "via_intermediary": False}
 
