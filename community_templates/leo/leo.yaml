@@ -1058,7 +1058,7 @@ rule-providers:
     type: http
     behavior: classical
     format: yaml
-    url: https://gh.669588.xyz/rules/geo/geosite/douyin.yaml
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/DouYin/DouYin_No_Resolve.yaml
     path: ./rule_provider/leo/555.yaml
     interval: 86400
   encoreTVB:
@@ -1160,7 +1160,7 @@ rule-providers:
     type: http
     behavior: classical
     format: yaml
-    url: https://gh.669588.xyz/rules/geo/geosite/facebook.yaml
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Facebook/Facebook_No_Resolve.yaml
     path: ./rule_provider/leo/581.yaml
     interval: 86400
   Instagram:
@@ -1251,7 +1251,7 @@ rule-providers:
     type: http
     behavior: classical
     format: yaml
-    url: https://gh.669588.xyz/rules/geo/geosite/xiaohongshu.yaml
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/XiaoHongShu/XiaoHongShu_No_Resolve.yaml
     path: ./rule_provider/leo/647.yaml
     interval: 86400
   WeChat:
@@ -1314,14 +1314,14 @@ rule-providers:
     type: http
     behavior: ipcidr
     format: mrs
-    url: https://gh.669588.xyz/rules/geo/geoip/cloudflare.mrs
+    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/cloudflare.mrs
     path: ./rule_provider/leo/662.mrs
     interval: 86400
   cloudfront-ip:
     type: http
     behavior: ipcidr
     format: mrs
-    url: https://gh.669588.xyz/rules/geo/geoip/cloudfront.mrs
+    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/cloudfront.mrs
     path: ./rule_provider/leo/665.mrs
     interval: 86400
   DNS-IP:
@@ -1355,7 +1355,7 @@ rule-providers:
     type: http
     behavior: ipcidr
     format: mrs
-    url: https://gh.669588.xyz/rules/geo/geoip/fastly.mrs
+    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/fastly.mrs
     path: ./rule_provider/leo/675.mrs
     interval: 86400
   HTTPDNS:
