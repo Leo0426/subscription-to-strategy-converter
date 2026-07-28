@@ -1618,7 +1618,6 @@ rules:
 - DOMAIN,access.pikpak.me,REJECT
 - DOMAIN-SUFFIX,steamserver.net,DIRECT
 - DST-PORT,3478/19302,DIRECT
-- DOMAIN-SUFFIX,2022822.xyz,DIRECT
 - DOMAIN-SUFFIX,download.nvidia.com,DIRECT
 - GEOSITE,private,DIRECT
 - GEOSITE,category-public-tracker,DIRECT
@@ -1631,7 +1630,6 @@ rules:
 - DOMAIN-SUFFIX,cn,DIRECT
 - GEOSITE,cn,DIRECT
 - GEOIP,cn,DIRECT,no-resolve
-- DOMAIN-SUFFIX,julebu.co,DIRECT
 - DOMAIN-SUFFIX,apple.com,DIRECT
 - DOMAIN-SUFFIX,icloud.com,DIRECT
 - DOMAIN-SUFFIX,cdn-apple.com,DIRECT
