@@ -92,6 +92,45 @@ def _resolve_mrs_url(url: str) -> str:
     )
 
 
+# ── blackmatrix7 Clash YAML → Surge .list substitution ─────────────────────
+# Surge cannot parse Clash provider YAML (files that begin with `payload:`);
+# feeding it one yields "Invalid line: payload:". The blackmatrix7/ios_rule_script
+# repo ships a native Surge `.list` for every rule set, so a Clash YAML URL is
+# rewritten to its Surge counterpart. The Surge filename drops the Clash-only
+# `_Classical` / `_No_Resolve` name segments — Surge `.list` files are already
+# classical text format and carry `no-resolve` inline on their IP rules.
+# Host-agnostic so mirror/proxy fronts of the same repo are handled too.
+_BLACKMATRIX7_CLASH_YAML = re.compile(
+    r"^(?P<prefix>.*/blackmatrix7/ios_rule_script/[^/]+)/rule/Clash/"
+    r"(?P<category>[^/]+)/(?P<name>[^/]+)\.yaml$"
+)
+
+
+def _resolve_blackmatrix7_url(url: str) -> str | None:
+    """Return the Surge `.list` URL for a blackmatrix7 Clash YAML URL.
+
+    Returns None when the URL is not a blackmatrix7 Clash YAML rule set.
+    """
+    match = _BLACKMATRIX7_CLASH_YAML.match(url)
+    if match is None:
+        return None
+    name = match["name"].replace("_No_Resolve", "").replace("_Classical", "")
+    return f"{match['prefix']}/rule/Surge/{match['category']}/{name}.list"
+
+
+def _resolve_surge_ruleset_url(url: str) -> str:
+    """Return a Surge-loadable RULE-SET URL for the given provider URL.
+
+    Rewrites blackmatrix7 Clash YAML URLs to their Surge `.list` counterpart,
+    then applies MRS → text substitution. May raise UnsupportedRuleTypeError
+    for MRS URLs with no known text-format equivalent.
+    """
+    surge_list = _resolve_blackmatrix7_url(url)
+    if surge_list is not None:
+        return surge_list
+    return _resolve_mrs_url(url)
+
+
 # ── Shadowsocks cipher passthrough map ─────────────────────────────────────
 # Clash and Surge share the same cipher names; this map is kept explicit so
 # that any divergence can be patched without touching the render logic.
@@ -320,7 +359,7 @@ def _rule_to_surge_line(
         raw_url = str(provider.get("url") or "")
         if not raw_url:
             return None
-        url = _resolve_mrs_url(raw_url)  # raises UnsupportedRuleTypeError for unknown MRS
+        url = _resolve_surge_ruleset_url(raw_url)  # raises UnsupportedRuleTypeError for unknown MRS
         suffix = ",no-resolve" if no_resolve else ""
         return f"RULE-SET,{url},{target}{suffix}"
 

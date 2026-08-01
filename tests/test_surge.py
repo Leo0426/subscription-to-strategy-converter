@@ -586,3 +586,54 @@ def test_build_surge_config_substitutes_known_mrs() -> None:
     assert ".mrs" not in result
     assert "domain/ai.txt" in result
     assert "FINAL,PROXY" in result
+
+
+# ── blackmatrix7 Clash YAML → Surge .list substitution ─────────────────────
+
+_B7_BASE = (
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script"
+    "/8818705adee20571a856daf11c9fc69c4929109a"
+)
+
+_B7_PROVIDERS: dict = {
+    "tencent": {"type": "http", "url": f"{_B7_BASE}/rule/Clash/Tencent/Tencent_No_Resolve.yaml"},
+    "global": {"type": "http", "url": f"{_B7_BASE}/rule/Clash/Global/Global_Classical_No_Resolve.yaml"},
+    "teams": {"type": "http", "url": f"{_B7_BASE}/rule/Clash/Teams/Teams.yaml"},
+}
+
+
+def test_b7_clash_yaml_no_resolve_rewritten_to_surge_list() -> None:
+    line = _rule_to_surge_line("RULE-SET,tencent,DIRECT", _B7_PROVIDERS)
+    assert line == f"RULE-SET,{_B7_BASE}/rule/Surge/Tencent/Tencent.list,DIRECT"
+    assert ".yaml" not in line
+    assert "/rule/Clash/" not in line
+
+
+def test_b7_clash_yaml_classical_segment_stripped() -> None:
+    line = _rule_to_surge_line("RULE-SET,global,Proxy", _B7_PROVIDERS)
+    # both the Clash-only _Classical and _No_Resolve segments are dropped
+    assert line == f"RULE-SET,{_B7_BASE}/rule/Surge/Global/Global.list,Proxy"
+
+
+def test_b7_clash_yaml_plain_name_rewritten() -> None:
+    line = _rule_to_surge_line("RULE-SET,teams,Microsoft", _B7_PROVIDERS)
+    assert line == f"RULE-SET,{_B7_BASE}/rule/Surge/Teams/Teams.list,Microsoft"
+
+
+def test_b7_clash_yaml_preserves_no_resolve_flag() -> None:
+    line = _rule_to_surge_line("RULE-SET,tencent,DIRECT,no-resolve", _B7_PROVIDERS)
+    assert line == f"RULE-SET,{_B7_BASE}/rule/Surge/Tencent/Tencent.list,DIRECT,no-resolve"
+
+
+def test_b7_clash_list_left_unchanged() -> None:
+    # .list files under rule/Clash/ are already classical text and parse in Surge
+    providers = {"ea": {"type": "http", "url": f"{_B7_BASE}/rule/Clash/EA/EA.list"}}
+    line = _rule_to_surge_line("RULE-SET,ea,DIRECT", providers)
+    assert line == f"RULE-SET,{_B7_BASE}/rule/Clash/EA/EA.list,DIRECT"
+
+
+def test_build_surge_config_has_no_clash_yaml_urls() -> None:
+    result = _compile([], [], ["RULE-SET,tencent,DIRECT", "MATCH,DIRECT"], _B7_PROVIDERS)
+    assert "/rule/Clash/" not in result
+    assert ".yaml" not in result
+    assert "/rule/Surge/Tencent/Tencent.list" in result
