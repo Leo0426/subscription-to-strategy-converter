@@ -357,20 +357,15 @@ def test_match_default_direct() -> None:
     assert _rule_to_surge_line("MATCH", {}) == "FINAL,DIRECT"
 
 
-def test_rule_set_resolves_url() -> None:
-    line = _rule_to_surge_line("RULE-SET,proxy,PROXY", _PROVIDERS)
-    assert line == (
-        "RULE-SET,"
-        "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/proxy.txt,"
-        "PROXY"
-    )
+def test_rule_set_domain_bare_list_unsupported() -> None:
+    # Loyalsoldier clash-rules proxy.txt is a bare-domain list Surge cannot parse.
+    with pytest.raises(UnsupportedRuleTypeError):
+        _rule_to_surge_line("RULE-SET,proxy,PROXY", _PROVIDERS)
 
 
-def test_rule_set_no_resolve_preserved() -> None:
-    line = _rule_to_surge_line("RULE-SET,cncidr,DIRECT,no-resolve", _PROVIDERS)
-    assert line is not None
-    assert line.endswith(",no-resolve")
-    assert "cncidr.txt" in line
+def test_rule_set_ipcidr_bare_list_unsupported() -> None:
+    with pytest.raises(UnsupportedRuleTypeError):
+        _rule_to_surge_line("RULE-SET,cncidr,DIRECT,no-resolve", _PROVIDERS)
 
 
 def test_rule_set_unknown_provider_returns_none() -> None:
@@ -413,11 +408,15 @@ def test_config_adds_final_if_missing() -> None:
     assert "FINAL," in result
 
 
-def test_config_rule_set_resolves() -> None:
+def test_config_skips_clash_bare_list_ruleset() -> None:
+    # reject.txt is a Clash bare-domain list; it must be skipped (not emitted)
+    # and surface as an unsupported_rule_sets warning, while the config still
+    # compiles with a FINAL rule.
     rules = ["RULE-SET,reject,REJECT", "MATCH,PROXY"]
-    result = _compile([], [], rules, _PROVIDERS)
-    assert "reject.txt" in result
+    result, warnings = build_surge_config([], [], rules, _PROVIDERS)
+    assert "reject.txt" not in result
     assert "FINAL,PROXY" in result
+    assert any(w["code"] == "unsupported_rule_sets" for w in warnings)
 
 
 def test_config_unsupported_protocol_skipped_with_warning() -> None:
@@ -548,7 +547,7 @@ def test_build_surge_config_skips_unknown_mrs() -> None:
             "code": "unsupported_rule_sets",
             "count": 1,
             "examples": ["https://example.com/rules/custom.mrs"],
-            "suggestion": "Surge 不支持这些规则源（MRS 或 Clash payload YAML），已跳过对应规则",
+            "suggestion": "Surge 不支持这些规则源（MRS / Clash payload YAML / domain·ipcidr 裸列表），已跳过对应规则",
         }
     ]
 
@@ -651,6 +650,69 @@ def test_non_b7_clash_yaml_raises_unsupported() -> None:
     with pytest.raises(UnsupportedRuleTypeError) as exc_info:
         _rule_to_surge_line("RULE-SET,fakeip,DIRECT", providers)
     assert exc_info.value.value.endswith("fakeip-filter.yaml")
+
+
+# ── skk.moe Clash → Surge /List substitution & behavior-aware directives ───
+
+_SKK = "https://ruleset.skk.moe"
+
+
+def test_skk_domainset_becomes_domain_set() -> None:
+    providers = {"cdn": {"behavior": "domain", "url": f"{_SKK}/Clash/domainset/cdn.txt"}}
+    line = _rule_to_surge_line("RULE-SET,cdn,Proxy", providers)
+    assert line == f"DOMAIN-SET,{_SKK}/List/domainset/cdn.conf,Proxy"
+
+
+def test_skk_non_ip_becomes_rule_set() -> None:
+    providers = {"stream": {"behavior": "classical", "url": f"{_SKK}/Clash/non_ip/stream.txt"}}
+    line = _rule_to_surge_line("RULE-SET,stream,Proxy", providers)
+    assert line == f"RULE-SET,{_SKK}/List/non_ip/stream.conf,Proxy"
+
+
+def test_skk_ip_becomes_rule_set_with_no_resolve() -> None:
+    providers = {"cnip": {"behavior": "ipcidr", "url": f"{_SKK}/Clash/ip/china_ip.txt"}}
+    line = _rule_to_surge_line("RULE-SET,cnip,DIRECT,no-resolve", providers)
+    assert line == f"RULE-SET,{_SKK}/List/ip/china_ip.conf,DIRECT,no-resolve"
+
+
+def test_domain_set_drops_no_resolve_flag() -> None:
+    # DOMAIN-SET has no IP rules, so a stray no-resolve must not be appended.
+    providers = {"cdn": {"behavior": "domain", "url": f"{_SKK}/Clash/domainset/cdn.txt"}}
+    line = _rule_to_surge_line("RULE-SET,cdn,Proxy,no-resolve", providers)
+    assert line == f"DOMAIN-SET,{_SKK}/List/domainset/cdn.conf,Proxy"
+
+
+def test_clash_domain_bare_list_raises_unsupported() -> None:
+    providers = {
+        "cn": {
+            "behavior": "domain",
+            "url": "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/abc/cn.list",
+        }
+    }
+    with pytest.raises(UnsupportedRuleTypeError):
+        _rule_to_surge_line("RULE-SET,cn,DIRECT", providers)
+
+
+def test_clash_ipcidr_bare_list_raises_unsupported() -> None:
+    providers = {
+        "cnip": {
+            "behavior": "ipcidr",
+            "url": "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/abc/cnip.list",
+        }
+    }
+    with pytest.raises(UnsupportedRuleTypeError):
+        _rule_to_surge_line("RULE-SET,cnip,DIRECT,no-resolve", providers)
+
+
+def test_classical_list_left_as_rule_set() -> None:
+    providers = {
+        "x": {
+            "behavior": "classical",
+            "url": "https://example.com/rules/x.list",
+        }
+    }
+    line = _rule_to_surge_line("RULE-SET,x,DIRECT", providers)
+    assert line == "RULE-SET,https://example.com/rules/x.list,DIRECT"
 
 
 def test_build_surge_config_skips_non_b7_clash_yaml() -> None:

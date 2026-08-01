@@ -118,25 +118,79 @@ def _resolve_blackmatrix7_url(url: str) -> str | None:
     return f"{match['prefix']}/rule/Surge/{match['category']}/{name}.list"
 
 
-def _resolve_surge_ruleset_url(url: str) -> str:
-    """Return a Surge-loadable RULE-SET URL for the given provider URL.
+# ── skk.moe (Sukka) Clash → Surge-native substitution ──────────────────────
+# Sukka publishes the same rule sets in both Clash and Surge form:
+#   /Clash/domainset/<n>.txt  (bare domains)      → /List/domainset/<n>.conf  (DOMAIN-SET)
+#   /Clash/non_ip/<n>.txt     (DOMAIN/-SUFFIX,…)  → /List/non_ip/<n>.conf     (RULE-SET)
+#   /Clash/ip/<n>.txt         (IP-CIDR,…)         → /List/ip/<n>.conf         (RULE-SET)
+# The Clash `.txt` variants are NOT Surge-loadable (bare domains fail RULE-SET
+# parsing); the `/List/*.conf` variants are the native Surge format.
+_SKK_CLASH_PATTERN = re.compile(
+    r"^(?P<scheme>https?://ruleset\.skk\.moe)/Clash/"
+    r"(?P<kind>domainset|non_ip|ip)/(?P<name>[^/]+)\.txt$"
+)
 
-    Rewrites blackmatrix7 Clash YAML URLs to their Surge `.list` counterpart,
-    then applies MRS → text substitution. Raises UnsupportedRuleTypeError for
-    any remaining Clash `payload:` YAML (which Surge cannot parse and has no
-    known text-format equivalent) and for MRS URLs with no text substitution.
+
+@dataclass
+class ResolvedRuleSet:
+    """A Surge external rule set: the directive keyword plus its URL."""
+    directive: str  # "RULE-SET" or "DOMAIN-SET"
+    url: str
+
+
+def _resolve_skk_ruleset(url: str) -> ResolvedRuleSet | None:
+    """Return the Surge-native rule set for a skk.moe Clash URL, else None."""
+    match = _SKK_CLASH_PATTERN.match(url)
+    if match is None:
+        return None
+    surge_url = f"{match['scheme']}/List/{match['kind']}/{match['name']}.conf"
+    directive = "DOMAIN-SET" if match["kind"] == "domainset" else "RULE-SET"
+    return ResolvedRuleSet(directive, surge_url)
+
+
+def _resolve_surge_ruleset(url: str, behavior: str) -> ResolvedRuleSet:
+    """Resolve a Clash rule-provider URL to a Surge-loadable rule set.
+
+    Rewrites URLs from repositories that publish a Surge-native variant
+    (blackmatrix7, skk.moe). Everything else is emitted as a best-effort
+    RULE-SET when it is plausibly classical text, and raised as
+    UnsupportedRuleTypeError (→ skipped + warned) when the format is one Surge
+    cannot parse by URL: Clash `payload:` YAML, MRS with no text equivalent, or
+    Clash `domain`/`ipcidr` provider bare-lists (`+.`/wildcards/bare CIDR).
     """
     surge_list = _resolve_blackmatrix7_url(url)
     if surge_list is not None:
-        return surge_list
+        # blackmatrix7 `.list` files are classical Surge rules.
+        return ResolvedRuleSet("RULE-SET", surge_list)
+
+    skk = _resolve_skk_ruleset(url)
+    if skk is not None:
+        return skk
+
     if url.endswith(".yaml"):
         raise UnsupportedRuleTypeError(
             code="unsupported_rule_type",
             field="rule_set_url",
             value=url,
-            suggestion="Surge 无法解析 Clash payload YAML 规则集，请替换为 .list/.txt 格式规则源",
+            suggestion="Surge 无法解析 Clash payload YAML 规则集，请替换为 Surge 原生规则源",
         )
-    return _resolve_mrs_url(url)
+
+    if url.endswith(".mrs"):
+        # _resolve_mrs_url substitutes known MRS repos or raises for the rest.
+        return ResolvedRuleSet("RULE-SET", _resolve_mrs_url(url))
+
+    if behavior in {"domain", "ipcidr"}:
+        # Clash domain/ipcidr providers ship bare-domain (`+.`/wildcard) or
+        # bare-CIDR lists that Surge cannot consume in any external ruleset form.
+        raise UnsupportedRuleTypeError(
+            code="unsupported_rule_type",
+            field="rule_set_url",
+            value=url,
+            suggestion="Surge 无法解析 Clash domain/ipcidr 裸列表，请替换为 Surge 原生规则源",
+        )
+
+    # Classical (or unspecified) providers are plain-text Surge rules.
+    return ResolvedRuleSet("RULE-SET", url)
 
 
 # ── Shadowsocks cipher passthrough map ─────────────────────────────────────
@@ -367,9 +421,12 @@ def _rule_to_surge_line(
         raw_url = str(provider.get("url") or "")
         if not raw_url:
             return None
-        url = _resolve_surge_ruleset_url(raw_url)  # raises UnsupportedRuleTypeError for unknown MRS
-        suffix = ",no-resolve" if no_resolve else ""
-        return f"RULE-SET,{url},{target}{suffix}"
+        behavior = str(provider.get("behavior") or "").strip().lower()
+        # raises UnsupportedRuleTypeError for formats Surge cannot parse
+        resolved = _resolve_surge_ruleset(raw_url, behavior)
+        # no-resolve only applies to IP matching; DOMAIN-SET has no IP rules.
+        suffix = ",no-resolve" if (no_resolve and resolved.directive == "RULE-SET") else ""
+        return f"{resolved.directive},{resolved.url},{target}{suffix}"
 
     if rule_type not in _SURGE_RULE_TYPES:
         return None
@@ -488,7 +545,7 @@ def build_surge_config(
                 "code": "unsupported_rule_sets",
                 "count": len(unique_urls),
                 "examples": unique_urls[:5],
-                "suggestion": "Surge 不支持这些规则源（MRS 或 Clash payload YAML），已跳过对应规则",
+                "suggestion": "Surge 不支持这些规则源（MRS / Clash payload YAML / domain·ipcidr 裸列表），已跳过对应规则",
             }
         )
     if unsupported_rule_types:
