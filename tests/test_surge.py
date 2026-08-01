@@ -548,7 +548,7 @@ def test_build_surge_config_skips_unknown_mrs() -> None:
             "code": "unsupported_rule_sets",
             "count": 1,
             "examples": ["https://example.com/rules/custom.mrs"],
-            "suggestion": "Surge 不支持这些 MRS 规则源，已跳过对应规则",
+            "suggestion": "Surge 不支持这些规则源（MRS 或 Clash payload YAML），已跳过对应规则",
         }
     ]
 
@@ -637,3 +637,33 @@ def test_build_surge_config_has_no_clash_yaml_urls() -> None:
     assert "/rule/Clash/" not in result
     assert ".yaml" not in result
     assert "/rule/Surge/Tencent/Tencent.list" in result
+
+
+def test_non_b7_clash_yaml_raises_unsupported() -> None:
+    # Clash payload YAML from a repo with no Surge .list equivalent cannot be
+    # rewritten; it must be reported as unsupported rather than emitted.
+    providers = {
+        "fakeip": {
+            "type": "http",
+            "url": "https://raw.githubusercontent.com/ameyukisora/Clash-Rule/abc/provider/fakeip-filter.yaml",
+        }
+    }
+    with pytest.raises(UnsupportedRuleTypeError) as exc_info:
+        _rule_to_surge_line("RULE-SET,fakeip,DIRECT", providers)
+    assert exc_info.value.value.endswith("fakeip-filter.yaml")
+
+
+def test_build_surge_config_skips_non_b7_clash_yaml() -> None:
+    providers = {
+        "fakeip": {
+            "type": "http",
+            "url": "https://raw.githubusercontent.com/ameyukisora/Clash-Rule/abc/provider/fakeip-filter.yaml",
+        }
+    }
+    result, warnings = build_surge_config([], [], ["RULE-SET,fakeip,DIRECT"], providers)
+    assert ".yaml" not in result
+    assert "fakeip-filter" not in result
+    assert warnings[0]["code"] == "unsupported_rule_sets"
+    assert warnings[0]["examples"] == [
+        "https://raw.githubusercontent.com/ameyukisora/Clash-Rule/abc/provider/fakeip-filter.yaml"
+    ]

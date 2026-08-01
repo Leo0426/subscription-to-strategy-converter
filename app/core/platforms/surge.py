@@ -122,12 +122,20 @@ def _resolve_surge_ruleset_url(url: str) -> str:
     """Return a Surge-loadable RULE-SET URL for the given provider URL.
 
     Rewrites blackmatrix7 Clash YAML URLs to their Surge `.list` counterpart,
-    then applies MRS → text substitution. May raise UnsupportedRuleTypeError
-    for MRS URLs with no known text-format equivalent.
+    then applies MRS → text substitution. Raises UnsupportedRuleTypeError for
+    any remaining Clash `payload:` YAML (which Surge cannot parse and has no
+    known text-format equivalent) and for MRS URLs with no text substitution.
     """
     surge_list = _resolve_blackmatrix7_url(url)
     if surge_list is not None:
         return surge_list
+    if url.endswith(".yaml"):
+        raise UnsupportedRuleTypeError(
+            code="unsupported_rule_type",
+            field="rule_set_url",
+            value=url,
+            suggestion="Surge 无法解析 Clash payload YAML 规则集，请替换为 .list/.txt 格式规则源",
+        )
     return _resolve_mrs_url(url)
 
 
@@ -480,7 +488,7 @@ def build_surge_config(
                 "code": "unsupported_rule_sets",
                 "count": len(unique_urls),
                 "examples": unique_urls[:5],
-                "suggestion": "Surge 不支持这些 MRS 规则源，已跳过对应规则",
+                "suggestion": "Surge 不支持这些规则源（MRS 或 Clash payload YAML），已跳过对应规则",
             }
         )
     if unsupported_rule_types:
