@@ -446,10 +446,9 @@ rule-providers:
     interval: 86400
   fcm_domain:
     type: http
-    behavior: domain
-    format: mrs
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/googlefcm.mrs
-    path: ./rule_provider/leo/167.mrs
+    behavior: classical
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/GoogleFCM/GoogleFCM.yaml
+    path: ./rule_provider/leo/167.yaml
     interval: 86400
   Google-2:
     type: http
@@ -589,10 +588,9 @@ rule-providers:
     interval: 86400
   115_domain:
     type: http
-    behavior: domain
-    format: mrs
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/115.mrs
-    path: ./rule_provider/leo/280.mrs
+    behavior: classical
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/115/115.yaml
+    path: ./rule_provider/leo/280.yaml
     interval: 86400
   ChinaDownloadCDN:
     type: http
@@ -700,10 +698,9 @@ rule-providers:
     interval: 86400
   aliyun_domain:
     type: http
-    behavior: domain
-    format: mrs
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/aliyun.mrs
-    path: ./rule_provider/leo/324.mrs
+    behavior: classical
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Alibaba/Alibaba.yaml
+    path: ./rule_provider/leo/324.yaml
     interval: 86400
   china_ip_ipv6:
     type: http
@@ -728,10 +725,9 @@ rule-providers:
     interval: 86400
   cn:
     type: http
-    behavior: domain
-    format: text
-    url: https://raw.githubusercontent.com/DustinWin/ruleset_geodata/05cb71a6617dcbceae1457f7168339704017f5aa/cn.list
-    path: ./rule_provider/leo/342.txt
+    behavior: classical
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/ChinaMax/ChinaMax.yaml
+    path: ./rule_provider/leo/342.yaml
     interval: 7200
   cn_v6:
     type: http
@@ -763,10 +759,9 @@ rule-providers:
     interval: 86400
   ads:
     type: http
-    behavior: domain
-    format: text
-    url: https://raw.githubusercontent.com/DustinWin/ruleset_geodata/05cb71a6617dcbceae1457f7168339704017f5aa/ads.list
-    path: ./rule_provider/leo/381.txt
+    behavior: classical
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/AdvertisingLite/AdvertisingLite.yaml
+    path: ./rule_provider/leo/381.yaml
     interval: 7200
   AdvertisingIP:
     type: http
