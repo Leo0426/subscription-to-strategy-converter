@@ -376,6 +376,21 @@ def test_unsupported_rule_type_returns_none() -> None:
     assert _rule_to_surge_line("SCRIPT,somescript,DIRECT", {}) is None
 
 
+def test_dst_port_single_maps_to_dest_port() -> None:
+    # Clash DST-PORT is Surge's DEST-PORT keyword.
+    assert _rule_to_surge_line("DST-PORT,19302,DIRECT", {}) == "DEST-PORT,19302,DIRECT"
+
+
+def test_dst_port_range_maps_to_dest_port() -> None:
+    assert _rule_to_surge_line("DST-PORT,10000-65535,默认代理", {}) == "DEST-PORT,10000-65535,默认代理"
+
+
+def test_dst_port_slash_multiport_dropped() -> None:
+    # Slash-joined multi-port is Clash-only; passing it through would make Surge
+    # reject the whole ruleset with "Invalid line", so it is dropped instead.
+    assert _rule_to_surge_line("DST-PORT,3478/19302,DIRECT", {}) is None
+
+
 # ── build_surge_config integration ────────────────────────────────────────
 
 

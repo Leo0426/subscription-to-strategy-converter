@@ -428,6 +428,15 @@ def _rule_to_surge_line(
         suffix = ",no-resolve" if (no_resolve and resolved.directive == "RULE-SET") else ""
         return f"{resolved.directive},{resolved.url},{target}{suffix}"
 
+    if rule_type == "DST-PORT":
+        # Clash's DST-PORT is Surge's DEST-PORT. Emit only the port forms Surge
+        # accepts natively — a single port or a hyphen range; other Clash-only
+        # forms (e.g. slash-joined "3478/19302") are dropped rather than passed
+        # through to become a Surge "Invalid line" load failure.
+        if re.fullmatch(r"\d+(?:-\d+)?", value):
+            return f"DEST-PORT,{value},{target}"
+        return None
+
     if rule_type not in _SURGE_RULE_TYPES:
         return None
 

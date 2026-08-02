@@ -1397,13 +1397,6 @@ rule-providers:
     url: https://ruleset.skk.moe/Clash/domainset/speedtest.txt
     path: ./rule_provider/leo/714.txt
     interval: 86400
-  WebRTC_端/域:
-    type: http
-    behavior: classical
-    format: text
-    url: https://cdn.jsdelivr.net/gh/GitMetaio/Surfing@cc151b84526587da56406ef15f7c77ec653cc72c/box_bll/clash/rules/WebRTC.list
-    path: ./rule_provider/leo/719.txt
-    interval: 86400
 rules:
 - AND,((NETWORK,UDP),(DST-PORT,443),(NOT,((GEOSITE,cn))),(NOT,((GEOIP,CN)))),REJECT
 - RULE-SET,ads,REJECT
@@ -1439,7 +1432,40 @@ rules:
 - RULE-SET,privateip-2,DIRECT
 - RULE-SET,site_webrtc,DIRECT
 - RULE-SET,speedtest-3,DIRECT
-- RULE-SET,WebRTC_端/域,DIRECT
+# WebRTC (STUN/TURN) — inlined from GitMetaio/Surfing WebRTC.list; kept native
+# because Surge rejects DST-PORT inside external RULE-SET files ("Invalid line").
+- DOMAIN,stun.l.google.com,DIRECT
+- DOMAIN,stun1.l.google.com,DIRECT
+- DOMAIN,stun2.l.google.com,DIRECT
+- DOMAIN,stun3.l.google.com,DIRECT
+- DOMAIN,stun4.l.google.com,DIRECT
+- DOMAIN,stun.services.mozilla.com,DIRECT
+- DOMAIN,stun.stunprotocol.org,DIRECT
+- DOMAIN,stun.voipstunt.com,DIRECT
+- DOMAIN,stun.ekiga.net,DIRECT
+- DOMAIN,stun.ideasip.com,DIRECT
+- DOMAIN,stun.rixtelecom.se,DIRECT
+- DOMAIN,stun.schlund.de,DIRECT
+- DOMAIN,stun.softjoys.com,DIRECT
+- DOMAIN,stun.voiparound.com,DIRECT
+- DOMAIN,stun.voipbuster.com,DIRECT
+- DOMAIN,stun1.voiceeclipse.net,DIRECT
+- DOMAIN,stunserver.org,DIRECT
+- DOMAIN,numb.viagenie.ca,DIRECT
+- DOMAIN,turn.anyfirewall.com,DIRECT
+- DOMAIN,turn.bistri.com,DIRECT
+- DOMAIN,turn.ipvideotalk.com,DIRECT
+- DOMAIN,turn.metrix.com,DIRECT
+- DOMAIN,turn1.turnserver.me,DIRECT
+- DOMAIN,turn2.turnserver.me,DIRECT
+- DOMAIN,relay.metered.ca,DIRECT
+- DOMAIN,global.stun.twilio.com,DIRECT
+- DOMAIN,stun.nextcloud.com,DIRECT
+- DST-PORT,19302,DIRECT
+- DST-PORT,3478,DIRECT
+- DST-PORT,5349,DIRECT
+- DST-PORT,10000,DIRECT
+- DST-PORT,5350,DIRECT
 - RULE-SET,ai-4,AI 服务
 - RULE-SET,Claude,AI 服务
 - RULE-SET,AI-CN,AI 服务
