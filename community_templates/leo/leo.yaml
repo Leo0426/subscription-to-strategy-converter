@@ -298,13 +298,6 @@ rule-providers:
     url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-porn.mrs
     path: ./rule_provider/leo/073.mrs
     interval: 86400
-  ehentai_domain:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/ehentai.mrs
-    path: ./rule_provider/leo/074.mrs
-    interval: 86400
   ifast_domain:
     type: http
     behavior: domain
@@ -350,13 +343,6 @@ rule-providers:
     format: text
     url: https://raw.githubusercontent.com/liandu2024/clash/3fa176d30b02f2f105ee3de9a5126bdd47b5e0f5/list/Check.list
     path: ./rule_provider/leo/089.txt
-    interval: 86400
-  tg_site:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/telegram.mrs
-    path: ./rule_provider/leo/091.mrs
     interval: 86400
   Amazon:
     type: http
@@ -476,33 +462,12 @@ rule-providers:
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Microsoft/Microsoft_No_Resolve.yaml
     path: ./rule_provider/leo/211.yaml
     interval: 86400
-  Teams:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Teams/Teams.yaml
-    path: ./rule_provider/leo/230.yaml
-    interval: 86400
   Nvidia / Domain:
     type: http
     behavior: classical
     format: text
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Nvidia/Nvidia.list
     path: ./rule_provider/leo/232.txt
-    interval: 86400
-  Nintendo:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Nintendo/Nintendo_No_Resolve.yaml
-    path: ./rule_provider/leo/234.yaml
-    interval: 86400
-  NintendoCN:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/nintendo@cn.mrs
-    path: ./rule_provider/leo/237.mrs
     interval: 86400
   PrivateTracker:
     type: http
@@ -524,12 +489,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/PayPal/PayPal.yaml
     path: ./rule_provider/leo/244.yaml
     interval: 604800
-  PlayStation:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/PlayStation/PlayStation.yaml
-    path: ./rule_provider/leo/248.yaml
-    interval: 86400
   Sony:
     type: http
     behavior: classical
@@ -537,33 +496,12 @@ rule-providers:
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Sony/Sony_No_Resolve.yaml
     path: ./rule_provider/leo/250.yaml
     interval: 86400
-  Steam-5:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Steam/Steam_No_Resolve.yaml
-    path: ./rule_provider/leo/257.yaml
-    interval: 86400
   steamcdn_ip:
     type: http
     behavior: ipcidr
     format: mrs
     url: https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/IP/steamCDN-ip.mrs
     path: ./rule_provider/leo/267.mrs
-    interval: 86400
-  SteamCN-2:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/SteamCN/SteamCN_No_Resolve.yaml
-    path: ./rule_provider/leo/269.yaml
-    interval: 86400
-  UBI / Domain:
-    type: http
-    behavior: classical
-    format: text
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/UBI/UBI.list
-    path: ./rule_provider/leo/271.txt
     interval: 86400
   UbisoftCN:
     type: http
@@ -656,18 +594,6 @@ rule-providers:
     format: mrs
     url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-ecommerce.mrs
     path: ./rule_provider/leo/313.mrs
-    interval: 86400
-  Shopee_domain:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Shopee/Shopee.yaml
-    path: ./rule_provider/leo/314.yaml
-    interval: 86400
-  Shopify_domain:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Shopify/Shopify.yaml
-    path: ./rule_provider/leo/315.yaml
     interval: 86400
   miHoYo:
     type: http
@@ -978,13 +904,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo-lite/geoip/bilibili.mrs
     path: ./rule_provider/leo/534.mrs
     interval: 86400
-  biliintl_domain:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/bilibili%40!cn.mrs
-    path: ./rule_provider/leo/539.mrs
-    interval: 86400
   # biliintl 保证模板不依赖可选的 biliintl geosite tag(见 test_leo_template)。
   biliintl:
     type: http
@@ -1161,13 +1080,6 @@ rule-providers:
     behavior: classical
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Reddit/Reddit.yaml
     path: ./rule_provider/leo/594.yaml
-    interval: 86400
-  signal_domain:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/signal.mrs
-    path: ./rule_provider/leo/595.mrs
     interval: 86400
   talkatone_domain:
     type: http
@@ -1434,7 +1346,6 @@ rules:
 - RULE-SET,speedtest-3,DIRECT
 # WebRTC (STUN/TURN) — inlined from GitMetaio/Surfing WebRTC.list; kept native
 # because Surge rejects DST-PORT inside external RULE-SET files ("Invalid line").
-- DOMAIN,stun.l.google.com,DIRECT
 - DOMAIN,stun1.l.google.com,DIRECT
 - DOMAIN,stun2.l.google.com,DIRECT
 - DOMAIN,stun3.l.google.com,DIRECT
@@ -1479,8 +1390,6 @@ rules:
 - GEOSITE,google,Google
 - GEOIP,google,Google,no-resolve
 - GEOSITE,google-cn,Google
-- DOMAIN-SUFFIX,xn--ngstr-lra8j.com,Google
-- DOMAIN-SUFFIX,googleapis.cn,Google
 - RULE-SET,Microsoft-6,Microsoft
 - RULE-SET,bank_cn_domain,金融服务
 - RULE-SET,Crypto-2,金融服务
@@ -1496,7 +1405,6 @@ rules:
 - RULE-SET,Line TV,社交通讯
 - RULE-SET,line_domain,社交通讯
 - RULE-SET,Reddit / Domain,社交通讯
-- RULE-SET,signal_domain,社交通讯
 - RULE-SET,SocialMedia-2,社交通讯
 - RULE-SET,SocialMediaIP,社交通讯,no-resolve
 - RULE-SET,talkatone_domain,社交通讯
@@ -1510,12 +1418,7 @@ rules:
 - RULE-SET,xiaohongshu,社交通讯
 - RULE-SET,EpicCN,游戏服务
 - RULE-SET,Game,游戏服务
-- RULE-SET,Nintendo,游戏服务
-- RULE-SET,NintendoCN,游戏服务
-- RULE-SET,PlayStation,游戏服务
-- RULE-SET,Steam-5,游戏服务
 - RULE-SET,steamcdn_ip,游戏服务,no-resolve
-- RULE-SET,SteamCN-2,游戏服务
 - RULE-SET,XboxCN,游戏服务
 - RULE-SET,Abema TV,流媒体
 - RULE-SET,Bahamut,流媒体
@@ -1523,7 +1426,6 @@ rules:
 - RULE-SET,Bilibili-5,流媒体
 - RULE-SET,bilibili_ip,流媒体,no-resolve
 - RULE-SET,biliintl,流媒体
-- RULE-SET,biliintl_domain,流媒体
 - RULE-SET,Crunchyroll / Domain,流媒体
 - RULE-SET,DAZN,流媒体
 - RULE-SET,Discovery Plus,流媒体
@@ -1584,7 +1486,6 @@ rules:
 - RULE-SET,EA / Domain,默认代理
 - RULE-SET,ebay_domain,默认代理
 - RULE-SET,Ecommerce,默认代理
-- RULE-SET,ehentai_domain,默认代理
 - RULE-SET,fcm_domain,默认代理
 - RULE-SET,Global,默认代理
 - RULE-SET,GlobalMedia,默认代理
@@ -1599,18 +1500,13 @@ rules:
 - RULE-SET,PrivateTracker,默认代理
 - RULE-SET,ProxyIP,默认代理,no-resolve
 - RULE-SET,Scholar,默认代理
-- RULE-SET,Shopee_domain,默认代理
-- RULE-SET,Shopify_domain,默认代理
 - RULE-SET,Sony,默认代理
 - RULE-SET,Special,默认代理
-- RULE-SET,Teams,默认代理
 - RULE-SET,TeamViewer,默认代理
 - RULE-SET,tencent!cn_domain,默认代理
 - RULE-SET,Tencent-2,默认代理
 - RULE-SET,TEST / Domain,默认代理
-- RULE-SET,tg_site,默认代理
 - RULE-SET,trackerslist,默认代理
-- RULE-SET,UBI / Domain,默认代理
 - RULE-SET,UbisoftCN,默认代理
 - RULE-SET,xiaomi_domain,默认代理
 - RULE-SET,Xunlei,默认代理
@@ -1624,7 +1520,6 @@ rules:
 - DOMAIN,access.mypikpak.com,REJECT
 - DOMAIN,access.mypikpak.net,REJECT
 - DOMAIN,access.pikpak.me,REJECT
-- DOMAIN-SUFFIX,steamserver.net,DIRECT
 - DOMAIN-SUFFIX,download.nvidia.com,DIRECT
 - GEOSITE,openai,AI 服务
 - GEOIP,ai,AI 服务,no-resolve
@@ -1661,7 +1556,6 @@ rules:
 - GEOSITE,microsoft@cn,DIRECT
 - GEOSITE,microsoft,默认代理
 - DOMAIN-KEYWORD,hk.tv.global.mi.com,默认代理
-- DOMAIN-SUFFIX,mytvsuper.com,默认代理
 - DOMAIN-SUFFIX,mytv.com.hk,默认代理
 - GEOSITE,facebook,默认代理
 - GEOSITE,bahamut,默认代理
@@ -1673,9 +1567,6 @@ rules:
 - DOMAIN-SUFFIX,edclub-cdn.typingclub.com,默认代理
 - DOMAIN-SUFFIX,typingclub-cdn.typingclub.com,默认代理
 - DOMAIN-KEYWORD,typingclub,默认代理
-- DOMAIN-SUFFIX,hf.co,默认代理
-- DOMAIN-SUFFIX,hf.space,默认代理
-- DOMAIN-SUFFIX,huggingface.co,默认代理
 - GEOSITE,category-games@cn,DIRECT
 - GEOSITE,category-games,默认代理
 - GEOSITE,twitter,默认代理
@@ -1687,7 +1578,6 @@ rules:
 - GEOSITE,pixiv,默认代理
 - AND,((NOT,((OR,((PROCESS-NAME,mihomo),(PROCESS-NAME,ClashMeta))))),(DST-PORT,853)),默认代理
 - GEOSITE,category-httpdns-cn,默认代理
-- IP-CIDR,203.107.1.0/24,默认代理,no-resolve
 - GEOSITE,connectivity-check,默认代理
 - GEOSITE,googlefcm,默认代理
 - GEOSITE,private,DIRECT
@@ -1702,11 +1592,6 @@ rules:
 - DOMAIN-SUFFIX,icloud.com,DIRECT
 - DOMAIN-SUFFIX,cdn-apple.com,DIRECT
 - DOMAIN-SUFFIX,ls.apple.com,DIRECT
-- IP-CIDR,100.64.0.0/10,DIRECT,no-resolve
-- IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
-- IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
-- IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
-- IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
 - IP-CIDR,223.5.5.5/32,DIRECT,no-resolve
 - IP-CIDR,223.6.6.6/32,DIRECT,no-resolve
 - DST-PORT,123,DIRECT
@@ -1718,6 +1603,5 @@ rules:
 - PROCESS-NAME,tv.danmaku.bili,默认代理
 - DOMAIN-KEYWORD,ipv6tracker,默认代理
 - DOMAIN-KEYWORD,bittorrent,默认代理
-- DOMAIN-KEYWORD,torrent,默认代理
 - DOMAIN-KEYWORD,tracker,默认代理
 - MATCH,兜底

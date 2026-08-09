@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-08-01T16:18:19.815983+00:00",
+  "generated_at": "2026-08-09T08:15:06.922642+00:00",
   "summary": {
-    "total": 175,
-    "valid": 175,
+    "total": 162,
+    "valid": 162,
     "invalid": 0,
     "failed": 0
   },
   "duplicate_content_groups": [],
   "high_overlap_pairs": [],
   "entry_target_conflicts": {
-    "indexed_entry_count": 79825,
-    "conflict_entry_count": 5058,
+    "indexed_entry_count": 79892,
+    "conflict_entry_count": 5045,
     "affected_providers": [
       "Abema TV",
       "Amazon",
@@ -56,18 +56,14 @@
       "Microsoft-6",
       "Netflix-6",
       "Niconico",
-      "Nintendo",
       "Pandora",
       "PayPal",
-      "PlayStation",
       "PrimeVideo-3",
       "Reddit / Domain",
       "Sony",
       "Soundcloud",
       "Special",
       "Spotify-5",
-      "Steam-5",
-      "SteamCN-2",
       "TEST / Domain",
       "TVB_domain",
       "Tencent Video",
@@ -76,7 +72,6 @@
       "Tumblr",
       "Twitch",
       "Twitter-4",
-      "UBI / Domain",
       "UnBan",
       "ViuTV",
       "WeChat",
@@ -122,7 +117,7 @@
       "开发服务 <> 默认代理": 33,
       "流媒体 <> 社交通讯": 3,
       "流媒体 <> 默认代理": 1026,
-      "游戏服务 <> 默认代理": 468,
+      "游戏服务 <> 默认代理": 455,
       "社交通讯 <> 默认代理": 658,
       "金融服务 <> 默认代理": 312
     },
@@ -249,7 +244,7 @@
         }
       },
       {
-        "entry": "7h15_ru1353t_1s_m4d3_by_5ukk4w.skk.moe",
+        "entry": "7h15.ru1353t.1s.m4d3.by.5ukk4w.skk.moe",
         "targets": {
           "DIRECT": [
             "speedtest-3"
@@ -261,7 +256,7 @@
         }
       },
       {
-        "entry": "domain,7h15_ru1353t_1s_m4d3_by_5ukk4w.skk.moe",
+        "entry": "domain,7h15.ru1353t.1s.m4d3.by.5ukk4w.skk.moe",
         "targets": {
           "DIRECT": [
             "lan_ip"
@@ -398,40 +393,6 @@
         }
       },
       {
-        "entry": "domain,csgo.wmsj.cn",
-        "targets": {
-          "游戏服务": [
-            "SteamCN-2"
-          ],
-          "默认代理": [
-            "Special"
-          ]
-        }
-      },
-      {
-        "entry": "domain,dl.steam.clngaa.com",
-        "targets": {
-          "游戏服务": [
-            "SteamCN-2"
-          ],
-          "默认代理": [
-            "ChinaDownloadCDN",
-            "Special"
-          ]
-        }
-      },
-      {
-        "entry": "domain,dl.steam.ksyna.com",
-        "targets": {
-          "游戏服务": [
-            "SteamCN-2"
-          ],
-          "默认代理": [
-            "Special"
-          ]
-        }
-      },
-      {
         "entry": "domain,dldir1.qq.com",
         "targets": {
           "流媒体": [
@@ -439,17 +400,6 @@
           ],
           "社交通讯": [
             "WeChat"
-          ]
-        }
-      },
-      {
-        "entry": "domain,dota2.wmsj.cn",
-        "targets": {
-          "游戏服务": [
-            "SteamCN-2"
-          ],
-          "默认代理": [
-            "Special"
           ]
         }
       },
@@ -542,75 +492,6 @@
         }
       },
       {
-        "entry": "domain,st.dl.bscstorage.net",
-        "targets": {
-          "游戏服务": [
-            "SteamCN-2"
-          ],
-          "默认代理": [
-            "ChinaDownloadCDN",
-            "Special"
-          ]
-        }
-      },
-      {
-        "entry": "domain,st.dl.eccdnx.com",
-        "targets": {
-          "游戏服务": [
-            "SteamCN-2"
-          ],
-          "默认代理": [
-            "ChinaDownloadCDN",
-            "Special"
-          ]
-        }
-      },
-      {
-        "entry": "domain,st.dl.pinyuncloud.com",
-        "targets": {
-          "游戏服务": [
-            "SteamCN-2"
-          ],
-          "默认代理": [
-            "Special"
-          ]
-        }
-      },
-      {
-        "entry": "domain,steampipe.steamcontent.tnkjmec.com",
-        "targets": {
-          "游戏服务": [
-            "SteamCN-2"
-          ],
-          "默认代理": [
-            "ChinaDownloadCDN",
-            "Special"
-          ]
-        }
-      },
-      {
-        "entry": "domain,steampowered.com.8686c.com",
-        "targets": {
-          "游戏服务": [
-            "SteamCN-2"
-          ],
-          "默认代理": [
-            "Special"
-          ]
-        }
-      },
-      {
-        "entry": "domain,steamstatic.com.8686c.com",
-        "targets": {
-          "游戏服务": [
-            "SteamCN-2"
-          ],
-          "默认代理": [
-            "Special"
-          ]
-        }
-      },
-      {
         "entry": "domain,vsmarketplacebadge.apphb.com",
         "targets": {
           "Microsoft": [
@@ -633,22 +514,10 @@
         }
       },
       {
-        "entry": "domain,wmsjsteam.com",
-        "targets": {
-          "游戏服务": [
-            "SteamCN-2"
-          ],
-          "默认代理": [
-            "Special"
-          ]
-        }
-      },
-      {
         "entry": "domain,xz.pphimalayanrt.com",
         "targets": {
           "游戏服务": [
-            "Game",
-            "SteamCN-2"
+            "Game"
           ],
           "默认代理": [
             "ChinaDownloadCDN"
@@ -688,12 +557,140 @@
             "GlobalMedia"
           ]
         }
+      },
+      {
+        "entry": "domain-keyword,avoddashs",
+        "targets": {
+          "流媒体": [
+            "PrimeVideo-3",
+            "stream_non_ip"
+          ],
+          "默认代理": [
+            "Amazon",
+            "Global",
+            "GlobalMedia"
+          ]
+        }
+      },
+      {
+        "entry": "domain-keyword,bbcfmt",
+        "targets": {
+          "流媒体": [
+            "BBC iPlayer",
+            "stream_non_ip"
+          ],
+          "默认代理": [
+            "Global",
+            "GlobalMedia"
+          ]
+        }
+      },
+      {
+        "entry": "domain-keyword,blogspot",
+        "targets": {
+          "Google": [
+            "Google-2"
+          ],
+          "默认代理": [
+            "Global"
+          ]
+        }
+      },
+      {
+        "entry": "domain-keyword,discovery.uplynk.com",
+        "targets": {
+          "流媒体": [
+            "Discovery Plus"
+          ],
+          "默认代理": [
+            "GlobalMedia"
+          ]
+        }
+      },
+      {
+        "entry": "domain-keyword,dualstack.apiproxy-",
+        "targets": {
+          "流媒体": [
+            "Netflix-6",
+            "stream_non_ip"
+          ],
+          "默认代理": [
+            "GlobalMedia"
+          ]
+        }
+      },
+      {
+        "entry": "domain-keyword,dualstack.ichnaea-web-",
+        "targets": {
+          "流媒体": [
+            "Netflix-6",
+            "stream_non_ip"
+          ],
+          "默认代理": [
+            "GlobalMedia"
+          ]
+        }
+      },
+      {
+        "entry": "domain-keyword,epicgames",
+        "targets": {
+          "游戏服务": [
+            "Game"
+          ],
+          "默认代理": [
+            "Special"
+          ]
+        }
+      },
+      {
+        "entry": "domain-keyword,facebook",
+        "targets": {
+          "社交通讯": [
+            "Facebook-zj"
+          ],
+          "默认代理": [
+            "Global"
+          ]
+        }
+      },
+      {
+        "entry": "domain-keyword,fbcdn",
+        "targets": {
+          "社交通讯": [
+            "Facebook-zj"
+          ],
+          "默认代理": [
+            "Global"
+          ]
+        }
+      },
+      {
+        "entry": "domain-keyword,gmail",
+        "targets": {
+          "Google": [
+            "Google-2"
+          ],
+          "默认代理": [
+            "Global"
+          ]
+        }
+      },
+      {
+        "entry": "domain-keyword,google",
+        "targets": {
+          "Google": [
+            "Google-2"
+          ],
+          "默认代理": [
+            "Global"
+          ]
+        }
       }
     ]
   },
   "ordered_entry_conflicts": {
-    "indexed_entry_count": 79825,
-    "ordered_conflict_entry_count": 5058,
+    "indexed_entry_count": 79892,
+    "ordered_conflict_entry_count": 5045,
     "affected_providers": [
       "Abema TV",
       "Amazon",
@@ -746,7 +743,6 @@
       "Soundcloud",
       "Special",
       "Spotify-5",
-      "SteamCN-2",
       "TVB_domain",
       "Tencent Video",
       "Tencent-2",
@@ -754,7 +750,6 @@
       "Tumblr",
       "Twitch",
       "Twitter-4",
-      "UBI / Domain",
       "UnBan",
       "WeChat",
       "WeTV",
@@ -796,7 +791,7 @@
       "Microsoft -> 默认代理": 425,
       "开发服务 -> 默认代理": 33,
       "流媒体 -> 默认代理": 1022,
-      "游戏服务 -> 默认代理": 434,
+      "游戏服务 -> 默认代理": 421,
       "社交通讯 -> 流媒体": 3,
       "社交通讯 -> 默认代理": 658,
       "金融服务 -> 默认代理": 312,
@@ -804,7 +799,7 @@
       "默认代理 -> 流媒体": 1
     },
     "risk_directions": {
-      "earlier_target_overrides_later": 5097
+      "earlier_target_overrides_later": 5084
     },
     "transition_examples": {
       "AI 服务 -> 默认代理": [
@@ -813,12 +808,12 @@
           "winner": {
             "provider": "ai-4",
             "target": "AI 服务",
-            "rule_index": 66
+            "rule_index": 65
           },
           "shadowed": {
             "provider": "cdn_domainset",
             "target": "默认代理",
-            "rule_index": 172
+            "rule_index": 167
           }
         },
         {
@@ -826,12 +821,12 @@
           "winner": {
             "provider": "ai-4",
             "target": "AI 服务",
-            "rule_index": 66
+            "rule_index": 65
           },
           "shadowed": {
             "provider": "cdn_domainset",
             "target": "默认代理",
-            "rule_index": 172
+            "rule_index": 167
           }
         },
         {
@@ -839,12 +834,12 @@
           "winner": {
             "provider": "ai-4",
             "target": "AI 服务",
-            "rule_index": 66
+            "rule_index": 65
           },
           "shadowed": {
             "provider": "cdn_domainset",
             "target": "默认代理",
-            "rule_index": 172
+            "rule_index": 167
           }
         }
       ],
@@ -854,12 +849,12 @@
           "winner": {
             "provider": "Apple-4",
             "target": "Apple",
-            "rule_index": 72
+            "rule_index": 71
           },
           "shadowed": {
             "provider": "Google-2",
             "target": "Google",
-            "rule_index": 74
+            "rule_index": 73
           }
         }
       ],
@@ -869,12 +864,12 @@
           "winner": {
             "provider": "Apple-4",
             "target": "Apple",
-            "rule_index": 72
+            "rule_index": 71
           },
           "shadowed": {
             "provider": "Microsoft-6",
             "target": "Microsoft",
-            "rule_index": 76
+            "rule_index": 78
           }
         }
       ],
@@ -884,12 +879,12 @@
           "winner": {
             "provider": "Apple-4",
             "target": "Apple",
-            "rule_index": 72
+            "rule_index": 71
           },
           "shadowed": {
             "provider": "stream_non_ip",
             "target": "流媒体",
-            "rule_index": 151
+            "rule_index": 146
           }
         },
         {
@@ -897,12 +892,12 @@
           "winner": {
             "provider": "Apple-4",
             "target": "Apple",
-            "rule_index": 72
+            "rule_index": 71
           },
           "shadowed": {
             "provider": "Bahamut",
             "target": "流媒体",
-            "rule_index": 113
+            "rule_index": 109
           }
         },
         {
@@ -910,12 +905,12 @@
           "winner": {
             "provider": "Apple-4",
             "target": "Apple",
-            "rule_index": 72
+            "rule_index": 71
           },
           "shadowed": {
             "provider": "stream_non_ip",
             "target": "流媒体",
-            "rule_index": 151
+            "rule_index": 146
           }
         }
       ],
@@ -925,12 +920,12 @@
           "winner": {
             "provider": "Apple-4",
             "target": "Apple",
-            "rule_index": 72
+            "rule_index": 71
           },
           "shadowed": {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         },
         {
@@ -938,12 +933,12 @@
           "winner": {
             "provider": "Apple-4",
             "target": "Apple",
-            "rule_index": 72
+            "rule_index": 71
           },
           "shadowed": {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         },
         {
@@ -951,12 +946,12 @@
           "winner": {
             "provider": "Apple-4",
             "target": "Apple",
-            "rule_index": 72
+            "rule_index": 71
           },
           "shadowed": {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         }
       ],
@@ -971,7 +966,7 @@
           "shadowed": {
             "provider": "Google-2",
             "target": "Google",
-            "rule_index": 74
+            "rule_index": 73
           }
         },
         {
@@ -984,7 +979,7 @@
           "shadowed": {
             "provider": "Google-2",
             "target": "Google",
-            "rule_index": 74
+            "rule_index": 73
           }
         }
       ],
@@ -999,7 +994,7 @@
           "shadowed": {
             "provider": "IQIYI",
             "target": "流媒体",
-            "rule_index": 135
+            "rule_index": 130
           }
         },
         {
@@ -1012,7 +1007,7 @@
           "shadowed": {
             "provider": "Bilibili-5",
             "target": "流媒体",
-            "rule_index": 115
+            "rule_index": 111
           }
         },
         {
@@ -1025,7 +1020,7 @@
           "shadowed": {
             "provider": "Netflix-6",
             "target": "流媒体",
-            "rule_index": 142
+            "rule_index": 137
           }
         }
       ],
@@ -1040,7 +1035,7 @@
           "shadowed": {
             "provider": "cdn_domainset",
             "target": "默认代理",
-            "rule_index": 172
+            "rule_index": 167
           }
         },
         {
@@ -1053,7 +1048,7 @@
           "shadowed": {
             "provider": "cdn_domainset",
             "target": "默认代理",
-            "rule_index": 172
+            "rule_index": 167
           }
         },
         {
@@ -1066,7 +1061,7 @@
           "shadowed": {
             "provider": "download_domainset",
             "target": "默认代理",
-            "rule_index": 175
+            "rule_index": 170
           }
         }
       ],
@@ -1076,12 +1071,12 @@
           "winner": {
             "provider": "Google-2",
             "target": "Google",
-            "rule_index": 74
+            "rule_index": 73
           },
           "shadowed": {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         },
         {
@@ -1089,12 +1084,12 @@
           "winner": {
             "provider": "Google-2",
             "target": "Google",
-            "rule_index": 74
+            "rule_index": 73
           },
           "shadowed": {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         },
         {
@@ -1102,12 +1097,12 @@
           "winner": {
             "provider": "Google-2",
             "target": "Google",
-            "rule_index": 74
+            "rule_index": 73
           },
           "shadowed": {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         }
       ],
@@ -1117,12 +1112,12 @@
           "winner": {
             "provider": "Microsoft-6",
             "target": "Microsoft",
-            "rule_index": 76
+            "rule_index": 78
           },
           "shadowed": {
             "provider": "Game",
             "target": "游戏服务",
-            "rule_index": 104
+            "rule_index": 105
           }
         },
         {
@@ -1130,12 +1125,12 @@
           "winner": {
             "provider": "Microsoft-6",
             "target": "Microsoft",
-            "rule_index": 76
+            "rule_index": 78
           },
           "shadowed": {
             "provider": "Game",
             "target": "游戏服务",
-            "rule_index": 104
+            "rule_index": 105
           }
         },
         {
@@ -1143,12 +1138,12 @@
           "winner": {
             "provider": "Microsoft-6",
             "target": "Microsoft",
-            "rule_index": 76
+            "rule_index": 78
           },
           "shadowed": {
             "provider": "Game",
             "target": "游戏服务",
-            "rule_index": 104
+            "rule_index": 105
           }
         }
       ],
@@ -1158,12 +1153,12 @@
           "winner": {
             "provider": "Microsoft-6",
             "target": "Microsoft",
-            "rule_index": 76
+            "rule_index": 78
           },
           "shadowed": {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         },
         {
@@ -1171,12 +1166,12 @@
           "winner": {
             "provider": "Microsoft-6",
             "target": "Microsoft",
-            "rule_index": 76
+            "rule_index": 78
           },
           "shadowed": {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         },
         {
@@ -1184,12 +1179,12 @@
           "winner": {
             "provider": "Microsoft-6",
             "target": "Microsoft",
-            "rule_index": 76
+            "rule_index": 78
           },
           "shadowed": {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         }
       ],
@@ -1199,12 +1194,12 @@
           "winner": {
             "provider": "GitHub-5",
             "target": "开发服务",
-            "rule_index": 71
+            "rule_index": 70
           },
           "shadowed": {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         },
         {
@@ -1212,12 +1207,12 @@
           "winner": {
             "provider": "Docker",
             "target": "开发服务",
-            "rule_index": 69
+            "rule_index": 68
           },
           "shadowed": {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         },
         {
@@ -1225,12 +1220,12 @@
           "winner": {
             "provider": "GitHub-5",
             "target": "开发服务",
-            "rule_index": 71
+            "rule_index": 70
           },
           "shadowed": {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         }
       ],
@@ -1240,12 +1235,12 @@
           "winner": {
             "provider": "stream_non_ip",
             "target": "流媒体",
-            "rule_index": 151
+            "rule_index": 146
           },
           "shadowed": {
             "provider": "GlobalMedia",
             "target": "默认代理",
-            "rule_index": 182
+            "rule_index": 176
           }
         },
         {
@@ -1253,12 +1248,12 @@
           "winner": {
             "provider": "stream_non_ip",
             "target": "流媒体",
-            "rule_index": 151
+            "rule_index": 146
           },
           "shadowed": {
             "provider": "GlobalMedia",
             "target": "默认代理",
-            "rule_index": 182
+            "rule_index": 176
           }
         },
         {
@@ -1266,53 +1261,53 @@
           "winner": {
             "provider": "encoreTVB",
             "target": "流媒体",
-            "rule_index": 127
+            "rule_index": 122
           },
           "shadowed": {
             "provider": "GlobalMedia",
             "target": "默认代理",
-            "rule_index": 182
+            "rule_index": 176
           }
         }
       ],
       "游戏服务 -> 默认代理": [
         {
-          "entry": "domain,csgo.wmsj.cn",
+          "entry": "domain,eaasserts-a.akamaihd.net",
           "winner": {
-            "provider": "SteamCN-2",
+            "provider": "Game",
             "target": "游戏服务",
-            "rule_index": 110
+            "rule_index": 105
           },
           "shadowed": {
-            "provider": "Special",
+            "provider": "EA / Domain",
             "target": "默认代理",
-            "rule_index": 197
+            "rule_index": 171
           }
         },
         {
-          "entry": "domain,dl.steam.clngaa.com",
+          "entry": "domain,gog.salesmanago.com",
           "winner": {
-            "provider": "SteamCN-2",
+            "provider": "Game",
             "target": "游戏服务",
-            "rule_index": 110
+            "rule_index": 105
           },
           "shadowed": {
-            "provider": "ChinaDownloadCDN",
+            "provider": "GOG",
             "target": "默认代理",
-            "rule_index": 173
+            "rule_index": 177
           }
         },
         {
-          "entry": "domain,dl.steam.ksyna.com",
+          "entry": "domain,originasserts.akamaized.net",
           "winner": {
-            "provider": "SteamCN-2",
+            "provider": "Game",
             "target": "游戏服务",
-            "rule_index": 110
+            "rule_index": 105
           },
           "shadowed": {
-            "provider": "Special",
+            "provider": "EA / Domain",
             "target": "默认代理",
-            "rule_index": 197
+            "rule_index": 171
           }
         }
       ],
@@ -1322,12 +1317,12 @@
           "winner": {
             "provider": "WeChat",
             "target": "社交通讯",
-            "rule_index": 100
+            "rule_index": 101
           },
           "shadowed": {
             "provider": "Tencent Video",
             "target": "流媒体",
-            "rule_index": 152
+            "rule_index": 147
           }
         },
         {
@@ -1335,12 +1330,12 @@
           "winner": {
             "provider": "Line TV",
             "target": "社交通讯",
-            "rule_index": 88
+            "rule_index": 90
           },
           "shadowed": {
             "provider": "stream_non_ip",
             "target": "流媒体",
-            "rule_index": 151
+            "rule_index": 146
           }
         },
         {
@@ -1348,12 +1343,12 @@
           "winner": {
             "provider": "Line TV",
             "target": "社交通讯",
-            "rule_index": 88
+            "rule_index": 90
           },
           "shadowed": {
             "provider": "stream_non_ip",
             "target": "流媒体",
-            "rule_index": 151
+            "rule_index": 146
           }
         }
       ],
@@ -1363,12 +1358,12 @@
           "winner": {
             "provider": "Facebook-zj",
             "target": "社交通讯",
-            "rule_index": 84
+            "rule_index": 86
           },
           "shadowed": {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         },
         {
@@ -1376,12 +1371,12 @@
           "winner": {
             "provider": "Facebook-zj",
             "target": "社交通讯",
-            "rule_index": 84
+            "rule_index": 86
           },
           "shadowed": {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         },
         {
@@ -1389,12 +1384,12 @@
           "winner": {
             "provider": "Instagram",
             "target": "社交通讯",
-            "rule_index": 86
+            "rule_index": 88
           },
           "shadowed": {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         }
       ],
@@ -1404,12 +1399,12 @@
           "winner": {
             "provider": "PayPal",
             "target": "金融服务",
-            "rule_index": 79
+            "rule_index": 81
           },
           "shadowed": {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         },
         {
@@ -1417,12 +1412,12 @@
           "winner": {
             "provider": "Crypto-2",
             "target": "金融服务",
-            "rule_index": 78
+            "rule_index": 80
           },
           "shadowed": {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         },
         {
@@ -1430,18 +1425,18 @@
           "winner": {
             "provider": "Crypto-2",
             "target": "金融服务",
-            "rule_index": 78
+            "rule_index": 80
           },
           "shadowed": {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         }
       ],
       "默认代理 -> DIRECT": [
         {
-          "entry": "domain,7h15_ru1353t_1s_m4d3_by_5ukk4w.skk.moe",
+          "entry": "domain,7h15.ru1353t.1s.m4d3.by.5ukk4w.skk.moe",
           "winner": {
             "provider": "cdn_non_ip",
             "target": "默认代理",
@@ -1456,7 +1451,7 @@
       ],
       "默认代理 -> 流媒体": [
         {
-          "entry": "domain,7h15_ru1353t_1s_m4d3_by_5ukk4w.skk.moe",
+          "entry": "domain,7h15.ru1353t.1s.m4d3.by.5ukk4w.skk.moe",
           "winner": {
             "provider": "cdn_non_ip",
             "target": "默认代理",
@@ -1465,7 +1460,7 @@
           "shadowed": {
             "provider": "stream_non_ip",
             "target": "流媒体",
-            "rule_index": 151
+            "rule_index": 146
           }
         }
       ]
@@ -1476,13 +1471,13 @@
         "winner": {
           "provider": "ai-4",
           "target": "AI 服务",
-          "rule_index": 66
+          "rule_index": 65
         },
         "shadowed": [
           {
             "provider": "cdn_domainset",
             "target": "默认代理",
-            "rule_index": 172
+            "rule_index": 167
           }
         ]
       },
@@ -1491,13 +1486,13 @@
         "winner": {
           "provider": "ai-4",
           "target": "AI 服务",
-          "rule_index": 66
+          "rule_index": 65
         },
         "shadowed": [
           {
             "provider": "cdn_domainset",
             "target": "默认代理",
-            "rule_index": 172
+            "rule_index": 167
           }
         ]
       },
@@ -1506,13 +1501,13 @@
         "winner": {
           "provider": "ai-4",
           "target": "AI 服务",
-          "rule_index": 66
+          "rule_index": 65
         },
         "shadowed": [
           {
             "provider": "cdn_domainset",
             "target": "默认代理",
-            "rule_index": 172
+            "rule_index": 167
           }
         ]
       },
@@ -1521,13 +1516,13 @@
         "winner": {
           "provider": "ai-4",
           "target": "AI 服务",
-          "rule_index": 66
+          "rule_index": 65
         },
         "shadowed": [
           {
             "provider": "cdn_domainset",
             "target": "默认代理",
-            "rule_index": 172
+            "rule_index": 167
           }
         ]
       },
@@ -1542,7 +1537,7 @@
           {
             "provider": "cdn_domainset",
             "target": "默认代理",
-            "rule_index": 172
+            "rule_index": 167
           }
         ]
       },
@@ -1551,13 +1546,13 @@
         "winner": {
           "provider": "ai-4",
           "target": "AI 服务",
-          "rule_index": 66
+          "rule_index": 65
         },
         "shadowed": [
           {
             "provider": "cdn_domainset",
             "target": "默认代理",
-            "rule_index": 172
+            "rule_index": 167
           }
         ]
       },
@@ -1566,13 +1561,13 @@
         "winner": {
           "provider": "ai-4",
           "target": "AI 服务",
-          "rule_index": 66
+          "rule_index": 65
         },
         "shadowed": [
           {
             "provider": "cdn_domainset",
             "target": "默认代理",
-            "rule_index": 172
+            "rule_index": 167
           }
         ]
       },
@@ -1581,13 +1576,13 @@
         "winner": {
           "provider": "ai-4",
           "target": "AI 服务",
-          "rule_index": 66
+          "rule_index": 65
         },
         "shadowed": [
           {
             "provider": "cdn_domainset",
             "target": "默认代理",
-            "rule_index": 172
+            "rule_index": 167
           }
         ]
       },
@@ -1602,7 +1597,7 @@
           {
             "provider": "cdn_domainset",
             "target": "默认代理",
-            "rule_index": 172
+            "rule_index": 167
           }
         ]
       },
@@ -1617,7 +1612,7 @@
           {
             "provider": "download_domainset",
             "target": "默认代理",
-            "rule_index": 175
+            "rule_index": 170
           }
         ]
       },
@@ -1632,12 +1627,12 @@
           {
             "provider": "cdn_domainset",
             "target": "默认代理",
-            "rule_index": 172
+            "rule_index": 167
           }
         ]
       },
       {
-        "entry": "7h15_ru1353t_1s_m4d3_by_5ukk4w.skk.moe",
+        "entry": "7h15.ru1353t.1s.m4d3.by.5ukk4w.skk.moe",
         "winner": {
           "provider": "speedtest-3",
           "target": "DIRECT",
@@ -1647,12 +1642,12 @@
           {
             "provider": "cdn_domainset",
             "target": "默认代理",
-            "rule_index": 172
+            "rule_index": 167
           }
         ]
       },
       {
-        "entry": "domain,7h15_ru1353t_1s_m4d3_by_5ukk4w.skk.moe",
+        "entry": "domain,7h15.ru1353t.1s.m4d3.by.5ukk4w.skk.moe",
         "winner": {
           "provider": "cdn_non_ip",
           "target": "默认代理",
@@ -1667,7 +1662,7 @@
           {
             "provider": "stream_non_ip",
             "target": "流媒体",
-            "rule_index": 151
+            "rule_index": 146
           }
         ]
       },
@@ -1676,13 +1671,13 @@
         "winner": {
           "provider": "stream_non_ip",
           "target": "流媒体",
-          "rule_index": 151
+          "rule_index": 146
         },
         "shadowed": [
           {
             "provider": "GlobalMedia",
             "target": "默认代理",
-            "rule_index": 182
+            "rule_index": 176
           }
         ]
       },
@@ -1691,13 +1686,13 @@
         "winner": {
           "provider": "stream_non_ip",
           "target": "流媒体",
-          "rule_index": 151
+          "rule_index": 146
         },
         "shadowed": [
           {
             "provider": "GlobalMedia",
             "target": "默认代理",
-            "rule_index": 182
+            "rule_index": 176
           }
         ]
       },
@@ -1706,13 +1701,13 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 72
+          "rule_index": 71
         },
         "shadowed": [
           {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         ]
       },
@@ -1721,13 +1716,13 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 72
+          "rule_index": 71
         },
         "shadowed": [
           {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         ]
       },
@@ -1736,13 +1731,13 @@
         "winner": {
           "provider": "encoreTVB",
           "target": "流媒体",
-          "rule_index": 127
+          "rule_index": 122
         },
         "shadowed": [
           {
             "provider": "GlobalMedia",
             "target": "默认代理",
-            "rule_index": 182
+            "rule_index": 176
           }
         ]
       },
@@ -1751,13 +1746,13 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 72
+          "rule_index": 71
         },
         "shadowed": [
           {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         ]
       },
@@ -1766,13 +1761,13 @@
         "winner": {
           "provider": "stream_non_ip",
           "target": "流媒体",
-          "rule_index": 151
+          "rule_index": 146
         },
         "shadowed": [
           {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         ]
       },
@@ -1781,13 +1776,13 @@
         "winner": {
           "provider": "stream_non_ip",
           "target": "流媒体",
-          "rule_index": 151
+          "rule_index": 146
         },
         "shadowed": [
           {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         ]
       },
@@ -1796,13 +1791,13 @@
         "winner": {
           "provider": "stream_non_ip",
           "target": "流媒体",
-          "rule_index": 151
+          "rule_index": 146
         },
         "shadowed": [
           {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         ]
       },
@@ -1811,13 +1806,13 @@
         "winner": {
           "provider": "Spotify-5",
           "target": "流媒体",
-          "rule_index": 150
+          "rule_index": 145
         },
         "shadowed": [
           {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         ]
       },
@@ -1826,58 +1821,13 @@
         "winner": {
           "provider": "stream_non_ip",
           "target": "流媒体",
-          "rule_index": 151
+          "rule_index": 146
         },
         "shadowed": [
           {
             "provider": "GlobalMedia",
             "target": "默认代理",
-            "rule_index": 182
-          }
-        ]
-      },
-      {
-        "entry": "domain,csgo.wmsj.cn",
-        "winner": {
-          "provider": "SteamCN-2",
-          "target": "游戏服务",
-          "rule_index": 110
-        },
-        "shadowed": [
-          {
-            "provider": "Special",
-            "target": "默认代理",
-            "rule_index": 197
-          }
-        ]
-      },
-      {
-        "entry": "domain,dl.steam.clngaa.com",
-        "winner": {
-          "provider": "SteamCN-2",
-          "target": "游戏服务",
-          "rule_index": 110
-        },
-        "shadowed": [
-          {
-            "provider": "ChinaDownloadCDN",
-            "target": "默认代理",
-            "rule_index": 173
-          }
-        ]
-      },
-      {
-        "entry": "domain,dl.steam.ksyna.com",
-        "winner": {
-          "provider": "SteamCN-2",
-          "target": "游戏服务",
-          "rule_index": 110
-        },
-        "shadowed": [
-          {
-            "provider": "Special",
-            "target": "默认代理",
-            "rule_index": 197
+            "rule_index": 176
           }
         ]
       },
@@ -1886,28 +1836,13 @@
         "winner": {
           "provider": "WeChat",
           "target": "社交通讯",
-          "rule_index": 100
+          "rule_index": 101
         },
         "shadowed": [
           {
             "provider": "Tencent Video",
             "target": "流媒体",
-            "rule_index": 152
-          }
-        ]
-      },
-      {
-        "entry": "domain,dota2.wmsj.cn",
-        "winner": {
-          "provider": "SteamCN-2",
-          "target": "游戏服务",
-          "rule_index": 110
-        },
-        "shadowed": [
-          {
-            "provider": "Special",
-            "target": "默认代理",
-            "rule_index": 197
+            "rule_index": 147
           }
         ]
       },
@@ -1916,13 +1851,13 @@
         "winner": {
           "provider": "Netflix-6",
           "target": "流媒体",
-          "rule_index": 142
+          "rule_index": 137
         },
         "shadowed": [
           {
             "provider": "GlobalMedia",
             "target": "默认代理",
-            "rule_index": 182
+            "rule_index": 176
           }
         ]
       },
@@ -1931,13 +1866,13 @@
         "winner": {
           "provider": "Game",
           "target": "游戏服务",
-          "rule_index": 104
+          "rule_index": 105
         },
         "shadowed": [
           {
             "provider": "EA / Domain",
             "target": "默认代理",
-            "rule_index": 176
+            "rule_index": 171
           }
         ]
       },
@@ -1946,13 +1881,13 @@
         "winner": {
           "provider": "Game",
           "target": "游戏服务",
-          "rule_index": 104
+          "rule_index": 105
         },
         "shadowed": [
           {
             "provider": "GOG",
             "target": "默认代理",
-            "rule_index": 183
+            "rule_index": 177
           }
         ]
       },
@@ -1961,13 +1896,13 @@
         "winner": {
           "provider": "Netflix-6",
           "target": "流媒体",
-          "rule_index": 142
+          "rule_index": 137
         },
         "shadowed": [
           {
             "provider": "GlobalMedia",
             "target": "默认代理",
-            "rule_index": 182
+            "rule_index": 176
           }
         ]
       },
@@ -1976,13 +1911,13 @@
         "winner": {
           "provider": "stream_non_ip",
           "target": "流媒体",
-          "rule_index": 151
+          "rule_index": 146
         },
         "shadowed": [
           {
             "provider": "GlobalMedia",
             "target": "默认代理",
-            "rule_index": 182
+            "rule_index": 176
           }
         ]
       },
@@ -1991,13 +1926,13 @@
         "winner": {
           "provider": "stream_non_ip",
           "target": "流媒体",
-          "rule_index": 151
+          "rule_index": 146
         },
         "shadowed": [
           {
             "provider": "GlobalMedia",
             "target": "默认代理",
-            "rule_index": 182
+            "rule_index": 176
           }
         ]
       },
@@ -2006,13 +1941,13 @@
         "winner": {
           "provider": "stream_non_ip",
           "target": "流媒体",
-          "rule_index": 151
+          "rule_index": 146
         },
         "shadowed": [
           {
             "provider": "GlobalMedia",
             "target": "默认代理",
-            "rule_index": 182
+            "rule_index": 176
           }
         ]
       },
@@ -2021,103 +1956,13 @@
         "winner": {
           "provider": "Game",
           "target": "游戏服务",
-          "rule_index": 104
+          "rule_index": 105
         },
         "shadowed": [
           {
             "provider": "EA / Domain",
             "target": "默认代理",
-            "rule_index": 176
-          }
-        ]
-      },
-      {
-        "entry": "domain,st.dl.bscstorage.net",
-        "winner": {
-          "provider": "SteamCN-2",
-          "target": "游戏服务",
-          "rule_index": 110
-        },
-        "shadowed": [
-          {
-            "provider": "ChinaDownloadCDN",
-            "target": "默认代理",
-            "rule_index": 173
-          }
-        ]
-      },
-      {
-        "entry": "domain,st.dl.eccdnx.com",
-        "winner": {
-          "provider": "SteamCN-2",
-          "target": "游戏服务",
-          "rule_index": 110
-        },
-        "shadowed": [
-          {
-            "provider": "ChinaDownloadCDN",
-            "target": "默认代理",
-            "rule_index": 173
-          }
-        ]
-      },
-      {
-        "entry": "domain,st.dl.pinyuncloud.com",
-        "winner": {
-          "provider": "SteamCN-2",
-          "target": "游戏服务",
-          "rule_index": 110
-        },
-        "shadowed": [
-          {
-            "provider": "Special",
-            "target": "默认代理",
-            "rule_index": 197
-          }
-        ]
-      },
-      {
-        "entry": "domain,steampipe.steamcontent.tnkjmec.com",
-        "winner": {
-          "provider": "SteamCN-2",
-          "target": "游戏服务",
-          "rule_index": 110
-        },
-        "shadowed": [
-          {
-            "provider": "ChinaDownloadCDN",
-            "target": "默认代理",
-            "rule_index": 173
-          }
-        ]
-      },
-      {
-        "entry": "domain,steampowered.com.8686c.com",
-        "winner": {
-          "provider": "SteamCN-2",
-          "target": "游戏服务",
-          "rule_index": 110
-        },
-        "shadowed": [
-          {
-            "provider": "Special",
-            "target": "默认代理",
-            "rule_index": 197
-          }
-        ]
-      },
-      {
-        "entry": "domain,steamstatic.com.8686c.com",
-        "winner": {
-          "provider": "SteamCN-2",
-          "target": "游戏服务",
-          "rule_index": 110
-        },
-        "shadowed": [
-          {
-            "provider": "Special",
-            "target": "默认代理",
-            "rule_index": 197
+            "rule_index": 171
           }
         ]
       },
@@ -2126,13 +1971,13 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 76
+          "rule_index": 78
         },
         "shadowed": [
           {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         ]
       },
@@ -2141,28 +1986,13 @@
         "winner": {
           "provider": "WeTV",
           "target": "流媒体",
-          "rule_index": 157
+          "rule_index": 152
         },
         "shadowed": [
           {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
-          }
-        ]
-      },
-      {
-        "entry": "domain,wmsjsteam.com",
-        "winner": {
-          "provider": "SteamCN-2",
-          "target": "游戏服务",
-          "rule_index": 110
-        },
-        "shadowed": [
-          {
-            "provider": "Special",
-            "target": "默认代理",
-            "rule_index": 197
+            "rule_index": 175
           }
         ]
       },
@@ -2171,13 +2001,13 @@
         "winner": {
           "provider": "Game",
           "target": "游戏服务",
-          "rule_index": 104
+          "rule_index": 105
         },
         "shadowed": [
           {
             "provider": "ChinaDownloadCDN",
             "target": "默认代理",
-            "rule_index": 173
+            "rule_index": 168
           }
         ]
       },
@@ -2186,13 +2016,13 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 76
+          "rule_index": 78
         },
         "shadowed": [
           {
             "provider": "Global",
             "target": "默认代理",
-            "rule_index": 181
+            "rule_index": 175
           }
         ]
       },
@@ -2201,13 +2031,13 @@
         "winner": {
           "provider": "Abema TV",
           "target": "流媒体",
-          "rule_index": 112
+          "rule_index": 108
         },
         "shadowed": [
           {
             "provider": "GlobalMedia",
             "target": "默认代理",
-            "rule_index": 182
+            "rule_index": 176
           }
         ]
       },
@@ -2216,13 +2046,178 @@
         "winner": {
           "provider": "Netflix-6",
           "target": "流媒体",
-          "rule_index": 142
+          "rule_index": 137
         },
         "shadowed": [
           {
             "provider": "GlobalMedia",
             "target": "默认代理",
-            "rule_index": 182
+            "rule_index": 176
+          }
+        ]
+      },
+      {
+        "entry": "domain-keyword,avoddashs",
+        "winner": {
+          "provider": "PrimeVideo-3",
+          "target": "流媒体",
+          "rule_index": 143
+        },
+        "shadowed": [
+          {
+            "provider": "Amazon",
+            "target": "默认代理",
+            "rule_index": 161
+          }
+        ]
+      },
+      {
+        "entry": "domain-keyword,bbcfmt",
+        "winner": {
+          "provider": "BBC iPlayer",
+          "target": "流媒体",
+          "rule_index": 110
+        },
+        "shadowed": [
+          {
+            "provider": "Global",
+            "target": "默认代理",
+            "rule_index": 175
+          }
+        ]
+      },
+      {
+        "entry": "domain-keyword,blogspot",
+        "winner": {
+          "provider": "Google-2",
+          "target": "Google",
+          "rule_index": 73
+        },
+        "shadowed": [
+          {
+            "provider": "Global",
+            "target": "默认代理",
+            "rule_index": 175
+          }
+        ]
+      },
+      {
+        "entry": "domain-keyword,discovery.uplynk.com",
+        "winner": {
+          "provider": "Discovery Plus",
+          "target": "流媒体",
+          "rule_index": 116
+        },
+        "shadowed": [
+          {
+            "provider": "GlobalMedia",
+            "target": "默认代理",
+            "rule_index": 176
+          }
+        ]
+      },
+      {
+        "entry": "domain-keyword,dualstack.apiproxy-",
+        "winner": {
+          "provider": "Netflix-6",
+          "target": "流媒体",
+          "rule_index": 137
+        },
+        "shadowed": [
+          {
+            "provider": "GlobalMedia",
+            "target": "默认代理",
+            "rule_index": 176
+          }
+        ]
+      },
+      {
+        "entry": "domain-keyword,dualstack.ichnaea-web-",
+        "winner": {
+          "provider": "Netflix-6",
+          "target": "流媒体",
+          "rule_index": 137
+        },
+        "shadowed": [
+          {
+            "provider": "GlobalMedia",
+            "target": "默认代理",
+            "rule_index": 176
+          }
+        ]
+      },
+      {
+        "entry": "domain-keyword,epicgames",
+        "winner": {
+          "provider": "Game",
+          "target": "游戏服务",
+          "rule_index": 105
+        },
+        "shadowed": [
+          {
+            "provider": "Special",
+            "target": "默认代理",
+            "rule_index": 189
+          }
+        ]
+      },
+      {
+        "entry": "domain-keyword,facebook",
+        "winner": {
+          "provider": "Facebook-zj",
+          "target": "社交通讯",
+          "rule_index": 86
+        },
+        "shadowed": [
+          {
+            "provider": "Global",
+            "target": "默认代理",
+            "rule_index": 175
+          }
+        ]
+      },
+      {
+        "entry": "domain-keyword,fbcdn",
+        "winner": {
+          "provider": "Facebook-zj",
+          "target": "社交通讯",
+          "rule_index": 86
+        },
+        "shadowed": [
+          {
+            "provider": "Global",
+            "target": "默认代理",
+            "rule_index": 175
+          }
+        ]
+      },
+      {
+        "entry": "domain-keyword,gmail",
+        "winner": {
+          "provider": "Google-2",
+          "target": "Google",
+          "rule_index": 73
+        },
+        "shadowed": [
+          {
+            "provider": "Global",
+            "target": "默认代理",
+            "rule_index": 175
+          }
+        ]
+      },
+      {
+        "entry": "domain-keyword,google",
+        "winner": {
+          "provider": "Google-2",
+          "target": "Google",
+          "rule_index": 73
+        },
+        "shadowed": [
+          {
+            "provider": "Global",
+            "target": "默认代理",
+            "rule_index": 175
           }
         ]
       }
@@ -2239,7 +2234,7 @@
       ],
       "routes": [
         {
-          "index": 162,
+          "index": 157,
           "target": "默认代理"
         }
       ],
@@ -2257,7 +2252,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/115/115.yaml",
-      "elapsed_ms": 2348
+      "elapsed_ms": 2063
     },
     {
       "name": "1Password",
@@ -2269,7 +2264,7 @@
       ],
       "routes": [
         {
-          "index": 163,
+          "index": 158,
           "target": "默认代理"
         }
       ],
@@ -2287,7 +2282,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://kelee.one/Tool/Clash/Rule/1PasswordUS.yaml",
-      "elapsed_ms": 1428
+      "elapsed_ms": 1794
     },
     {
       "name": "AI-CN",
@@ -2299,7 +2294,7 @@
       ],
       "routes": [
         {
-          "index": 68,
+          "index": 67,
           "target": "AI 服务"
         }
       ],
@@ -2317,7 +2312,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-ai-cn.mrs",
-      "elapsed_ms": 2348
+      "elapsed_ms": 2202
     },
     {
       "name": "Abema TV",
@@ -2329,7 +2324,7 @@
       ],
       "routes": [
         {
-          "index": 112,
+          "index": 108,
           "target": "流媒体"
         }
       ],
@@ -2347,7 +2342,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/AbemaTV/AbemaTV.yaml",
-      "elapsed_ms": 2335
+      "elapsed_ms": 2301
     },
     {
       "name": "Accelerator",
@@ -2359,7 +2354,7 @@
       ],
       "routes": [
         {
-          "index": 164,
+          "index": 159,
           "target": "默认代理"
         }
       ],
@@ -2377,7 +2372,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-game-accelerator-cn.mrs",
-      "elapsed_ms": 6367
+      "elapsed_ms": 2300
     },
     {
       "name": "AdvertisingIP",
@@ -2407,7 +2402,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/666OS/rules/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/ip/Advertising.mrs",
-      "elapsed_ms": 2347
+      "elapsed_ms": 3866
     },
     {
       "name": "Amazon",
@@ -2419,7 +2414,7 @@
       ],
       "routes": [
         {
-          "index": 166,
+          "index": 161,
           "target": "默认代理"
         }
       ],
@@ -2437,7 +2432,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Amazon/Amazon.yaml",
-      "elapsed_ms": 2337
+      "elapsed_ms": 2012
     },
     {
       "name": "Amazon_ip",
@@ -2449,7 +2444,7 @@
       ],
       "routes": [
         {
-          "index": 167,
+          "index": 162,
           "target": "默认代理"
         }
       ],
@@ -2467,7 +2462,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/IP/amazon-ip.mrs",
-      "elapsed_ms": 2348
+      "elapsed_ms": 2009
     },
     {
       "name": "AppStore",
@@ -2479,7 +2474,7 @@
       ],
       "routes": [
         {
-          "index": 168,
+          "index": 163,
           "target": "默认代理"
         }
       ],
@@ -2497,7 +2492,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/AppStore/AppStore.yaml",
-      "elapsed_ms": 2874
+      "elapsed_ms": 2113
     },
     {
       "name": "Apple-4",
@@ -2509,7 +2504,7 @@
       ],
       "routes": [
         {
-          "index": 72,
+          "index": 71,
           "target": "Apple"
         }
       ],
@@ -2527,7 +2522,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Apple/Apple_Classical_No_Resolve.yaml",
-      "elapsed_ms": 2250
+      "elapsed_ms": 199
     },
     {
       "name": "Apple-IP",
@@ -2539,7 +2534,7 @@
       ],
       "routes": [
         {
-          "index": 73,
+          "index": 72,
           "target": "Apple"
         }
       ],
@@ -2557,7 +2552,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo-lite/geoip/apple.mrs",
-      "elapsed_ms": 5053
+      "elapsed_ms": 391
     },
     {
       "name": "BBC iPlayer",
@@ -2569,7 +2564,7 @@
       ],
       "routes": [
         {
-          "index": 114,
+          "index": 110,
           "target": "流媒体"
         }
       ],
@@ -2587,7 +2582,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/BBC/BBC.yaml",
-      "elapsed_ms": 2665
+      "elapsed_ms": 233
     },
     {
       "name": "Bahamut",
@@ -2599,7 +2594,7 @@
       ],
       "routes": [
         {
-          "index": 113,
+          "index": 109,
           "target": "流媒体"
         }
       ],
@@ -2617,7 +2612,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Bahamut/Bahamut.yaml",
-      "elapsed_ms": 2345
+      "elapsed_ms": 253
     },
     {
       "name": "Bilibili-5",
@@ -2629,7 +2624,7 @@
       ],
       "routes": [
         {
-          "index": 115,
+          "index": 111,
           "target": "流媒体"
         }
       ],
@@ -2647,7 +2642,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/BiliBili/BiliBili_No_Resolve.yaml",
-      "elapsed_ms": 2350
+      "elapsed_ms": 112
     },
     {
       "name": "Bing",
@@ -2659,7 +2654,7 @@
       ],
       "routes": [
         {
-          "index": 169,
+          "index": 164,
           "target": "默认代理"
         }
       ],
@@ -2677,7 +2672,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Bing/Bing.yaml",
-      "elapsed_ms": 2336
+      "elapsed_ms": 123
     },
     {
       "name": "Blizzard / Domain",
@@ -2689,7 +2684,7 @@
       ],
       "routes": [
         {
-          "index": 170,
+          "index": 165,
           "target": "默认代理"
         }
       ],
@@ -2707,7 +2702,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Blizzard/Blizzard.list",
-      "elapsed_ms": 2348
+      "elapsed_ms": 121
     },
     {
       "name": "Category-DoH",
@@ -2737,7 +2732,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-doh.mrs",
-      "elapsed_ms": 2405
+      "elapsed_ms": 296
     },
     {
       "name": "ChinaAPP",
@@ -2767,7 +2762,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://fastly.jsdelivr.net/gh/0xWans/my-backup@fdcc41d26806332a9eba870c230b1669610006ba/clash/rules/Process/ChinaAPP.yaml",
-      "elapsed_ms": 722
+      "elapsed_ms": 2420
     },
     {
       "name": "ChinaDownloadCDN",
@@ -2779,7 +2774,7 @@
       ],
       "routes": [
         {
-          "index": 173,
+          "index": 168,
           "target": "默认代理"
         }
       ],
@@ -2797,7 +2792,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://kelee.one/Tool/Clash/Rule/ChinaDownloadCDN.yaml",
-      "elapsed_ms": 1089
+      "elapsed_ms": 81
     },
     {
       "name": "ChinaIPs",
@@ -2827,7 +2822,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/ChinaIPs/ChinaIPs_Classical_No_Resolve.yaml",
-      "elapsed_ms": 5057
+      "elapsed_ms": 324
     },
     {
       "name": "Claude",
@@ -2839,7 +2834,7 @@
       ],
       "routes": [
         {
-          "index": 67,
+          "index": 66,
           "target": "AI 服务"
         }
       ],
@@ -2857,7 +2852,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Claude/Claude_No_Resolve.yaml",
-      "elapsed_ms": 2722
+      "elapsed_ms": 102
     },
     {
       "name": "Cloudflare-2",
@@ -2887,7 +2882,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Cloudflare/Cloudflare_No_Resolve.yaml",
-      "elapsed_ms": 3392
+      "elapsed_ms": 106
     },
     {
       "name": "Communication",
@@ -2899,7 +2894,7 @@
       ],
       "routes": [
         {
-          "index": 81,
+          "index": 83,
           "target": "社交通讯"
         }
       ],
@@ -2917,7 +2912,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-communication.mrs",
-      "elapsed_ms": 3256
+      "elapsed_ms": 1171
     },
     {
       "name": "Crunchyroll / Domain",
@@ -2929,7 +2924,7 @@
       ],
       "routes": [
         {
-          "index": 119,
+          "index": 114,
           "target": "流媒体"
         }
       ],
@@ -2947,7 +2942,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/liandu2024/clash/3fa176d30b02f2f105ee3de9a5126bdd47b5e0f5/list/Crunchyroll.list",
-      "elapsed_ms": 2347
+      "elapsed_ms": 102
     },
     {
       "name": "Crypto-2",
@@ -2959,7 +2954,7 @@
       ],
       "routes": [
         {
-          "index": 78,
+          "index": 80,
           "target": "金融服务"
         }
       ],
@@ -2977,7 +2972,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Crypto/Crypto.yaml",
-      "elapsed_ms": 2618
+      "elapsed_ms": 157
     },
     {
       "name": "DAZN",
@@ -2989,7 +2984,7 @@
       ],
       "routes": [
         {
-          "index": 120,
+          "index": 115,
           "target": "流媒体"
         }
       ],
@@ -3007,7 +3002,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/DAZN/DAZN.yaml",
-      "elapsed_ms": 1253
+      "elapsed_ms": 147
     },
     {
       "name": "DMM",
@@ -3019,7 +3014,7 @@
       ],
       "routes": [
         {
-          "index": 123,
+          "index": 118,
           "target": "流媒体"
         }
       ],
@@ -3037,7 +3032,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/DMM/DMM.yaml",
-      "elapsed_ms": 1231
+      "elapsed_ms": 1048
     },
     {
       "name": "DNS-IP",
@@ -3067,7 +3062,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://gcore.jsdelivr.net/gh/Aethersailor/Custom_OpenClash_Rules@ed3c535fd747589fdb9e1a60f4df77122a839d70/rule/Encrypted_DNS_IP.mrs",
-      "elapsed_ms": 996
+      "elapsed_ms": 2337
     },
     {
       "name": "DNSLeak",
@@ -3097,7 +3092,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://fastly.jsdelivr.net/gh/0xWans/my-backup@fdcc41d26806332a9eba870c230b1669610006ba/clash/rules/DNSLeak.mrs",
-      "elapsed_ms": 826
+      "elapsed_ms": 1951
     },
     {
       "name": "Discord-2",
@@ -3109,7 +3104,7 @@
       ],
       "routes": [
         {
-          "index": 82,
+          "index": 84,
           "target": "社交通讯"
         }
       ],
@@ -3127,7 +3122,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Discord/Discord_No_Resolve.yaml",
-      "elapsed_ms": 335
+      "elapsed_ms": 205
     },
     {
       "name": "Discovery Plus",
@@ -3139,7 +3134,7 @@
       ],
       "routes": [
         {
-          "index": 121,
+          "index": 116,
           "target": "流媒体"
         }
       ],
@@ -3157,7 +3152,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/DiscoveryPlus/DiscoveryPlus.yaml",
-      "elapsed_ms": 415
+      "elapsed_ms": 681
     },
     {
       "name": "Disney-5",
@@ -3169,7 +3164,7 @@
       ],
       "routes": [
         {
-          "index": 122,
+          "index": 117,
           "target": "流媒体"
         }
       ],
@@ -3187,7 +3182,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Disney/Disney_No_Resolve.yaml",
-      "elapsed_ms": 339
+      "elapsed_ms": 191
     },
     {
       "name": "Docker",
@@ -3199,7 +3194,7 @@
       ],
       "routes": [
         {
-          "index": 69,
+          "index": 68,
           "target": "开发服务"
         }
       ],
@@ -3217,7 +3212,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Docker/Docker.yaml",
-      "elapsed_ms": 333
+      "elapsed_ms": 187
     },
     {
       "name": "EA / Domain",
@@ -3229,7 +3224,7 @@
       ],
       "routes": [
         {
-          "index": 176,
+          "index": 171,
           "target": "默认代理"
         }
       ],
@@ -3247,7 +3242,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/EA/EA.list",
-      "elapsed_ms": 828
+      "elapsed_ms": 420
     },
     {
       "name": "Ecommerce",
@@ -3259,7 +3254,7 @@
       ],
       "routes": [
         {
-          "index": 178,
+          "index": 173,
           "target": "默认代理"
         }
       ],
@@ -3277,7 +3272,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-ecommerce.mrs",
-      "elapsed_ms": 4144
+      "elapsed_ms": 2674
     },
     {
       "name": "Emby-5",
@@ -3289,7 +3284,7 @@
       ],
       "routes": [
         {
-          "index": 125,
+          "index": 120,
           "target": "流媒体"
         }
       ],
@@ -3307,7 +3302,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Emby/Emby_No_Resolve.yaml",
-      "elapsed_ms": 488
+      "elapsed_ms": 118
     },
     {
       "name": "EmbyIP",
@@ -3319,7 +3314,7 @@
       ],
       "routes": [
         {
-          "index": 126,
+          "index": 121,
           "target": "流媒体"
         }
       ],
@@ -3337,7 +3332,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/666OS/rules/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/ip/Emby.mrs",
-      "elapsed_ms": 2693
+      "elapsed_ms": 559
     },
     {
       "name": "EpicCN",
@@ -3349,7 +3344,7 @@
       ],
       "routes": [
         {
-          "index": 103,
+          "index": 104,
           "target": "游戏服务"
         }
       ],
@@ -3367,7 +3362,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/classical/epicgames%40cn.yaml",
-      "elapsed_ms": 1198
+      "elapsed_ms": 428
     },
     {
       "name": "F1 TV",
@@ -3379,7 +3374,7 @@
       ],
       "routes": [
         {
-          "index": 128,
+          "index": 123,
           "target": "流媒体"
         }
       ],
@@ -3397,7 +3392,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/F1%20TV.yaml",
-      "elapsed_ms": 601
+      "elapsed_ms": 4295
     },
     {
       "name": "Facebook-IP",
@@ -3409,7 +3404,7 @@
       ],
       "routes": [
         {
-          "index": 83,
+          "index": 85,
           "target": "社交通讯"
         }
       ],
@@ -3427,7 +3422,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/facebook.mrs",
-      "elapsed_ms": 4124
+      "elapsed_ms": 277
     },
     {
       "name": "Facebook-zj",
@@ -3439,7 +3434,7 @@
       ],
       "routes": [
         {
-          "index": 84,
+          "index": 86,
           "target": "社交通讯"
         }
       ],
@@ -3457,7 +3452,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Facebook/Facebook_No_Resolve.yaml",
-      "elapsed_ms": 555
+      "elapsed_ms": 114
     },
     {
       "name": "Fox+",
@@ -3469,7 +3464,7 @@
       ],
       "routes": [
         {
-          "index": 129,
+          "index": 124,
           "target": "流媒体"
         }
       ],
@@ -3487,7 +3482,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Fox/Fox.yaml",
-      "elapsed_ms": 3973
+      "elapsed_ms": 224
     },
     {
       "name": "GOG",
@@ -3499,7 +3494,7 @@
       ],
       "routes": [
         {
-          "index": 183,
+          "index": 177,
           "target": "默认代理"
         }
       ],
@@ -3517,7 +3512,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Gog/Gog.yaml",
-      "elapsed_ms": 3712
+      "elapsed_ms": 200
     },
     {
       "name": "GOGCN",
@@ -3529,7 +3524,7 @@
       ],
       "routes": [
         {
-          "index": 184,
+          "index": 178,
           "target": "默认代理"
         }
       ],
@@ -3547,7 +3542,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/gog%40cn.mrs",
-      "elapsed_ms": 3296
+      "elapsed_ms": 1915
     },
     {
       "name": "Game",
@@ -3559,7 +3554,7 @@
       ],
       "routes": [
         {
-          "index": 104,
+          "index": 105,
           "target": "游戏服务"
         }
       ],
@@ -3577,7 +3572,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Game/Game.yaml",
-      "elapsed_ms": 502
+      "elapsed_ms": 1827
     },
     {
       "name": "GitHub-5",
@@ -3589,7 +3584,7 @@
       ],
       "routes": [
         {
-          "index": 71,
+          "index": 70,
           "target": "开发服务"
         }
       ],
@@ -3607,7 +3602,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/GitHub/GitHub_No_Resolve.yaml",
-      "elapsed_ms": 482
+      "elapsed_ms": 106
     },
     {
       "name": "Global",
@@ -3619,7 +3614,7 @@
       ],
       "routes": [
         {
-          "index": 181,
+          "index": 175,
           "target": "默认代理"
         }
       ],
@@ -3637,7 +3632,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Global/Global_Classical_No_Resolve.yaml",
-      "elapsed_ms": 987
+      "elapsed_ms": 340
     },
     {
       "name": "GlobalMedia",
@@ -3649,7 +3644,7 @@
       ],
       "routes": [
         {
-          "index": 182,
+          "index": 176,
           "target": "默认代理"
         }
       ],
@@ -3667,7 +3662,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/GlobalMedia/GlobalMedia_Classical_No_Resolve.yaml",
-      "elapsed_ms": 644
+      "elapsed_ms": 130
     },
     {
       "name": "Google-2",
@@ -3679,7 +3674,7 @@
       ],
       "routes": [
         {
-          "index": 74,
+          "index": 73,
           "target": "Google"
         }
       ],
@@ -3697,7 +3692,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Google/Google.yaml",
-      "elapsed_ms": 509
+      "elapsed_ms": 187
     },
     {
       "name": "Google_IP-4",
@@ -3709,7 +3704,7 @@
       ],
       "routes": [
         {
-          "index": 75,
+          "index": 74,
           "target": "Google"
         }
       ],
@@ -3727,7 +3722,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@42c2a789e19516f0a8bb2bca8eb1541505599940/geo-lite/geoip/google.mrs",
-      "elapsed_ms": 705
+      "elapsed_ms": 2483
     },
     {
       "name": "HBO-3",
@@ -3739,7 +3734,7 @@
       ],
       "routes": [
         {
-          "index": 130,
+          "index": 125,
           "target": "流媒体"
         }
       ],
@@ -3757,7 +3752,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/HBO/HBO_No_Resolve.yaml",
-      "elapsed_ms": 2090
+      "elapsed_ms": 1469
     },
     {
       "name": "HTTPDNS",
@@ -3787,7 +3782,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/HTTPDNS.yaml",
-      "elapsed_ms": 285
+      "elapsed_ms": 1627
     },
     {
       "name": "Hulu",
@@ -3799,7 +3794,7 @@
       ],
       "routes": [
         {
-          "index": 132,
+          "index": 127,
           "target": "流媒体"
         }
       ],
@@ -3817,7 +3812,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Hulu/Hulu.yaml",
-      "elapsed_ms": 2803
+      "elapsed_ms": 115
     },
     {
       "name": "Hulu Japan",
@@ -3829,7 +3824,7 @@
       ],
       "routes": [
         {
-          "index": 131,
+          "index": 126,
           "target": "流媒体"
         }
       ],
@@ -3847,7 +3842,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/HuluJP/HuluJP.yaml",
-      "elapsed_ms": 1859
+      "elapsed_ms": 372
     },
     {
       "name": "IQ",
@@ -3859,7 +3854,7 @@
       ],
       "routes": [
         {
-          "index": 134,
+          "index": 129,
           "target": "流媒体"
         }
       ],
@@ -3877,7 +3872,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/iQIYIIntl/iQIYIIntl.yaml",
-      "elapsed_ms": 1860
+      "elapsed_ms": 118
     },
     {
       "name": "IQIYI",
@@ -3889,7 +3884,7 @@
       ],
       "routes": [
         {
-          "index": 135,
+          "index": 130,
           "target": "流媒体"
         }
       ],
@@ -3907,7 +3902,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/iQIYI/iQIYI.yaml",
-      "elapsed_ms": 1829
+      "elapsed_ms": 114
     },
     {
       "name": "Instagram",
@@ -3919,7 +3914,7 @@
       ],
       "routes": [
         {
-          "index": 86,
+          "index": 88,
           "target": "社交通讯"
         }
       ],
@@ -3937,7 +3932,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Instagram/Instagram_No_Resolve.yaml",
-      "elapsed_ms": 1791
+      "elapsed_ms": 145
     },
     {
       "name": "JOOX",
@@ -3949,7 +3944,7 @@
       ],
       "routes": [
         {
-          "index": 136,
+          "index": 131,
           "target": "流媒体"
         }
       ],
@@ -3967,7 +3962,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/JOOX/JOOX.yaml",
-      "elapsed_ms": 2701
+      "elapsed_ms": 118
     },
     {
       "name": "JapanWeb",
@@ -3979,7 +3974,7 @@
       ],
       "routes": [
         {
-          "index": 186,
+          "index": 180,
           "target": "默认代理"
         }
       ],
@@ -3997,7 +3992,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/ameyukisora/Clash-Rule/fd849948e4073ff94e4c04d5199c407bfff14e51/provider/JapanWeb.yaml",
-      "elapsed_ms": 1721
+      "elapsed_ms": 111
     },
     {
       "name": "KKTV",
@@ -4009,7 +4004,7 @@
       ],
       "routes": [
         {
-          "index": 137,
+          "index": 132,
           "target": "流媒体"
         }
       ],
@@ -4027,7 +4022,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/KKTV/KKTV.yaml",
-      "elapsed_ms": 1692
+      "elapsed_ms": 111
     },
     {
       "name": "Letv",
@@ -4039,7 +4034,7 @@
       ],
       "routes": [
         {
-          "index": 138,
+          "index": 133,
           "target": "流媒体"
         }
       ],
@@ -4057,7 +4052,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/LeTV/LeTV.yaml",
-      "elapsed_ms": 2596
+      "elapsed_ms": 390
     },
     {
       "name": "Line TV",
@@ -4069,7 +4064,7 @@
       ],
       "routes": [
         {
-          "index": 88,
+          "index": 90,
           "target": "社交通讯"
         }
       ],
@@ -4087,7 +4082,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/LineTV/LineTV.yaml",
-      "elapsed_ms": 1654
+      "elapsed_ms": 135
     },
     {
       "name": "Microsoft-6",
@@ -4099,7 +4094,7 @@
       ],
       "routes": [
         {
-          "index": 76,
+          "index": 78,
           "target": "Microsoft"
         }
       ],
@@ -4117,7 +4112,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Microsoft/Microsoft_No_Resolve.yaml",
-      "elapsed_ms": 2889
+      "elapsed_ms": 137
     },
     {
       "name": "NetEaseMusic_ip",
@@ -4129,7 +4124,7 @@
       ],
       "routes": [
         {
-          "index": 141,
+          "index": 136,
           "target": "流媒体"
         }
       ],
@@ -4147,7 +4142,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/IP/NetEaseMusic-ip.mrs",
-      "elapsed_ms": 2434
+      "elapsed_ms": 356
     },
     {
       "name": "Netease Music",
@@ -4159,7 +4154,7 @@
       ],
       "routes": [
         {
-          "index": 140,
+          "index": 135,
           "target": "流媒体"
         }
       ],
@@ -4177,7 +4172,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/NetEaseMusic/NetEaseMusic.yaml",
-      "elapsed_ms": 2755
+      "elapsed_ms": 347
     },
     {
       "name": "Netflix-6",
@@ -4189,7 +4184,7 @@
       ],
       "routes": [
         {
-          "index": 142,
+          "index": 137,
           "target": "流媒体"
         }
       ],
@@ -4207,7 +4202,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Netflix/Netflix_Classical_No_Resolve.yaml",
-      "elapsed_ms": 1502
+      "elapsed_ms": 741
     },
     {
       "name": "Netflix_IP-2",
@@ -4219,7 +4214,7 @@
       ],
       "routes": [
         {
-          "index": 143,
+          "index": 138,
           "target": "流媒体"
         }
       ],
@@ -4237,7 +4232,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@42c2a789e19516f0a8bb2bca8eb1541505599940/geo-lite/geoip/netflix.mrs",
-      "elapsed_ms": 240
+      "elapsed_ms": 231
     },
     {
       "name": "NewsMedia",
@@ -4249,7 +4244,7 @@
       ],
       "routes": [
         {
-          "index": 144,
+          "index": 139,
           "target": "流媒体"
         }
       ],
@@ -4267,7 +4262,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/666OS/rules/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/domain/NewsMedia.mrs",
-      "elapsed_ms": 3130
+      "elapsed_ms": 486
     },
     {
       "name": "Niconico",
@@ -4279,7 +4274,7 @@
       ],
       "routes": [
         {
-          "index": 145,
+          "index": 140,
           "target": "流媒体"
         }
       ],
@@ -4297,67 +4292,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Niconico/Niconico.yaml",
-      "elapsed_ms": 360
-    },
-    {
-      "name": "Nintendo",
-      "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Nintendo/Nintendo_No_Resolve.yaml",
-      "behavior": "classical",
-      "declared_format": "yaml",
-      "targets": [
-        "游戏服务"
-      ],
-      "routes": [
-        {
-          "index": 105,
-          "target": "游戏服务"
-        }
-      ],
-      "upstream": "github:blackmatrix7",
-      "pinned": true,
-      "via_intermediary": false,
-      "detected_format": "yaml-payload",
-      "content_type": "text/plain; charset=utf-8",
-      "byte_count": 4633,
-      "entry_count": 126,
-      "sha256": "80183aee2b4ffadcf36c6bd92ec1a098111955fefc8df37f6ae7a2437fee7b2c",
-      "valid": true,
-      "unique_entry_count": 126,
-      "normalized_sha256": "2e27f481c892c0894ba94658da12692041573bd80376eb314f7f77cd9fa8223d",
-      "status": "valid",
-      "status_code": 200,
-      "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Nintendo/Nintendo_No_Resolve.yaml",
-      "elapsed_ms": 494
-    },
-    {
-      "name": "NintendoCN",
-      "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/nintendo@cn.mrs",
-      "behavior": "domain",
-      "declared_format": "mrs",
-      "targets": [
-        "游戏服务"
-      ],
-      "routes": [
-        {
-          "index": 106,
-          "target": "游戏服务"
-        }
-      ],
-      "upstream": "github:MetaCubeX",
-      "pinned": true,
-      "via_intermediary": false,
-      "detected_format": "mrs-binary",
-      "content_type": "application/octet-stream",
-      "byte_count": 236,
-      "entry_count": null,
-      "sha256": "75b526c7769257452e161e92220ce58af1133e318aec61a5cd2a87900b245dca",
-      "valid": true,
-      "unique_entry_count": null,
-      "normalized_sha256": "",
-      "status": "valid",
-      "status_code": 200,
-      "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/nintendo%40cn.mrs",
-      "elapsed_ms": 2838
+      "elapsed_ms": 104
     },
     {
       "name": "Nvidia / Domain",
@@ -4369,7 +4304,7 @@
       ],
       "routes": [
         {
-          "index": 189,
+          "index": 183,
           "target": "默认代理"
         }
       ],
@@ -4387,7 +4322,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Nvidia/Nvidia.list",
-      "elapsed_ms": 398
+      "elapsed_ms": 151
     },
     {
       "name": "Pandora",
@@ -4399,7 +4334,7 @@
       ],
       "routes": [
         {
-          "index": 146,
+          "index": 141,
           "target": "流媒体"
         }
       ],
@@ -4417,7 +4352,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Pandora/Pandora.yaml",
-      "elapsed_ms": 443
+      "elapsed_ms": 409
     },
     {
       "name": "PayPal",
@@ -4429,7 +4364,7 @@
       ],
       "routes": [
         {
-          "index": 79,
+          "index": 81,
           "target": "金融服务"
         }
       ],
@@ -4447,7 +4382,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/PayPal/PayPal.yaml",
-      "elapsed_ms": 399
+      "elapsed_ms": 109
     },
     {
       "name": "Pixiv",
@@ -4459,7 +4394,7 @@
       ],
       "routes": [
         {
-          "index": 190,
+          "index": 184,
           "target": "默认代理"
         }
       ],
@@ -4477,37 +4412,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Pixiv/Pixiv.yaml",
-      "elapsed_ms": 383
-    },
-    {
-      "name": "PlayStation",
-      "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/PlayStation/PlayStation.yaml",
-      "behavior": "classical",
-      "declared_format": "",
-      "targets": [
-        "游戏服务"
-      ],
-      "routes": [
-        {
-          "index": 107,
-          "target": "游戏服务"
-        }
-      ],
-      "upstream": "github:blackmatrix7",
-      "pinned": true,
-      "via_intermediary": false,
-      "detected_format": "yaml-payload",
-      "content_type": "text/plain; charset=utf-8",
-      "byte_count": 325,
-      "entry_count": 4,
-      "sha256": "200e42e1f81820087991f92a6075c38822a484642f1a0f44f08e049762204609",
-      "valid": true,
-      "unique_entry_count": 4,
-      "normalized_sha256": "c5d3cb80d71461ae909ecc27d84e479bdf17c888dc9e6a3aca05057ea0230b4b",
-      "status": "valid",
-      "status_code": 200,
-      "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/PlayStation/PlayStation.yaml",
-      "elapsed_ms": 396
+      "elapsed_ms": 563
     },
     {
       "name": "Popcorn / Domain",
@@ -4519,7 +4424,7 @@
       ],
       "routes": [
         {
-          "index": 147,
+          "index": 142,
           "target": "流媒体"
         }
       ],
@@ -4537,7 +4442,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/liandu2024/clash/3fa176d30b02f2f105ee3de9a5126bdd47b5e0f5/list/Popcorn.list",
-      "elapsed_ms": 1487
+      "elapsed_ms": 393
     },
     {
       "name": "PrimeVideo-3",
@@ -4549,7 +4454,7 @@
       ],
       "routes": [
         {
-          "index": 148,
+          "index": 143,
           "target": "流媒体"
         }
       ],
@@ -4567,7 +4472,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/PrimeVideo/PrimeVideo_No_Resolve.yaml",
-      "elapsed_ms": 490
+      "elapsed_ms": 135
     },
     {
       "name": "PrivateTracker",
@@ -4579,7 +4484,7 @@
       ],
       "routes": [
         {
-          "index": 191,
+          "index": 185,
           "target": "默认代理"
         }
       ],
@@ -4597,7 +4502,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/PrivateTracker/PrivateTracker_No_Resolve.yaml",
-      "elapsed_ms": 358
+      "elapsed_ms": 113
     },
     {
       "name": "ProxyIP",
@@ -4609,7 +4514,7 @@
       ],
       "routes": [
         {
-          "index": 192,
+          "index": 186,
           "target": "默认代理"
         }
       ],
@@ -4627,7 +4532,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/666OS/rules/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/ip/Proxy.mrs",
-      "elapsed_ms": 3130
+      "elapsed_ms": 245
     },
     {
       "name": "Reddit / Domain",
@@ -4639,7 +4544,7 @@
       ],
       "routes": [
         {
-          "index": 90,
+          "index": 92,
           "target": "社交通讯"
         }
       ],
@@ -4657,7 +4562,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Reddit/Reddit.yaml",
-      "elapsed_ms": 510
+      "elapsed_ms": 130
     },
     {
       "name": "Scholar",
@@ -4669,7 +4574,7 @@
       ],
       "routes": [
         {
-          "index": 193,
+          "index": 187,
           "target": "默认代理"
         }
       ],
@@ -4687,67 +4592,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Scholar/Scholar.yaml",
-      "elapsed_ms": 376
-    },
-    {
-      "name": "Shopee_domain",
-      "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Shopee/Shopee.yaml",
-      "behavior": "classical",
-      "declared_format": "",
-      "targets": [
-        "默认代理"
-      ],
-      "routes": [
-        {
-          "index": 194,
-          "target": "默认代理"
-        }
-      ],
-      "upstream": "github:blackmatrix7",
-      "pinned": true,
-      "via_intermediary": false,
-      "detected_format": "yaml-payload",
-      "content_type": "text/plain; charset=utf-8",
-      "byte_count": 784,
-      "entry_count": 21,
-      "sha256": "7e18602d0ef49a84099690a6a47b5126ce6e615c8b60a3f242e9571fe139bf08",
-      "valid": true,
-      "unique_entry_count": 21,
-      "normalized_sha256": "d553c29a43e78dcb4d007b5f5592b0d18adb7046663ee8289a88556ca257db91",
-      "status": "valid",
-      "status_code": 200,
-      "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Shopee/Shopee.yaml",
-      "elapsed_ms": 634
-    },
-    {
-      "name": "Shopify_domain",
-      "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Shopify/Shopify.yaml",
-      "behavior": "classical",
-      "declared_format": "",
-      "targets": [
-        "默认代理"
-      ],
-      "routes": [
-        {
-          "index": 195,
-          "target": "默认代理"
-        }
-      ],
-      "upstream": "github:blackmatrix7",
-      "pinned": true,
-      "via_intermediary": false,
-      "detected_format": "yaml-payload",
-      "content_type": "text/plain; charset=utf-8",
-      "byte_count": 421,
-      "entry_count": 8,
-      "sha256": "818533a21a6278a8fa69049388a919c83b168f808ff0b750740b214047c97aa6",
-      "valid": true,
-      "unique_entry_count": 8,
-      "normalized_sha256": "be103a0ab7704bb3bd7f8eff61217c9d3aba74f1bcec045f225606e7ee2d22cc",
-      "status": "valid",
-      "status_code": 200,
-      "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Shopify/Shopify.yaml",
-      "elapsed_ms": 530
+      "elapsed_ms": 108
     },
     {
       "name": "SocialMedia-2",
@@ -4759,7 +4604,7 @@
       ],
       "routes": [
         {
-          "index": 92,
+          "index": 93,
           "target": "社交通讯"
         }
       ],
@@ -4777,7 +4622,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-social-media-!cn.mrs",
-      "elapsed_ms": 2437
+      "elapsed_ms": 479
     },
     {
       "name": "SocialMediaIP",
@@ -4789,7 +4634,7 @@
       ],
       "routes": [
         {
-          "index": 93,
+          "index": 94,
           "target": "社交通讯"
         }
       ],
@@ -4807,7 +4652,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/666OS/rules/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/ip/SocialMedia.mrs",
-      "elapsed_ms": 1133
+      "elapsed_ms": 286
     },
     {
       "name": "Sony",
@@ -4819,7 +4664,7 @@
       ],
       "routes": [
         {
-          "index": 196,
+          "index": 188,
           "target": "默认代理"
         }
       ],
@@ -4837,7 +4682,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Sony/Sony_No_Resolve.yaml",
-      "elapsed_ms": 358
+      "elapsed_ms": 107
     },
     {
       "name": "Soundcloud",
@@ -4849,7 +4694,7 @@
       ],
       "routes": [
         {
-          "index": 149,
+          "index": 144,
           "target": "流媒体"
         }
       ],
@@ -4867,7 +4712,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/SoundCloud/SoundCloud.yaml",
-      "elapsed_ms": 372
+      "elapsed_ms": 111
     },
     {
       "name": "Special",
@@ -4879,7 +4724,7 @@
       ],
       "routes": [
         {
-          "index": 197,
+          "index": 189,
           "target": "默认代理"
         }
       ],
@@ -4897,7 +4742,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Special.yaml",
-      "elapsed_ms": 757
+      "elapsed_ms": 80
     },
     {
       "name": "Spotify-5",
@@ -4909,7 +4754,7 @@
       ],
       "routes": [
         {
-          "index": 150,
+          "index": 145,
           "target": "流媒体"
         }
       ],
@@ -4927,67 +4772,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Spotify/Spotify_No_Resolve.yaml",
-      "elapsed_ms": 529
-    },
-    {
-      "name": "Steam-5",
-      "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Steam/Steam_No_Resolve.yaml",
-      "behavior": "classical",
-      "declared_format": "yaml",
-      "targets": [
-        "游戏服务"
-      ],
-      "routes": [
-        {
-          "index": 108,
-          "target": "游戏服务"
-        }
-      ],
-      "upstream": "github:blackmatrix7",
-      "pinned": true,
-      "via_intermediary": false,
-      "detected_format": "yaml-payload",
-      "content_type": "text/plain; charset=utf-8",
-      "byte_count": 2280,
-      "entry_count": 54,
-      "sha256": "585e423c866bb020421a79dd2842f279b56ef94bf487fbee13354796958dcad6",
-      "valid": true,
-      "unique_entry_count": 54,
-      "normalized_sha256": "ccfc1da63e5f867ccc7dbbfdb7635d6b55ff693b0dfbd9c7c3690ed54fe4a229",
-      "status": "valid",
-      "status_code": 200,
-      "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Steam/Steam_No_Resolve.yaml",
-      "elapsed_ms": 367
-    },
-    {
-      "name": "SteamCN-2",
-      "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/SteamCN/SteamCN_No_Resolve.yaml",
-      "behavior": "classical",
-      "declared_format": "yaml",
-      "targets": [
-        "游戏服务"
-      ],
-      "routes": [
-        {
-          "index": 110,
-          "target": "游戏服务"
-        }
-      ],
-      "upstream": "github:blackmatrix7",
-      "pinned": true,
-      "via_intermediary": false,
-      "detected_format": "yaml-payload",
-      "content_type": "text/plain; charset=utf-8",
-      "byte_count": 739,
-      "entry_count": 17,
-      "sha256": "9001a292467843777e7b97b7a78224da8a259f5e6fcb5d36e4413c28296875e4",
-      "valid": true,
-      "unique_entry_count": 17,
-      "normalized_sha256": "aadf0a0ff6e6bcf5fdad9c605cf7845b2d1d351c256a059bdc539c9e35111bf4",
-      "status": "valid",
-      "status_code": 200,
-      "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/SteamCN/SteamCN_No_Resolve.yaml",
-      "elapsed_ms": 364
+      "elapsed_ms": 341
     },
     {
       "name": "TEST / Domain",
@@ -4999,7 +4784,7 @@
       ],
       "routes": [
         {
-          "index": 202,
+          "index": 193,
           "target": "默认代理"
         }
       ],
@@ -5017,7 +4802,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/liandu2024/clash/3fa176d30b02f2f105ee3de9a5126bdd47b5e0f5/list/Check.list",
-      "elapsed_ms": 523
+      "elapsed_ms": 106
     },
     {
       "name": "TVB_domain",
@@ -5029,7 +4814,7 @@
       ],
       "routes": [
         {
-          "index": 154,
+          "index": 149,
           "target": "流媒体"
         }
       ],
@@ -5047,7 +4832,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/TVB/TVB.yaml",
-      "elapsed_ms": 968
+      "elapsed_ms": 176
     },
     {
       "name": "TeamViewer",
@@ -5059,7 +4844,7 @@
       ],
       "routes": [
         {
-          "index": 199,
+          "index": 190,
           "target": "默认代理"
         }
       ],
@@ -5077,37 +4862,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/TeamViewer/TeamViewer_No_Resolve.yaml",
-      "elapsed_ms": 789
-    },
-    {
-      "name": "Teams",
-      "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Teams/Teams.yaml",
-      "behavior": "classical",
-      "declared_format": "yaml",
-      "targets": [
-        "默认代理"
-      ],
-      "routes": [
-        {
-          "index": 198,
-          "target": "默认代理"
-        }
-      ],
-      "upstream": "github:blackmatrix7",
-      "pinned": true,
-      "via_intermediary": false,
-      "detected_format": "yaml-payload",
-      "content_type": "text/plain; charset=utf-8",
-      "byte_count": 326,
-      "entry_count": 4,
-      "sha256": "b6037bb812b2a816407c293f64b182bab3d8d8a71fc343062e05cdd69a9b395f",
-      "valid": true,
-      "unique_entry_count": 4,
-      "normalized_sha256": "cc5374f1bb7831aad38d76c57c832b7dde870848948ef28f36d2fcb1f815168b",
-      "status": "valid",
-      "status_code": 200,
-      "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Teams/Teams.yaml",
-      "elapsed_ms": 550
+      "elapsed_ms": 170
     },
     {
       "name": "Tencent Video",
@@ -5119,7 +4874,7 @@
       ],
       "routes": [
         {
-          "index": 152,
+          "index": 147,
           "target": "流媒体"
         }
       ],
@@ -5137,7 +4892,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/TencentVideo/TencentVideo.yaml",
-      "elapsed_ms": 467
+      "elapsed_ms": 163
     },
     {
       "name": "Tencent-2",
@@ -5149,7 +4904,7 @@
       ],
       "routes": [
         {
-          "index": 201,
+          "index": 192,
           "target": "默认代理"
         }
       ],
@@ -5167,7 +4922,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Tencent/Tencent_No_Resolve.yaml",
-      "elapsed_ms": 921
+      "elapsed_ms": 188
     },
     {
       "name": "TikTok-4",
@@ -5179,7 +4934,7 @@
       ],
       "routes": [
         {
-          "index": 153,
+          "index": 148,
           "target": "流媒体"
         }
       ],
@@ -5197,7 +4952,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/TikTok/TikTok_No_Resolve.yaml",
-      "elapsed_ms": 470
+      "elapsed_ms": 356
     },
     {
       "name": "Tumblr",
@@ -5209,7 +4964,7 @@
       ],
       "routes": [
         {
-          "index": 98,
+          "index": 99,
           "target": "社交通讯"
         }
       ],
@@ -5227,7 +4982,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Tumblr/Tumblr.yaml",
-      "elapsed_ms": 475
+      "elapsed_ms": 116
     },
     {
       "name": "Twitch",
@@ -5239,7 +4994,7 @@
       ],
       "routes": [
         {
-          "index": 155,
+          "index": 150,
           "target": "流媒体"
         }
       ],
@@ -5257,7 +5012,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Twitch/Twitch_No_Resolve.yaml",
-      "elapsed_ms": 819
+      "elapsed_ms": 115
     },
     {
       "name": "Twitter-4",
@@ -5269,7 +5024,7 @@
       ],
       "routes": [
         {
-          "index": 99,
+          "index": 100,
           "target": "社交通讯"
         }
       ],
@@ -5287,37 +5042,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Twitter/Twitter_No_Resolve.yaml",
-      "elapsed_ms": 536
-    },
-    {
-      "name": "UBI / Domain",
-      "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/UBI/UBI.list",
-      "behavior": "classical",
-      "declared_format": "text",
-      "targets": [
-        "默认代理"
-      ],
-      "routes": [
-        {
-          "index": 205,
-          "target": "默认代理"
-        }
-      ],
-      "upstream": "github:blackmatrix7",
-      "pinned": true,
-      "via_intermediary": false,
-      "detected_format": "text-rules",
-      "content_type": "text/plain; charset=utf-8",
-      "byte_count": 334,
-      "entry_count": 5,
-      "sha256": "b6a5607200a67a6f581bd2ba6ee41b836d66f3d965db6e6fa50361304a041295",
-      "valid": true,
-      "unique_entry_count": 5,
-      "normalized_sha256": "08a216cfbfb736ee9a71c2ab866f0e0fb3f42e2499fad11ec20c8146c71f2afb",
-      "status": "valid",
-      "status_code": 200,
-      "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/UBI/UBI.list",
-      "elapsed_ms": 641
+      "elapsed_ms": 153
     },
     {
       "name": "UbisoftCN",
@@ -5329,7 +5054,7 @@
       ],
       "routes": [
         {
-          "index": 206,
+          "index": 195,
           "target": "默认代理"
         }
       ],
@@ -5347,7 +5072,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/ubisoft%40cn.mrs",
-      "elapsed_ms": 1676
+      "elapsed_ms": 450
     },
     {
       "name": "UnBan",
@@ -5377,7 +5102,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/4b461ca03b430c46d33b505cf4384e2f4f1be4b1/Clash/Providers/UnBan.yaml",
-      "elapsed_ms": 651
+      "elapsed_ms": 430
     },
     {
       "name": "ViuTV",
@@ -5389,7 +5114,7 @@
       ],
       "routes": [
         {
-          "index": 156,
+          "index": 151,
           "target": "流媒体"
         }
       ],
@@ -5407,7 +5132,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/ViuTV/ViuTV.yaml",
-      "elapsed_ms": 623
+      "elapsed_ms": 109
     },
     {
       "name": "WeChat",
@@ -5419,7 +5144,7 @@
       ],
       "routes": [
         {
-          "index": 100,
+          "index": 101,
           "target": "社交通讯"
         }
       ],
@@ -5437,7 +5162,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/WeChat/WeChat_No_Resolve.yaml",
-      "elapsed_ms": 538
+      "elapsed_ms": 411
     },
     {
       "name": "WeTV",
@@ -5449,7 +5174,7 @@
       ],
       "routes": [
         {
-          "index": 157,
+          "index": 152,
           "target": "流媒体"
         }
       ],
@@ -5467,7 +5192,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/WeTV/WeTV.yaml",
-      "elapsed_ms": 1557
+      "elapsed_ms": 104
     },
     {
       "name": "WhatsApp / Domain",
@@ -5479,7 +5204,7 @@
       ],
       "routes": [
         {
-          "index": 101,
+          "index": 102,
           "target": "社交通讯"
         }
       ],
@@ -5497,7 +5222,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Whatsapp/Whatsapp.list",
-      "elapsed_ms": 479
+      "elapsed_ms": 148
     },
     {
       "name": "Wise_domain",
@@ -5509,7 +5234,7 @@
       ],
       "routes": [
         {
-          "index": 80,
+          "index": 82,
           "target": "金融服务"
         }
       ],
@@ -5527,7 +5252,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/wise.mrs",
-      "elapsed_ms": 573
+      "elapsed_ms": 114
     },
     {
       "name": "XPTV",
@@ -5539,7 +5264,7 @@
       ],
       "routes": [
         {
-          "index": 158,
+          "index": 153,
           "target": "流媒体"
         }
       ],
@@ -5557,7 +5282,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/666OS/rules/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/domain/XPTV.mrs",
-      "elapsed_ms": 2263
+      "elapsed_ms": 630
     },
     {
       "name": "XPTVIP",
@@ -5569,7 +5294,7 @@
       ],
       "routes": [
         {
-          "index": 159,
+          "index": 154,
           "target": "流媒体"
         }
       ],
@@ -5587,7 +5312,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/666OS/rules/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/ip/XPTV.mrs",
-      "elapsed_ms": 1263
+      "elapsed_ms": 474
     },
     {
       "name": "XboxCN",
@@ -5599,7 +5324,7 @@
       ],
       "routes": [
         {
-          "index": 111,
+          "index": 107,
           "target": "游戏服务"
         }
       ],
@@ -5617,7 +5342,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/xbox%40cn.mrs",
-      "elapsed_ms": 2124
+      "elapsed_ms": 324
     },
     {
       "name": "Xunlei",
@@ -5629,7 +5354,7 @@
       ],
       "routes": [
         {
-          "index": 208,
+          "index": 197,
           "target": "默认代理"
         }
       ],
@@ -5647,7 +5372,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Xunlei/Xunlei.yaml",
-      "elapsed_ms": 464
+      "elapsed_ms": 182
     },
     {
       "name": "YouTube-6",
@@ -5659,7 +5384,7 @@
       ],
       "routes": [
         {
-          "index": 161,
+          "index": 156,
           "target": "流媒体"
         }
       ],
@@ -5677,7 +5402,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/YouTube/YouTube_No_Resolve.yaml",
-      "elapsed_ms": 1005
+      "elapsed_ms": 111
     },
     {
       "name": "Youku",
@@ -5689,7 +5414,7 @@
       ],
       "routes": [
         {
-          "index": 160,
+          "index": 155,
           "target": "流媒体"
         }
       ],
@@ -5707,7 +5432,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Youku/Youku.yaml",
-      "elapsed_ms": 567
+      "elapsed_ms": 355
     },
     {
       "name": "ads",
@@ -5737,7 +5462,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/AdvertisingLite/AdvertisingLite.yaml",
-      "elapsed_ms": 501
+      "elapsed_ms": 5375
     },
     {
       "name": "ai-4",
@@ -5749,7 +5474,7 @@
       ],
       "routes": [
         {
-          "index": 66,
+          "index": 65,
           "target": "AI 服务"
         }
       ],
@@ -5767,7 +5492,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-ai-!cn.list",
-      "elapsed_ms": 1161
+      "elapsed_ms": 129
     },
     {
       "name": "aliyun_domain",
@@ -5779,7 +5504,7 @@
       ],
       "routes": [
         {
-          "index": 165,
+          "index": 160,
           "target": "默认代理"
         }
       ],
@@ -5797,7 +5522,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Alibaba/Alibaba.yaml",
-      "elapsed_ms": 507
+      "elapsed_ms": 119
     },
     {
       "name": "bank_cn_domain",
@@ -5809,7 +5534,7 @@
       ],
       "routes": [
         {
-          "index": 77,
+          "index": 79,
           "target": "金融服务"
         }
       ],
@@ -5827,7 +5552,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-bank-cn.mrs",
-      "elapsed_ms": 513
+      "elapsed_ms": 109
     },
     {
       "name": "bilibili_ip",
@@ -5839,7 +5564,7 @@
       ],
       "routes": [
         {
-          "index": 116,
+          "index": 112,
           "target": "流媒体"
         }
       ],
@@ -5857,7 +5582,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo-lite/geoip/bilibili.mrs",
-      "elapsed_ms": 509
+      "elapsed_ms": 114
     },
     {
       "name": "biliintl",
@@ -5869,7 +5594,7 @@
       ],
       "routes": [
         {
-          "index": 117,
+          "index": 113,
           "target": "流媒体"
         }
       ],
@@ -5887,37 +5612,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/BiliBiliIntl/BiliBiliIntl.yaml",
-      "elapsed_ms": 1122
-    },
-    {
-      "name": "biliintl_domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/bilibili%40!cn.mrs",
-      "behavior": "domain",
-      "declared_format": "mrs",
-      "targets": [
-        "流媒体"
-      ],
-      "routes": [
-        {
-          "index": 118,
-          "target": "流媒体"
-        }
-      ],
-      "upstream": "github:MetaCubeX",
-      "pinned": true,
-      "via_intermediary": false,
-      "detected_format": "mrs-binary",
-      "content_type": "application/octet-stream",
-      "byte_count": 136,
-      "entry_count": null,
-      "sha256": "adf0bd128f0e9aeaf9ffe28ca72368806337d99318f30302c1aaa3c3342ef1ec",
-      "valid": true,
-      "unique_entry_count": null,
-      "normalized_sha256": "",
-      "status": "valid",
-      "status_code": 200,
-      "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/bilibili%40!cn.mrs",
-      "elapsed_ms": 857
+      "elapsed_ms": 585
     },
     {
       "name": "category-porn",
@@ -5929,7 +5624,7 @@
       ],
       "routes": [
         {
-          "index": 171,
+          "index": 166,
           "target": "默认代理"
         }
       ],
@@ -5947,7 +5642,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-porn.mrs",
-      "elapsed_ms": 2578
+      "elapsed_ms": 711
     },
     {
       "name": "cdn_domainset",
@@ -5959,7 +5654,7 @@
       ],
       "routes": [
         {
-          "index": 172,
+          "index": 167,
           "target": "默认代理"
         }
       ],
@@ -5968,16 +5663,16 @@
       "via_intermediary": false,
       "detected_format": "text-rules",
       "content_type": "text/plain; charset=utf-8",
-      "byte_count": 88609,
-      "entry_count": 4567,
-      "sha256": "a925acecf35933d4b02dda244adbb33dc548baf75da28323a7fa09a11574638c",
+      "byte_count": 89515,
+      "entry_count": 4609,
+      "sha256": "7beeef2b4e8ccb0c5be8ab34318f569d5206b5a2b1fb4ccff3928539dfe9e1e6",
       "valid": true,
-      "unique_entry_count": 4567,
-      "normalized_sha256": "6491349ae2a3152403bdafc93bf9a40d249a6f2ba6bd62212a3d6dbe1a9a3919",
+      "unique_entry_count": 4609,
+      "normalized_sha256": "e4a8dbc86251eae7b50155a1486b3754e9c5af73e5c774ab6d0e914b87e7bdf5",
       "status": "valid",
       "status_code": 200,
       "final_url": "https://ruleset.skk.moe/Clash/domainset/cdn.txt",
-      "elapsed_ms": 668
+      "elapsed_ms": 2038
     },
     {
       "name": "cdn_non_ip",
@@ -5998,16 +5693,16 @@
       "via_intermediary": false,
       "detected_format": "text-rules",
       "content_type": "text/plain; charset=utf-8",
-      "byte_count": 3470,
+      "byte_count": 3471,
       "entry_count": 85,
-      "sha256": "5525baa82043883b1086b3871306b25f9edb0c153af3bfeeff10150bbdf4208f",
+      "sha256": "2f532a9a94ea48b0f64cc68fd88da7e52957503b0061f06a6a32b467e788df9a",
       "valid": true,
       "unique_entry_count": 85,
-      "normalized_sha256": "c8f4317d3ec2d6690f202d204bde0963b62ef34889d6382064141d3cc1a92102",
+      "normalized_sha256": "7e496840df54adc010ec958018887002c820bdf5b2b8c9385765ff046a723ffa",
       "status": "valid",
       "status_code": 200,
       "final_url": "https://ruleset.skk.moe/Clash/non_ip/cdn.txt",
-      "elapsed_ms": 681
+      "elapsed_ms": 1835
     },
     {
       "name": "china_ip_ipv6",
@@ -6028,16 +5723,16 @@
       "via_intermediary": false,
       "detected_format": "text-rules",
       "content_type": "text/plain; charset=utf-8",
-      "byte_count": 29496,
-      "entry_count": 1601,
-      "sha256": "7740cb7c50862159df7cde1ff5c27995e3fe987b5b3ccba4b739a1ce24251781",
+      "byte_count": 29825,
+      "entry_count": 1618,
+      "sha256": "8073fcbe9eccbf5ee21ed280f9586f179d926564bbb434a777cc9a23dc93cfe1",
       "valid": true,
-      "unique_entry_count": 1601,
-      "normalized_sha256": "4b95707d277d70374aa60e2cf25f82b7f39db36f60ad2675eb4ed902646c1987",
+      "unique_entry_count": 1618,
+      "normalized_sha256": "6fd8985798b4798ecf1d662b6a30bfaa3f3829d465556a28a59f844d1702ed7f",
       "status": "valid",
       "status_code": 200,
       "final_url": "https://ruleset.skk.moe/Clash/ip/china_ip_ipv6.txt",
-      "elapsed_ms": 522
+      "elapsed_ms": 1735
     },
     {
       "name": "cloudflare-ip",
@@ -6067,7 +5762,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/cloudflare.mrs",
-      "elapsed_ms": 1287
+      "elapsed_ms": 291
     },
     {
       "name": "cloudfront-ip",
@@ -6097,7 +5792,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/cloudfront.mrs",
-      "elapsed_ms": 1425
+      "elapsed_ms": 407
     },
     {
       "name": "cn",
@@ -6127,7 +5822,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/ChinaMax/ChinaMax.yaml",
-      "elapsed_ms": 497
+      "elapsed_ms": 405
     },
     {
       "name": "cn_v6",
@@ -6157,7 +5852,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/ameyukisora/Clash-Rule/fd849948e4073ff94e4c04d5199c407bfff14e51/autoupdate/cn_v6.mrs",
-      "elapsed_ms": 539
+      "elapsed_ms": 200
     },
     {
       "name": "cnip",
@@ -6187,7 +5882,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/05cb71a6617dcbceae1457f7168339704017f5aa/cnip.list",
-      "elapsed_ms": 1659
+      "elapsed_ms": 266
     },
     {
       "name": "custom_direct",
@@ -6217,7 +5912,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/JohnsonRan/CRules/e60d312c610b84c0fdddd0e91aabf5e49da02be7/rules/custom.yaml",
-      "elapsed_ms": 1095
+      "elapsed_ms": 354
     },
     {
       "name": "custom_proxy",
@@ -6229,7 +5924,7 @@
       ],
       "routes": [
         {
-          "index": 174,
+          "index": 169,
           "target": "默认代理"
         }
       ],
@@ -6247,7 +5942,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/JohnsonRan/CRules/e60d312c610b84c0fdddd0e91aabf5e49da02be7/rules/customProxy.yaml",
-      "elapsed_ms": 602
+      "elapsed_ms": 187
     },
     {
       "name": "custom_reject",
@@ -6277,7 +5972,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/JohnsonRan/CRules/e60d312c610b84c0fdddd0e91aabf5e49da02be7/rules/reject.txt",
-      "elapsed_ms": 488
+      "elapsed_ms": 190
     },
     {
       "name": "douyin-zj",
@@ -6289,7 +5984,7 @@
       ],
       "routes": [
         {
-          "index": 124,
+          "index": 119,
           "target": "流媒体"
         }
       ],
@@ -6307,7 +6002,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/DouYin/DouYin_No_Resolve.yaml",
-      "elapsed_ms": 488
+      "elapsed_ms": 109
     },
     {
       "name": "download_domainset",
@@ -6319,7 +6014,7 @@
       ],
       "routes": [
         {
-          "index": 175,
+          "index": 170,
           "target": "默认代理"
         }
       ],
@@ -6328,16 +6023,16 @@
       "via_intermediary": false,
       "detected_format": "text-rules",
       "content_type": "text/plain; charset=utf-8",
-      "byte_count": 46204,
-      "entry_count": 1966,
-      "sha256": "454efcd6e4bed59e096629d4c9490dea1618a06999862cef9763ecbf0fbb1299",
+      "byte_count": 46243,
+      "entry_count": 1968,
+      "sha256": "b0b0fc05863d1db3957d311fcbfd8accd18042f5f489749072a93bfaf7e0f0b2",
       "valid": true,
-      "unique_entry_count": 1966,
-      "normalized_sha256": "732871d4cb267eda891063c9dac7542ca19956bef845ecd463c77710fce26bad",
+      "unique_entry_count": 1968,
+      "normalized_sha256": "ea7cf52d226d3504ab02890eed9815ceeaf673a457189364d0652944614689b8",
       "status": "valid",
       "status_code": 200,
       "final_url": "https://ruleset.skk.moe/Clash/domainset/download.txt",
-      "elapsed_ms": 814
+      "elapsed_ms": 1110
     },
     {
       "name": "ebay_domain",
@@ -6349,7 +6044,7 @@
       ],
       "routes": [
         {
-          "index": 177,
+          "index": 172,
           "target": "默认代理"
         }
       ],
@@ -6367,7 +6062,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/eBay/eBay.yaml",
-      "elapsed_ms": 471
+      "elapsed_ms": 109
     },
     {
       "name": "ecs-no-cn",
@@ -6397,37 +6092,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/JohnsonRan/CRules/e60d312c610b84c0fdddd0e91aabf5e49da02be7/rules/ecs-no-cn.txt",
-      "elapsed_ms": 934
-    },
-    {
-      "name": "ehentai_domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/ehentai.mrs",
-      "behavior": "domain",
-      "declared_format": "mrs",
-      "targets": [
-        "默认代理"
-      ],
-      "routes": [
-        {
-          "index": 179,
-          "target": "默认代理"
-        }
-      ],
-      "upstream": "github:MetaCubeX",
-      "pinned": true,
-      "via_intermediary": false,
-      "detected_format": "mrs-binary",
-      "content_type": "application/octet-stream",
-      "byte_count": 148,
-      "entry_count": null,
-      "sha256": "e3f1f6972bd5afc4defb2708adf4c85aaa71eea789ae2cb90f751ae409988d88",
-      "valid": true,
-      "unique_entry_count": null,
-      "normalized_sha256": "",
-      "status": "valid",
-      "status_code": 200,
-      "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/ehentai.mrs",
-      "elapsed_ms": 553
+      "elapsed_ms": 103
     },
     {
       "name": "encoreTVB",
@@ -6439,7 +6104,7 @@
       ],
       "routes": [
         {
-          "index": 127,
+          "index": 122,
           "target": "流媒体"
         }
       ],
@@ -6457,7 +6122,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/EncoreTVB/EncoreTVB.yaml",
-      "elapsed_ms": 497
+      "elapsed_ms": 414
     },
     {
       "name": "fakeip-filter-2",
@@ -6487,7 +6152,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/ameyukisora/Clash-Rule/fd849948e4073ff94e4c04d5199c407bfff14e51/provider/fakeip-filter.yaml",
-      "elapsed_ms": 982
+      "elapsed_ms": 104
     },
     {
       "name": "fakeip_filter_domain",
@@ -6517,7 +6182,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/Domain/fakeip-filter.mrs",
-      "elapsed_ms": 517
+      "elapsed_ms": 383
     },
     {
       "name": "fastly-ip",
@@ -6547,7 +6212,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/fastly.mrs",
-      "elapsed_ms": 1786
+      "elapsed_ms": 234
     },
     {
       "name": "fcm_domain",
@@ -6559,7 +6224,7 @@
       ],
       "routes": [
         {
-          "index": 180,
+          "index": 174,
           "target": "默认代理"
         }
       ],
@@ -6577,7 +6242,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/GoogleFCM/GoogleFCM.yaml",
-      "elapsed_ms": 486
+      "elapsed_ms": 106
     },
     {
       "name": "games-cn",
@@ -6607,7 +6272,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/05cb71a6617dcbceae1457f7168339704017f5aa/games-cn.list",
-      "elapsed_ms": 1550
+      "elapsed_ms": 633
     },
     {
       "name": "geoip_twitter",
@@ -6619,7 +6284,7 @@
       ],
       "routes": [
         {
-          "index": 85,
+          "index": 87,
           "target": "社交通讯"
         }
       ],
@@ -6637,7 +6302,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/twitter.mrs",
-      "elapsed_ms": 493
+      "elapsed_ms": 423
     },
     {
       "name": "gitbook_domain",
@@ -6649,7 +6314,7 @@
       ],
       "routes": [
         {
-          "index": 70,
+          "index": 69,
           "target": "开发服务"
         }
       ],
@@ -6667,7 +6332,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/GitBook/GitBook.yaml",
-      "elapsed_ms": 989
+      "elapsed_ms": 111
     },
     {
       "name": "ifast_domain",
@@ -6679,7 +6344,7 @@
       ],
       "routes": [
         {
-          "index": 185,
+          "index": 179,
           "target": "默认代理"
         }
       ],
@@ -6697,7 +6362,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/ifast.mrs",
-      "elapsed_ms": 999
+      "elapsed_ms": 437
     },
     {
       "name": "ip_httpdns",
@@ -6727,7 +6392,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/yiteei/Share@d46fd38f37f03d0000c007bb0749ab4c883d5da6/rules/ip/httpdns.mrs",
-      "elapsed_ms": 210
+      "elapsed_ms": 132
     },
     {
       "name": "ip_telegram",
@@ -6739,7 +6404,7 @@
       ],
       "routes": [
         {
-          "index": 87,
+          "index": 89,
           "target": "社交通讯"
         }
       ],
@@ -6757,7 +6422,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/telegram.mrs",
-      "elapsed_ms": 265
+      "elapsed_ms": 82
     },
     {
       "name": "ip_webrtc",
@@ -6787,7 +6452,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/yiteei/Share@d46fd38f37f03d0000c007bb0749ab4c883d5da6/rules/ip/webrtc.mrs",
-      "elapsed_ms": 767
+      "elapsed_ms": 84
     },
     {
       "name": "iptv_domain",
@@ -6799,7 +6464,7 @@
       ],
       "routes": [
         {
-          "index": 133,
+          "index": 128,
           "target": "流媒体"
         }
       ],
@@ -6817,7 +6482,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/Domain/iptv.mrs",
-      "elapsed_ms": 595
+      "elapsed_ms": 460
     },
     {
       "name": "lan_ip",
@@ -6838,16 +6503,16 @@
       "via_intermediary": false,
       "detected_format": "text-rules",
       "content_type": "text/plain; charset=utf-8",
-      "byte_count": 692,
+      "byte_count": 693,
       "entry_count": 12,
-      "sha256": "03bd72742d9b49d61612b6918409fd6abd146764397d17bd30b61599d0ad6d92",
+      "sha256": "0866aadd6e3a726914b2db4f001c00a2df739bf7639795b475aef4ab3f676806",
       "valid": true,
       "unique_entry_count": 12,
-      "normalized_sha256": "3a642bb2d7a0cc87d210afb126cbb4f13cd133b60564e1a2b126345d34245e15",
+      "normalized_sha256": "3e16cd62bf25a8db4b3fc3bf5f95019d8d675c65d750db7813e1351f1ef41071",
       "status": "valid",
       "status_code": 200,
       "final_url": "https://ruleset.skk.moe/Clash/ip/lan.txt",
-      "elapsed_ms": 238
+      "elapsed_ms": 110
     },
     {
       "name": "line_domain",
@@ -6859,7 +6524,7 @@
       ],
       "routes": [
         {
-          "index": 89,
+          "index": 91,
           "target": "社交通讯"
         }
       ],
@@ -6877,7 +6542,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Line/Line.yaml",
-      "elapsed_ms": 469
+      "elapsed_ms": 170
     },
     {
       "name": "mediaip",
@@ -6889,7 +6554,7 @@
       ],
       "routes": [
         {
-          "index": 139,
+          "index": 134,
           "target": "流媒体"
         }
       ],
@@ -6906,8 +6571,8 @@
       "normalized_sha256": "",
       "status": "valid",
       "status_code": 200,
-      "final_url": "https://release-assets.githubusercontent.com/github-production-release-asset/624368088/2ad53ece-cca3-4988-b86b-7c3267a79000?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-08-01T16%3A57%3A18Z&rscd=attachment%3B+filename%3Dmediaip.mrs&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-08-01T15%3A57%3A10Z&ske=2026-08-01T16%3A57%3A18Z&sks=b&skv=2018-11-09&sig=HC3%2BusCGa0mGOl6qzY%2BxbI1ubb2mbgIZQNQOQ%2BYMwVU%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc4NTYwMTM5OCwibmJmIjoxNzg1NjAxMDk4LCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.mryloEET1YBl5eXKWKGNzi0rIYfk6SRBKoPVEnk32mM&response-content-disposition=attachment%3B%20filename%3Dmediaip.mrs&response-content-type=application%2Foctet-stream",
-      "elapsed_ms": 1355
+      "final_url": "https://release-assets.githubusercontent.com/github-production-release-asset/624368088/43692434-8f76-46a1-8113-fc7f19e5d53d?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-08-09T08%3A50%3A48Z&rscd=attachment%3B+filename%3Dmediaip.mrs&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-08-09T07%3A50%3A47Z&ske=2026-08-09T08%3A50%3A48Z&sks=b&skv=2018-11-09&sig=gFOLXvx0mJvKoP1fnWvCuJciqTk%2F8Kbhk6QwMChpjso%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc4NjI2MzQ2OCwibmJmIjoxNzg2MjYzMTY4LCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.UZqV8V_EKrEHS7k7c_r2jOzDMFuHq3UDHBqlDVg2UEM&response-content-disposition=attachment%3B%20filename%3Dmediaip.mrs&response-content-type=application%2Foctet-stream",
+      "elapsed_ms": 2046
     },
     {
       "name": "miHoYo",
@@ -6919,7 +6584,7 @@
       ],
       "routes": [
         {
-          "index": 187,
+          "index": 181,
           "target": "默认代理"
         }
       ],
@@ -6937,7 +6602,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/HoYoverse/HoYoverse.yaml",
-      "elapsed_ms": 1633
+      "elapsed_ms": 356
     },
     {
       "name": "myignore",
@@ -6949,7 +6614,7 @@
       ],
       "routes": [
         {
-          "index": 188,
+          "index": 182,
           "target": "默认代理"
         }
       ],
@@ -6967,7 +6632,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/Pililink/AirRules/e1f177e32be784989d35c78390f762c5c784d600/clash/ruleset/ignore.list",
-      "elapsed_ms": 1568
+      "elapsed_ms": 116
     },
     {
       "name": "no-fakeip",
@@ -6997,7 +6662,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/JohnsonRan/CRules/e60d312c610b84c0fdddd0e91aabf5e49da02be7/rules/no-fakeip.txt",
-      "elapsed_ms": 486
+      "elapsed_ms": 160
     },
     {
       "name": "private-2",
@@ -7027,7 +6692,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/05cb71a6617dcbceae1457f7168339704017f5aa/private.list",
-      "elapsed_ms": 626
+      "elapsed_ms": 108
     },
     {
       "name": "privateip-2",
@@ -7057,37 +6722,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/05cb71a6617dcbceae1457f7168339704017f5aa/privateip.list",
-      "elapsed_ms": 830
-    },
-    {
-      "name": "signal_domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/signal.mrs",
-      "behavior": "domain",
-      "declared_format": "mrs",
-      "targets": [
-        "社交通讯"
-      ],
-      "routes": [
-        {
-          "index": 91,
-          "target": "社交通讯"
-        }
-      ],
-      "upstream": "github:MetaCubeX",
-      "pinned": true,
-      "via_intermediary": false,
-      "detected_format": "mrs-binary",
-      "content_type": "application/octet-stream",
-      "byte_count": 156,
-      "entry_count": null,
-      "sha256": "b251dfa83e4442944dfb92f36be1462071d727d2e012100432cc9b7885c98f59",
-      "valid": true,
-      "unique_entry_count": null,
-      "normalized_sha256": "",
-      "status": "valid",
-      "status_code": 200,
-      "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/signal.mrs",
-      "elapsed_ms": 1137
+      "elapsed_ms": 157
     },
     {
       "name": "site_webrtc",
@@ -7117,7 +6752,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://testingcf.jsdelivr.net/gh/yiteei/Share@d46fd38f37f03d0000c007bb0749ab4c883d5da6/rules/site/webrtc.mrs",
-      "elapsed_ms": 352
+      "elapsed_ms": 169
     },
     {
       "name": "speedtest-3",
@@ -7138,16 +6773,16 @@
       "via_intermediary": false,
       "detected_format": "text-rules",
       "content_type": "text/plain; charset=utf-8",
-      "byte_count": 85045,
-      "entry_count": 3305,
-      "sha256": "0930904485d581c7f5a1f131d22f69d243db7ee30c777da943a7400f023acb74",
+      "byte_count": 85382,
+      "entry_count": 3318,
+      "sha256": "4611f8b9dc52385e9552746d3d28dec9a117e6a306cc6b516fb2544f5bd09e9f",
       "valid": true,
-      "unique_entry_count": 3304,
-      "normalized_sha256": "f7286ee46e92c7c877ad909d431b631b878022bce9ea1cadce23dc1380e98fd1",
+      "unique_entry_count": 3317,
+      "normalized_sha256": "5e0094cc5b7af1dd48a234350939e8877fd153aa30bb3bbb961d2b584da6711d",
       "status": "valid",
       "status_code": 200,
       "final_url": "https://ruleset.skk.moe/Clash/domainset/speedtest.txt",
-      "elapsed_ms": 460
+      "elapsed_ms": 179
     },
     {
       "name": "steamcdn_ip",
@@ -7159,7 +6794,7 @@
       ],
       "routes": [
         {
-          "index": 109,
+          "index": 106,
           "target": "游戏服务"
         }
       ],
@@ -7177,7 +6812,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/IP/steamCDN-ip.mrs",
-      "elapsed_ms": 538
+      "elapsed_ms": 114
     },
     {
       "name": "stream_non_ip",
@@ -7189,7 +6824,7 @@
       ],
       "routes": [
         {
-          "index": 151,
+          "index": 146,
           "target": "流媒体"
         }
       ],
@@ -7200,14 +6835,14 @@
       "content_type": "text/plain; charset=utf-8",
       "byte_count": 9451,
       "entry_count": 287,
-      "sha256": "648cd329397c5af61206ed931fb57ce7426527160d3c64b840e21be8cb6fce9e",
+      "sha256": "87152d51177a81caaa49baaa8b776810abed514443d27f3312b48a514e14ce5e",
       "valid": true,
       "unique_entry_count": 287,
-      "normalized_sha256": "a8fba78ef2527b68d86cc6a782f2e9d96007198be24cc7907594dafbb7e5986b",
+      "normalized_sha256": "f5476b60e73201b39f92fd052e59005406a54ae5e44b98eef3addda5fefa8554",
       "status": "valid",
       "status_code": 200,
       "final_url": "https://ruleset.skk.moe/Clash/non_ip/stream.txt",
-      "elapsed_ms": 210
+      "elapsed_ms": 524
     },
     {
       "name": "talkatone_domain",
@@ -7219,7 +6854,7 @@
       ],
       "routes": [
         {
-          "index": 94,
+          "index": 95,
           "target": "社交通讯"
         }
       ],
@@ -7237,7 +6872,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/Domain/Talkatone-domain.mrs",
-      "elapsed_ms": 1064
+      "elapsed_ms": 109
     },
     {
       "name": "talkatone_ip",
@@ -7249,7 +6884,7 @@
       ],
       "routes": [
         {
-          "index": 95,
+          "index": 96,
           "target": "社交通讯"
         }
       ],
@@ -7267,7 +6902,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/IP/Talkatone-ip.mrs",
-      "elapsed_ms": 1572
+      "elapsed_ms": 109
     },
     {
       "name": "telegram_domain",
@@ -7279,7 +6914,7 @@
       ],
       "routes": [
         {
-          "index": 96,
+          "index": 97,
           "target": "社交通讯"
         }
       ],
@@ -7297,7 +6932,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Telegram/Telegram.yaml",
-      "elapsed_ms": 890
+      "elapsed_ms": 113
     },
     {
       "name": "tencent!cn_domain",
@@ -7309,7 +6944,7 @@
       ],
       "routes": [
         {
-          "index": 200,
+          "index": 191,
           "target": "默认代理"
         }
       ],
@@ -7327,37 +6962,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/tencent%40!cn.mrs",
-      "elapsed_ms": 904
-    },
-    {
-      "name": "tg_site",
-      "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/telegram.mrs",
-      "behavior": "domain",
-      "declared_format": "mrs",
-      "targets": [
-        "默认代理"
-      ],
-      "routes": [
-        {
-          "index": 203,
-          "target": "默认代理"
-        }
-      ],
-      "upstream": "github:MetaCubeX",
-      "pinned": true,
-      "via_intermediary": false,
-      "detected_format": "mrs-binary",
-      "content_type": "application/octet-stream",
-      "byte_count": 274,
-      "entry_count": null,
-      "sha256": "ffa4d1d3e8649965e529c1c570d8add75a0d6f70aa8503ece8add841ce48c0e7",
-      "valid": true,
-      "unique_entry_count": null,
-      "normalized_sha256": "",
-      "status": "valid",
-      "status_code": 200,
-      "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/telegram.mrs",
-      "elapsed_ms": 1075
+      "elapsed_ms": 181
     },
     {
       "name": "threads_domain",
@@ -7369,7 +6974,7 @@
       ],
       "routes": [
         {
-          "index": 97,
+          "index": 98,
           "target": "社交通讯"
         }
       ],
@@ -7387,7 +6992,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Threads/Threads.yaml",
-      "elapsed_ms": 484
+      "elapsed_ms": 102
     },
     {
       "name": "trackerslist",
@@ -7399,7 +7004,7 @@
       ],
       "routes": [
         {
-          "index": 204,
+          "index": 194,
           "target": "默认代理"
         }
       ],
@@ -7417,7 +7022,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/DustinWin/ruleset_geodata/05cb71a6617dcbceae1457f7168339704017f5aa/trackerslist.mrs",
-      "elapsed_ms": 1147
+      "elapsed_ms": 207
     },
     {
       "name": "xiaohongshu",
@@ -7429,7 +7034,7 @@
       ],
       "routes": [
         {
-          "index": 102,
+          "index": 103,
           "target": "社交通讯"
         }
       ],
@@ -7447,7 +7052,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/XiaoHongShu/XiaoHongShu_No_Resolve.yaml",
-      "elapsed_ms": 621
+      "elapsed_ms": 427
     },
     {
       "name": "xiaomi_domain",
@@ -7459,7 +7064,7 @@
       ],
       "routes": [
         {
-          "index": 207,
+          "index": 196,
           "target": "默认代理"
         }
       ],
@@ -7477,26 +7082,26 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/XiaoMi/XiaoMi.yaml",
-      "elapsed_ms": 1559
+      "elapsed_ms": 193
     }
   ],
   "quality_score": {
     "kind": "structural-v2",
-    "total": 98.94,
+    "total": 98.91,
     "grade": "A",
     "dimensions": {
       "availability": 40.0,
       "content_validity": 10.0,
       "content_uniqueness": 15.0,
       "target_consistency": 9.37,
-      "supply_chain": 14.57,
+      "supply_chain": 14.54,
       "cold_start_cost": 10.0
     },
     "evidence": {
       "upstream_count": 16,
       "via_intermediary_count": 0,
       "unpinned_count": 10,
-      "total_bytes": 3006632,
+      "total_bytes": 2997453,
       "provider_count_budget": 200,
       "cold_start_byte_budget": 16777216
     },
