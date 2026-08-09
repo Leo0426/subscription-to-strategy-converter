@@ -187,8 +187,8 @@ proxy-groups:
 - name: 开发服务
   type: select
   proxies:
-  - 默认代理
   - 美国自动
+  - 默认代理
   - 日本自动
   - 新加坡自动
   - DIRECT
@@ -202,16 +202,16 @@ proxy-groups:
 - name: Google
   type: select
   proxies:
-  - 默认代理
   - 美国自动
+  - 默认代理
   - 新加坡自动
   - 日本自动
 - name: Microsoft
   type: select
   proxies:
-  - DIRECT
-  - 默认代理
   - 美国自动
+  - 默认代理
+  - DIRECT
   - 日本自动
 - name: Apple
   type: select
@@ -1311,9 +1311,9 @@ rule-providers:
     interval: 86400
 rules:
 - AND,((NETWORK,UDP),(DST-PORT,443),(NOT,((GEOSITE,cn))),(NOT,((GEOIP,CN)))),REJECT
-- RULE-SET,ads,REJECT
-- RULE-SET,AdvertisingIP,REJECT,no-resolve
-- RULE-SET,custom_reject,REJECT
+- DOMAIN-SUFFIX,hcaptcha.com,AI 服务
+- DOMAIN-SUFFIX,challenges.cloudflare.com,AI 服务
+- DOMAIN-SUFFIX,recaptcha.net,AI 服务
 - DOMAIN-SUFFIX,gvt1.com,Google
 - RULE-SET,UnBan,DIRECT
 - RULE-SET,Category-DoH,DIRECT
@@ -1510,6 +1510,9 @@ rules:
 - RULE-SET,UbisoftCN,默认代理
 - RULE-SET,xiaomi_domain,默认代理
 - RULE-SET,Xunlei,默认代理
+- RULE-SET,ads,REJECT
+- RULE-SET,AdvertisingIP,REJECT,no-resolve
+- RULE-SET,custom_reject,REJECT
 - DST-PORT,6881-6999,REJECT
 - GEOSITE,category-ads-all,REJECT
 - IP-CIDR,198.18.0.1/16,REJECT,no-resolve
