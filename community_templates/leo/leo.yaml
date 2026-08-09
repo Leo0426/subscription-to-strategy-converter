@@ -703,13 +703,6 @@ rule-providers:
     url: https://raw.githubusercontent.com/JohnsonRan/CRules/e60d312c610b84c0fdddd0e91aabf5e49da02be7/rules/reject.txt
     path: ./rule_provider/leo/396.txt
     interval: 86400
-  UnBan:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/4b461ca03b430c46d33b505cf4384e2f4f1be4b1/Clash/Providers/UnBan.yaml
-    path: ./rule_provider/leo/404.yaml
-    interval: 86400
   F1 TV:
     type: http
     behavior: classical
@@ -1315,7 +1308,6 @@ rules:
 - DOMAIN-SUFFIX,challenges.cloudflare.com,AI 服务
 - DOMAIN-SUFFIX,recaptcha.net,AI 服务
 - DOMAIN-SUFFIX,gvt1.com,Google
-- RULE-SET,UnBan,DIRECT
 - RULE-SET,Category-DoH,DIRECT
 - RULE-SET,cdn_non_ip,默认代理
 - RULE-SET,china_ip_ipv6,DIRECT
@@ -1371,7 +1363,6 @@ rules:
 - DOMAIN,turn2.turnserver.me,DIRECT
 - DOMAIN,relay.metered.ca,DIRECT
 - DOMAIN,global.stun.twilio.com,DIRECT
-- DOMAIN,stun.nextcloud.com,DIRECT
 - DST-PORT,19302,DIRECT
 - DST-PORT,3478,DIRECT
 - DST-PORT,5349,DIRECT
@@ -1523,7 +1514,6 @@ rules:
 - DOMAIN,access.mypikpak.com,REJECT
 - DOMAIN,access.mypikpak.net,REJECT
 - DOMAIN,access.pikpak.me,REJECT
-- DOMAIN-SUFFIX,download.nvidia.com,DIRECT
 - GEOSITE,openai,AI 服务
 - GEOIP,ai,AI 服务,no-resolve
 - DOMAIN-SUFFIX,lingq.com,AI 服务
@@ -1591,9 +1581,6 @@ rules:
 - DOMAIN-SUFFIX,cn,DIRECT
 - GEOSITE,cn,DIRECT
 - GEOIP,cn,DIRECT,no-resolve
-- DOMAIN-SUFFIX,apple.com,DIRECT
-- DOMAIN-SUFFIX,icloud.com,DIRECT
-- DOMAIN-SUFFIX,cdn-apple.com,DIRECT
 - DOMAIN-SUFFIX,ls.apple.com,DIRECT
 - IP-CIDR,223.5.5.5/32,DIRECT,no-resolve
 - IP-CIDR,223.6.6.6/32,DIRECT,no-resolve
