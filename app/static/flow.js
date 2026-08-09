@@ -66,6 +66,25 @@ function setBusy(button, busy, busyText) {
   button.disabled = busy;
 }
 
+async function copyToClipboard(value, sourceInput) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(value);
+      return;
+    } catch {
+      // Falls through to the execCommand fallback below (e.g. insecure
+      // context or permission denied — clipboard API throws silently).
+    }
+  }
+  sourceInput.removeAttribute("readonly");
+  sourceInput.focus();
+  sourceInput.select();
+  const ok = document.execCommand("copy");
+  sourceInput.setAttribute("readonly", "");
+  sourceInput.blur();
+  if (!ok) throw new Error("copy command failed");
+}
+
 function showToast(message) {
   const toast = $("#toast");
   toast.textContent = message;
@@ -420,10 +439,15 @@ function bindEvents() {
   $("#publish-result").addEventListener("click", async (event) => {
     const button = event.target.closest("[data-copy-output]");
     if (!button) return;
-    const value = $(`#published-${button.dataset.copyOutput}-url`).value;
+    const input = $(`#published-${button.dataset.copyOutput}-url`);
+    const value = input.value;
     if (!value) return;
-    await navigator.clipboard.writeText(value);
-    showToast("链接已复制");
+    try {
+      await copyToClipboard(value, input);
+      showToast("链接已复制");
+    } catch {
+      showToast("复制失败，请手动选择链接后按 Cmd/Ctrl+C");
+    }
   });
 }
 
