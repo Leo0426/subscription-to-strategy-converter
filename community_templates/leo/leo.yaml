@@ -1476,6 +1476,11 @@ rules:
 - RULE-SET,Apple-IP,Apple,no-resolve
 - RULE-SET,Google-2,Google
 - RULE-SET,Google_IP-4,Google,no-resolve
+- GEOSITE,google,Google
+- GEOIP,google,Google,no-resolve
+- GEOSITE,google-cn,Google
+- DOMAIN-SUFFIX,xn--ngstr-lra8j.com,Google
+- DOMAIN-SUFFIX,googleapis.cn,Google
 - RULE-SET,Microsoft-6,Microsoft
 - RULE-SET,bank_cn_domain,金融服务
 - RULE-SET,Crypto-2,金融服务
@@ -1620,35 +1625,7 @@ rules:
 - DOMAIN,access.mypikpak.net,REJECT
 - DOMAIN,access.pikpak.me,REJECT
 - DOMAIN-SUFFIX,steamserver.net,DIRECT
-- DST-PORT,3478/19302,DIRECT
 - DOMAIN-SUFFIX,download.nvidia.com,DIRECT
-- GEOSITE,private,DIRECT
-- GEOSITE,category-public-tracker,DIRECT
-- GEOSITE,category-games@cn,DIRECT
-- GEOSITE,apple@cn,DIRECT
-- GEOSITE,icloud,DIRECT
-- GEOSITE,microsoft@cn,DIRECT
-- GEOSITE,onedrive,DIRECT
-- GEOIP,private,DIRECT,no-resolve
-- DOMAIN-SUFFIX,cn,DIRECT
-- GEOSITE,cn,DIRECT
-- GEOIP,cn,DIRECT,no-resolve
-- DOMAIN-SUFFIX,apple.com,DIRECT
-- DOMAIN-SUFFIX,icloud.com,DIRECT
-- DOMAIN-SUFFIX,cdn-apple.com,DIRECT
-- DOMAIN-SUFFIX,ls.apple.com,DIRECT
-- IP-CIDR,100.64.0.0/10,DIRECT,no-resolve
-- GEOSITE,steam@cn,DIRECT
-- IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
-- IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
-- IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
-- IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
-- IP-CIDR,223.5.5.5/32,DIRECT,no-resolve
-- IP-CIDR,223.6.6.6/32,DIRECT,no-resolve
-- DST-PORT,123,DIRECT
-- DOMAIN-KEYWORD,dl-a10b-,DIRECT
-- DOMAIN-KEYWORD,dl-z01a-,DIRECT
-- DOMAIN-REGEX,^dl-[A-Za-z0-9-]+\.mypikpak\.com$,DIRECT
 - GEOSITE,category-ai-!cn,AI 服务
 - GEOSITE,openai,AI 服务
 - GEOIP,ai,AI 服务,no-resolve
@@ -1665,16 +1642,13 @@ rules:
 - DOMAIN,edgeservices.bing.com,AI 服务
 - DOMAIN,sydney.bing.com,AI 服务
 - DOMAIN,img.bing.com,AI 服务
+- GEOSITE,apple@cn,DIRECT
 - GEOSITE,apple,Apple
 - GEOSITE,apple-tvplus,Apple
 - GEOSITE,apple-cn,Apple
-- GEOSITE,google,Google
-- GEOIP,google,Google,no-resolve
-- GEOSITE,google-cn,Google
-- DOMAIN-SUFFIX,xn--ngstr-lra8j.com,Google
-- DOMAIN-SUFFIX,googleapis.cn,Google
 - GEOSITE,github,开发服务
 - GEOSITE,paypal,金融服务
+- GEOSITE,steam@cn,DIRECT
 - GEOSITE,steam,游戏服务
 - GEOSITE,youtube,流媒体
 - GEOSITE,netflix,流媒体
@@ -1687,6 +1661,7 @@ rules:
 - DOMAIN-KEYWORD,speedtest,默认代理
 - DOMAIN-SUFFIX,3gppnetwork.org,默认代理
 - PROCESS-NAME-REGEX,.*telegram.*,默认代理
+- GEOSITE,microsoft@cn,DIRECT
 - GEOSITE,microsoft,默认代理
 - GEOSITE,telegram,默认代理
 - GEOIP,telegram,默认代理,no-resolve
@@ -1707,13 +1682,12 @@ rules:
 - DOMAIN-SUFFIX,hf.co,默认代理
 - DOMAIN-SUFFIX,hf.space,默认代理
 - DOMAIN-SUFFIX,huggingface.co,默认代理
+- GEOSITE,category-games@cn,DIRECT
 - GEOSITE,category-games,默认代理
 - GEOSITE,twitter,默认代理
 - GEOSITE,category-speedtest,默认代理
 - AND,((DST-PORT,53),(NOT,((IN-TYPE,Inner)))),默认代理
-- AND,((DST-PORT,3478),(RULE-SET,site_webrtc)),默认代理
 - IN-NAME,in_mixed,默认代理
-- AND,((DST-PORT,3478),(RULE-SET,ip_webrtc)),默认代理
 - DST-PORT,10000-65535,默认代理
 - GEOSITE,category-scholar-!cn,默认代理
 - GEOSITE,ehentai,默认代理
@@ -1723,8 +1697,29 @@ rules:
 - IP-CIDR,203.107.1.0/24,默认代理,no-resolve
 - GEOSITE,connectivity-check,默认代理
 - GEOSITE,googlefcm,默认代理
-- DST-PORT,53,默认代理
-- DST-PORT,853,默认代理
+- GEOSITE,private,DIRECT
+- GEOSITE,category-public-tracker,DIRECT
+- GEOSITE,icloud,DIRECT
+- GEOSITE,onedrive,DIRECT
+- GEOIP,private,DIRECT,no-resolve
+- DOMAIN-SUFFIX,cn,DIRECT
+- GEOSITE,cn,DIRECT
+- GEOIP,cn,DIRECT,no-resolve
+- DOMAIN-SUFFIX,apple.com,DIRECT
+- DOMAIN-SUFFIX,icloud.com,DIRECT
+- DOMAIN-SUFFIX,cdn-apple.com,DIRECT
+- DOMAIN-SUFFIX,ls.apple.com,DIRECT
+- IP-CIDR,100.64.0.0/10,DIRECT,no-resolve
+- IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+- IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
+- IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+- IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
+- IP-CIDR,223.5.5.5/32,DIRECT,no-resolve
+- IP-CIDR,223.6.6.6/32,DIRECT,no-resolve
+- DST-PORT,123,DIRECT
+- DOMAIN-KEYWORD,dl-a10b-,DIRECT
+- DOMAIN-KEYWORD,dl-z01a-,DIRECT
+- DOMAIN-REGEX,^dl-[A-Za-z0-9-]+\.mypikpak\.com$,DIRECT
 - PROCESS-NAME,com.ss.android.ugc.aweme,默认代理
 - PROCESS-NAME,com.xingin.xhs,默认代理
 - PROCESS-NAME,tv.danmaku.bili,默认代理
