@@ -1303,7 +1303,6 @@ rule-providers:
     path: ./rule_provider/leo/714.txt
     interval: 86400
 rules:
-- AND,((NETWORK,UDP),(DST-PORT,443),(NOT,((GEOSITE,cn))),(NOT,((GEOIP,CN)))),REJECT
 - DOMAIN-SUFFIX,hcaptcha.com,AI 服务
 - DOMAIN-SUFFIX,challenges.cloudflare.com,AI 服务
 - DOMAIN-SUFFIX,recaptcha.net,AI 服务
