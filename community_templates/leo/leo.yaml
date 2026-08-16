@@ -43,6 +43,9 @@ dns:
   - +.xboxlive.com
   - stun.*.*
   - stun.*.*.*
+  # DIRECT 规则依赖真实 IP,fake-ip 会导致该域名解析异常。
+  - +.tokfinity.com
+  - stun.*.*.*
 sniffer:
   enable: true
   parse-pure-ip: true
@@ -146,9 +149,17 @@ proxy-groups:
   url: https://www.gstatic.com/generate_204
   interval: 600
   tolerance: 150
+- name: AI自动
+  type: url-test
+  include-all: true
+  url: https://claude.ai/
+  expected-status: 200
+  interval: 600
+  tolerance: 150
 - name: AI 服务
   type: select
   proxies:
+  - AI自动
   - 美国自动
   - 默认代理
   - 日本自动
@@ -1303,21 +1314,16 @@ rule-providers:
     path: ./rule_provider/leo/714.txt
     interval: 86400
 rules:
+- DOMAIN-SUFFIX,tokfinity.com,DIRECT
 - DOMAIN-SUFFIX,hcaptcha.com,AI 服务
 - DOMAIN-SUFFIX,challenges.cloudflare.com,AI 服务
 - DOMAIN-SUFFIX,recaptcha.net,AI 服务
 - DOMAIN-SUFFIX,gvt1.com,Google
 - RULE-SET,Category-DoH,DIRECT
 - RULE-SET,cdn_non_ip,默认代理
-- RULE-SET,china_ip_ipv6,DIRECT
-- RULE-SET,ChinaAPP,DIRECT
-- RULE-SET,ChinaIPs,DIRECT
 - RULE-SET,Cloudflare-2,默认代理
 - RULE-SET,cloudflare-ip,默认代理,no-resolve
 - RULE-SET,cloudfront-ip,默认代理,no-resolve
-- RULE-SET,cn,DIRECT
-- RULE-SET,cn_v6,DIRECT
-- RULE-SET,cnip,DIRECT
 - RULE-SET,custom_direct,DIRECT
 - RULE-SET,DNS-IP,DIRECT
 - RULE-SET,DNSLeak,DIRECT
@@ -1331,7 +1337,6 @@ rules:
 - RULE-SET,ip_webrtc,DIRECT
 - RULE-SET,lan_ip,DIRECT
 - RULE-SET,no-fakeip,DIRECT
-- RULE-SET,private-2,DIRECT
 - RULE-SET,privateip-2,DIRECT
 - RULE-SET,site_webrtc,DIRECT
 - RULE-SET,speedtest-3,DIRECT
@@ -1577,7 +1582,17 @@ rules:
 - GEOSITE,icloud,DIRECT
 - GEOSITE,onedrive,DIRECT
 - GEOIP,private,DIRECT,no-resolve
+# 广谱"中国大陆/内网即直连"兜底规则,必须排在所有具名服务规则之后——
+# 否则任何被这几个大列表误判命中的服务域名/IP(如 Netflix、IQIYI、Bilibili)
+# 会在到达自己的分组之前被直接拦下,见 rule-target-semantics-bugs 类型二。
+- RULE-SET,china_ip_ipv6,DIRECT
+- RULE-SET,ChinaAPP,DIRECT
+- RULE-SET,ChinaIPs,DIRECT
+- RULE-SET,private-2,DIRECT
 - DOMAIN-SUFFIX,cn,DIRECT
+- RULE-SET,cn,DIRECT
+- RULE-SET,cn_v6,DIRECT
+- RULE-SET,cnip,DIRECT
 - GEOSITE,cn,DIRECT
 - GEOIP,cn,DIRECT,no-resolve
 - DOMAIN-SUFFIX,ls.apple.com,DIRECT

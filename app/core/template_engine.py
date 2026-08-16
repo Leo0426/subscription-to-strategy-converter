@@ -97,13 +97,25 @@ def _core_groups(extra: list[dict] | None = None) -> list[dict]:
 
 def _ai_groups() -> list[dict]:
     return [
-        {"name": "AI", "type": "select", "proxies": ["Proxy", "Auto", "Fallback"]},
-        {"name": "Claude", "type": "select", "proxies": ["AI", "Proxy", "Auto"]},
-        {"name": "OpenAI", "type": "select", "proxies": ["AI", "Proxy", "Auto"]},
-        {"name": "Gemini", "type": "select", "proxies": ["AI", "Proxy", "Auto"]},
-        {"name": "Perplexity", "type": "select", "proxies": ["AI", "Proxy", "Auto"]},
-        {"name": "Cursor", "type": "select", "proxies": ["AI", "Proxy", "Auto"]},
-        {"name": "GitHub Copilot", "type": "select", "proxies": ["AI", "Proxy", "Auto"]},
+        {
+            "name": "AI Auto",
+            "type": "url-test",
+            "include-all": True,
+            # Latency alone (e.g. Auto/gstatic) can't tell a Cloudflare-blocked
+            # exit apart from a clean one — both answer generate_204 fine.
+            # Testing against claude.ai directly and requiring a 200 excludes
+            # nodes that get served a 403 challenge page.
+            "url": "https://claude.ai/",
+            "expected-status": "200",
+            "interval": 300,
+        },
+        {"name": "AI", "type": "select", "proxies": ["AI Auto", "Proxy", "Auto", "Fallback"]},
+        {"name": "Claude", "type": "select", "proxies": ["AI Auto", "AI", "Proxy", "Auto"]},
+        {"name": "OpenAI", "type": "select", "proxies": ["AI Auto", "AI", "Proxy", "Auto"]},
+        {"name": "Gemini", "type": "select", "proxies": ["AI Auto", "AI", "Proxy", "Auto"]},
+        {"name": "Perplexity", "type": "select", "proxies": ["AI Auto", "AI", "Proxy", "Auto"]},
+        {"name": "Cursor", "type": "select", "proxies": ["AI Auto", "AI", "Proxy", "Auto"]},
+        {"name": "GitHub Copilot", "type": "select", "proxies": ["AI Auto", "AI", "Proxy", "Auto"]},
     ]
 
 
