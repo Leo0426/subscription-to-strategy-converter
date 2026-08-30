@@ -160,7 +160,7 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 | Platform | Priority | Compiler |
 |----------|----------|---------|
 | Mihomo / Clash | Product semantic quality bar | `app/core/policy_workspace.py` → `workspace_to_mihomo_config()` + `app/core/renderer.py` |
-| Surge | Public compatibility target; unsupported protocols and MRS sources are skipped with warnings | `app/core/platforms/surge.py` |
+| Surge 5.21+ | Public compatibility target; unsupported protocols and MRS sources are skipped with warnings | `app/core/platforms/surge.py` |
 | sing-box | Internal experimental compiler; rejected by Leo-backed product interfaces | `app/core/platforms/singbox.py` |
 
 ## Key Invariants
@@ -175,6 +175,7 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - Mihomo is the first quality-bar compiler; other compilers remain experimental until semantic parity is explicit
 - Experimental compilers should report unsupported protocols without breaking the workspace loop
 - `RULE-SET` in Surge uses a direct URL (not provider name); the compiler resolves the name via `rule_providers` dict
+- Surge 5.21+ is the compatibility baseline; audited blackmatrix7 Classical providers use complete `_All` variants, while unknown Classical mappings fail closed instead of guessing a partial or nonexistent list
 - Every `RULE-SET` reference, including references nested inside logical `AND` / `OR` / `NOT` rules, must resolve to a declared RuleProvider before publication
 - Surge does not accept Mihomo-only rule types such as `DOMAIN-REGEX`, `PROCESS-NAME-REGEX`, and `IN-NAME`; the compatibility compiler must skip and report them rather than emit an invalid `.conf` line
 - Community templates live under `community_templates/` (scanned root); the deduplicated community template is `community_templates/leo/leo.yaml`
@@ -202,6 +203,7 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - New RuleSources must pass the admission checklist in `community_templates/leo/README.md` (trusted upstream, no third-party proxy fronts, pin when possible, cost-proportional, no high overlap, no target conflicts); the structural-v2 score and the analyzer share one provider-count budget
 - Leo is intentionally a lightweight runtime policy: its regression budget is at most 8 RuleProviders, 140 rules, 12 KiB of source YAML, 14 ProxyGroups, 3 health-check groups, 380 total group-member edges, 200 potential probe memberships, and 34 KiB of rendered YAML for the fixed 144-node SS fixture; exceeding one budget requires an explicit architecture decision and cold-start evidence
 - IP-layer RULE-SETs may route to a service group only for services with genuine domainless direct-IP traffic (Telegram, Discord voice) and must carry `no-resolve`; shared-infrastructure services (AI, Google, streaming) get no IP-layer routing at all, because their front IPs carry unrelated services and a resolving IP rule splits one page across two egresses — geo/private fallbacks targeting DIRECT legitimately resolve
+- Known debt against that boundary: the pinned Google and YouTube classical sources still contain 5 and 3 IP entries. Both source entries and outer references are `no-resolve`, and the public audit exposes their types and resolving count; this containment is not compliance and must not be used as precedent for a new RuleSource
 - RuleProviders hosted where the client has no direct route must declare `proxy: <group>`; `provider_egress.py` owns that decision for both the compiler and the analyzer
 - The published Subscription URL host is unknowable from the request; the page guesses `location.origin` and `SUBFLOW_PUBLIC_BASE_URL` overrides it for clients running on another host
 - There is no Release/ProfileRevision history or rollback; a Profile keeps only its current intent and last-successful artifact per target (ADR 0012)

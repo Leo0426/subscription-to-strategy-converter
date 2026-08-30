@@ -112,6 +112,24 @@ _BLACKMATRIX7_CLASH_YAML = re.compile(
 )
 
 
+_BLACKMATRIX7_COMPLETE_SURGE_VARIANTS = {
+    # These mappings are pinned-revision audited. Other categories use their
+    # base list only when the Clash source is not a `_Classical` variant.
+    ("Apple", "Apple_Classical_No_Resolve"): "Apple_All_No_Resolve",
+    ("Global", "Global_Classical_No_Resolve"): "Global_All_No_Resolve",
+    ("Global", "Global_Classical"): "Global_All",
+}
+
+
+def _blackmatrix7_surge_list_name(category: str, clash_name: str) -> str | None:
+    audited_variant = _BLACKMATRIX7_COMPLETE_SURGE_VARIANTS.get((category, clash_name))
+    if audited_variant is not None:
+        return audited_variant
+    if "_Classical" in clash_name:
+        return None
+    return clash_name.removesuffix("_No_Resolve")
+
+
 def _resolve_blackmatrix7_url(url: str) -> str | None:
     """Return the Surge `.list` URL for a blackmatrix7 Clash YAML URL.
 
@@ -120,7 +138,9 @@ def _resolve_blackmatrix7_url(url: str) -> str | None:
     canonical = _BLACKMATRIX7_CANONICAL_CLASH_YAML.match(url)
     if canonical is not None:
         ref = canonical["raw_ref"] or canonical["cdn_ref"]
-        name = canonical["name"].replace("_No_Resolve", "").replace("_Classical", "")
+        name = _blackmatrix7_surge_list_name(canonical["category"], canonical["name"])
+        if name is None:
+            return None
         return (
             "https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@"
             f"{ref}/rule/Surge/{canonical['category']}/{name}.list"
@@ -129,7 +149,9 @@ def _resolve_blackmatrix7_url(url: str) -> str | None:
     match = _BLACKMATRIX7_CLASH_YAML.match(url)
     if match is None:
         return None
-    name = match["name"].replace("_No_Resolve", "").replace("_Classical", "")
+    name = _blackmatrix7_surge_list_name(match["category"], match["name"])
+    if name is None:
+        return None
     return f"{match['prefix']}/rule/Surge/{match['category']}/{name}.list"
 
 
@@ -384,22 +406,97 @@ def _group_to_surge_line(
         members = ["DIRECT"]
 
     member_str = ", ".join(members)
-    # Current Surge releases use the policy-level test-url or General's
-    # proxy-test-url. Keep the group-level url only for legacy clients; the
-    # actual probe timeout is General's test-timeout, not a group timeout.
-    url = str(group.get("url") or "http://www.gstatic.com/generate_204")
+    # Surge 5.21+ uses General's proxy-test-url; group-level `url=` is ignored.
+    # Keep only scheduling and switching parameters on the group itself.
     interval = int(group.get("interval") or 300)
     tolerance = int(group.get("tolerance") or 100)
 
     if gtype == "select":
         return f"{name} = select, {member_str}"
     if gtype == "url-test":
-        return f"{name} = url-test, {member_str}, url={url}, interval={interval}, tolerance={tolerance}"
+        return f"{name} = url-test, {member_str}, interval={interval}, tolerance={tolerance}"
     if gtype == "fallback":
-        return f"{name} = fallback, {member_str}, url={url}, interval={interval}"
+        return f"{name} = fallback, {member_str}, interval={interval}"
     if gtype == "load-balance":
-        return f"{name} = load-balance, {member_str}, url={url}, persistent=true"
+        return f"{name} = load-balance, {member_str}, persistent=true"
     return f"{name} = select, {member_str}"
+
+
+def _close_group_members_for_surge(
+    proxy_groups: list[Any],
+    compiled_node_names: list[str],
+) -> tuple[list[dict[str, Any]], set[str]]:
+    """Remove groups emptied by target-specific protocol filtering.
+
+    A group that originally named nodes or dynamically selected nodes must not
+    become ``DIRECT`` merely because Surge skipped every matching protocol.
+    Removing it and closing parent references preserves the template's own
+    fallback chain instead.
+    """
+    groups: list[dict[str, Any]] = []
+    prunable_names: set[str] = set()
+    removed_names: set[str] = set()
+    for raw_group in proxy_groups:
+        if not isinstance(raw_group, dict) or not raw_group.get("name"):
+            continue
+        group = dict(raw_group)
+        if isinstance(raw_group.get("proxies"), list):
+            group["proxies"] = list(raw_group["proxies"])
+        name = str(group["name"])
+        if group.get("proxies"):
+            prunable_names.add(name)
+        elif (
+            group.get("include-all")
+            or group.get("use")
+            or group.get("filter")
+            or group.get("exclude-filter")
+        ):
+            members = list(compiled_node_names)
+            include_expression = str(group.get("filter") or "").strip()
+            exclude_expression = str(group.get("exclude-filter") or "").strip()
+            if include_expression:
+                include = re.compile(include_expression)
+                members = [member for member in members if include.search(member)]
+            if exclude_expression:
+                exclude = re.compile(exclude_expression)
+                members = [member for member in members if not exclude.search(member)]
+            group["proxies"] = members
+            prunable_names.add(name)
+        groups.append(group)
+
+    while True:
+        group_names = {str(group["name"]) for group in groups}
+        valid_members = set(compiled_node_names) | group_names | _BUILTIN_TARGETS
+        newly_empty: set[str] = set()
+        for group in groups:
+            members = group.get("proxies")
+            if not isinstance(members, list):
+                continue
+            group["proxies"] = [
+                member for member in members if str(member) in valid_members
+            ]
+            name = str(group["name"])
+            if name in prunable_names and not group["proxies"]:
+                newly_empty.add(name)
+
+        if not newly_empty:
+            return groups, removed_names
+        removed_names.update(newly_empty)
+        groups = [
+            group for group in groups if str(group["name"]) not in newly_empty
+        ]
+
+
+def _redirect_unavailable_target(line: str, unavailable_targets: set[str]) -> str:
+    if not unavailable_targets:
+        return line
+    parts = [part.strip() for part in line.split(",")]
+    if len(parts) < 2:
+        return line
+    target_index = -2 if parts[-1].lower() == "no-resolve" else -1
+    if parts[target_index] in unavailable_targets:
+        parts[target_index] = "REJECT"
+    return ",".join(parts)
 
 
 # ── Rule mapping layer ─────────────────────────────────────────────────────
@@ -521,26 +618,42 @@ def build_surge_config(
     Returns ``(conf, warnings)``. Unsupported node protocols and rule-set URLs
     are reported and skipped while compilation continues.
     """
-    group_names = {
-        str(g.get("name"))
-        for g in proxy_groups
-        if isinstance(g, dict) and g.get("name")
-    }
-
     warnings: list[dict] = []
     proxy_lines: list[str] = []
+    compiled_nodes: list[ProxyNode] = []
     compiled_node_names: list[str] = []
     for node in nodes:
         try:
             proxy_lines.append(_node_to_surge_line(node))
+            compiled_nodes.append(node)
             compiled_node_names.append(node.name)
         except UnsupportedProtocolError as exc:
             warnings.append(exc.to_dict())
 
-    group_lines: list[str] = []
-    for group in proxy_groups:
-        if isinstance(group, dict) and group.get("name"):
-            group_lines.append(_group_to_surge_line(group, compiled_node_names, group_names))
+    closed_groups, removed_group_names = _close_group_members_for_surge(
+        proxy_groups,
+        compiled_node_names,
+    )
+    group_names = {str(group["name"]) for group in closed_groups}
+    unavailable_targets = (removed_group_names | {node.name for node in nodes}) - (
+        set(compiled_node_names) | group_names | _BUILTIN_TARGETS
+    )
+    group_lines = [
+        _group_to_surge_line(group, compiled_node_names, group_names)
+        for group in closed_groups
+    ]
+    if removed_group_names:
+        warnings.append(
+            {
+                "code": "unavailable_proxy_groups",
+                "count": len(removed_group_names),
+                "groups": sorted(removed_group_names),
+                "suggestion": (
+                    "Surge 不支持这些组的全部节点，已删除空组及父级引用；"
+                    "直接命中这些组的规则已改为 REJECT"
+                ),
+            }
+        )
 
     providers = rule_providers if isinstance(rule_providers, dict) else {}
     rule_lines: list[str] = []
@@ -560,6 +673,7 @@ def build_surge_config(
             if rule_type and rule_type not in _SURGE_RULE_TYPES and rule_type != "MATCH":
                 unsupported_rule_types.append(rule_type)
             continue
+        line = _redirect_unavailable_target(line, unavailable_targets)
         if line.startswith("FINAL,"):
             has_final = True
         rule_lines.append(line)
@@ -588,7 +702,7 @@ def build_surge_config(
         )
 
     sections: list[str] = [_general_section()]
-    host_section = _host_section(nodes)
+    host_section = _host_section(compiled_nodes)
     if host_section:
         sections.extend(["", host_section])
     sections.extend([

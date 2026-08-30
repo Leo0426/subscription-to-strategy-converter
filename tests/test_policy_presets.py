@@ -17,6 +17,35 @@ proxies:
 """
 
 
+MIXED_REGION_SUBSCRIPTION = """
+proxies:
+  - name: US02
+    type: ss
+    server: us.example.com
+    port: 443
+    cipher: aes-128-gcm
+    password: secret
+  - name: LAX 01
+    type: ss
+    server: lax.example.com
+    port: 443
+    cipher: aes-128-gcm
+    password: secret
+  - name: RUSSIA 01
+    type: ss
+    server: ru.example.com
+    port: 443
+    cipher: aes-128-gcm
+    password: secret
+  - name: 新加坡 01
+    type: ss
+    server: sg.example.com
+    port: 443
+    cipher: aes-128-gcm
+    password: secret
+"""
+
+
 def test_product_catalog_exposes_one_base_template_and_five_policy_presets() -> None:
     response = TestClient(app).get("/presets")
 
@@ -37,7 +66,7 @@ def test_product_catalog_exposes_one_base_template_and_five_policy_presets() -> 
 
 def test_workspace_builds_ai_preset_on_the_canonical_base(monkeypatch) -> None:
     async def fake_fetch_subscription(url: str) -> str:
-        return SUBSCRIPTION
+        return MIXED_REGION_SUBSCRIPTION
 
     monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
     response = TestClient(app).post(
@@ -53,6 +82,8 @@ def test_workspace_builds_ai_preset_on_the_canonical_base(monkeypatch) -> None:
     workspace = response.json()["workspace"]
     assert any(group["name"] == "Claude" for group in workspace["proxy_groups"])
     assert any(rule["raw"] == "DOMAIN-SUFFIX,claude.ai,Claude" for rule in workspace["rules"])
+    ai_auto = next(group for group in workspace["proxy_groups"] if group["name"] == "AI Auto")
+    assert ai_auto["members"] == ["US02", "LAX 01"]
 
 
 def test_custom_policy_takes_ownership_after_preset_selection(monkeypatch) -> None:

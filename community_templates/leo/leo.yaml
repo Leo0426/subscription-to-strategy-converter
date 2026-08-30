@@ -37,7 +37,6 @@ dns:
   # 断网误判和 NAT 类型劣化。
   - +.msftconnecttest.com
   - +.msftncsi.com
-  - dns.msftncsi.com
   - +.srv.nintendo.net
   - +.stun.playstation.net
   - +.xboxlive.com
@@ -117,11 +116,11 @@ proxy-groups:
   - 自动选择
   - 手动选择
 - name: AI自动
-  # ChatGPT 可达性与通用 204 延迟不是一回事。只测试较近且通常支持 AI
-  # 服务的新加坡节点，失败一次即重测；无新加坡节点时编译器会删除本组。
+  # ChatGPT TLS 探针与通用 204 延迟不是一回事。只测试通常支持 AI 服务的
+  # 美国节点，失败一次即重测；无美国节点时编译器会删除本组。
   type: url-test
   include-all: true
-  filter: (?i)(新加坡|狮城|🇸🇬|Singapore|(^|[^A-Za-z])(SG|SIN)([^A-Za-z]|$))
+  filter: (?i)(美国|美國|🇺🇸|United States|(^|[^A-Za-z])(US|USA|LAX|SJC|SFO)([^A-Za-z]|$))
   url: https://chatgpt.com/cdn-cgi/trace
   expected-status: 200
   timeout: 5000
@@ -211,7 +210,7 @@ rule-providers:
     type: http
     behavior: classical
     format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Google/Google.yaml
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Google/Google_No_Resolve.yaml
     path: ./rule_provider/leo/169.yaml
     interval: 604800
   Microsoft-6:
@@ -279,20 +278,30 @@ rules:
 - GEOSITE,apple@cn,DIRECT
 - GEOSITE,icloud,DIRECT
 - GEOSITE,microsoft@cn,DIRECT
+- DOMAIN-SUFFIX,ls.apple.com,DIRECT
+# 精确例外必须先于广义厂商 Provider，否则会被 msedge.net 等后缀
+# 提前吞掉，模板声明的拒绝或 AI 出口不会生效。
+- DOMAIN,t-ring-fdv2.msedge.net,REJECT,no-resolve
 # 这些核心域名同时是 Surge 的保底契约；Surge 无法读取 ai-4 的 domain
 # 裸列表，也不支持后面的 GEOSITE。
 - DOMAIN-SUFFIX,openai.com,AI 服务
 - DOMAIN-SUFFIX,chatgpt.com,AI 服务
 - DOMAIN-SUFFIX,oaistatic.com,AI 服务
 - DOMAIN-SUFFIX,oaiusercontent.com,AI 服务
+- DOMAIN-SUFFIX,api.microsoftapp.net,AI 服务
+- DOMAIN-SUFFIX,copilot.azure.com,AI 服务
+- DOMAIN-SUFFIX,openai.azure.com,AI 服务
+- DOMAIN,edgeservices.bing.com,AI 服务
+- DOMAIN,sydney.bing.com,AI 服务
+- DOMAIN,img.bing.com,AI 服务
 # 专属服务必须先于广义集合，确保自定义 Claude/YouTube 出口真实生效。
 - RULE-SET,Claude,AI 服务
 - RULE-SET,ai-4,AI 服务
 - RULE-SET,GitHub-5,开发服务
 - DOMAIN-SUFFIX,crashlytics.com,Google
 - RULE-SET,Apple-4,Apple
-- RULE-SET,YouTube-6,流媒体
-- RULE-SET,Google-2,Google
+- RULE-SET,YouTube-6,流媒体,no-resolve
+- RULE-SET,Google-2,Google,no-resolve
 - GEOSITE,google,Google
 - GEOSITE,google-cn,Google
 - RULE-SET,Microsoft-6,Microsoft
@@ -301,7 +310,6 @@ rules:
 - GEOSITE,category-ads-all,REJECT
 - IP-CIDR,198.18.0.1/16,REJECT,no-resolve
 - IP-CIDR,169.254.169.254/32,REJECT,no-resolve
-- DOMAIN,t-ring-fdv2.msedge.net,REJECT,no-resolve
 - IP-CIDR,95.161.76.100/31,REJECT,no-resolve
 - DOMAIN,access.pikpakdrive.com,REJECT
 - DOMAIN,access.mypikpak.com,REJECT
@@ -313,12 +321,6 @@ rules:
 - DOMAIN-SUFFIX,deepl.com,AI 服务
 - DOMAIN-SUFFIX,grammarly.com,AI 服务
 - DOMAIN-KEYWORD,sci-hub,AI 服务
-- DOMAIN-SUFFIX,api.microsoftapp.net,AI 服务
-- DOMAIN-SUFFIX,copilot.azure.com,AI 服务
-- DOMAIN-SUFFIX,openai.azure.com,AI 服务
-- DOMAIN,edgeservices.bing.com,AI 服务
-- DOMAIN,sydney.bing.com,AI 服务
-- DOMAIN,img.bing.com,AI 服务
 - GEOSITE,apple,Apple
 - GEOSITE,apple-tvplus,Apple
 - GEOSITE,apple-cn,Apple
@@ -344,9 +346,6 @@ rules:
 - GEOSITE,gfw,默认代理
 - GEOSITE,geolocation-!cn,默认代理
 - DOMAIN-SUFFIX,edclub.com,默认代理
-- DOMAIN-SUFFIX,typingclub.com,默认代理
-- DOMAIN-SUFFIX,edclub-cdn.typingclub.com,默认代理
-- DOMAIN-SUFFIX,typingclub-cdn.typingclub.com,默认代理
 - DOMAIN-KEYWORD,typingclub,默认代理
 - GEOSITE,category-games@cn,DIRECT
 - GEOSITE,category-games,游戏服务
@@ -369,7 +368,6 @@ rules:
 - DOMAIN-SUFFIX,cn,DIRECT
 - GEOSITE,cn,DIRECT
 - GEOIP,cn,DIRECT,no-resolve
-- DOMAIN-SUFFIX,ls.apple.com,DIRECT
 - IP-CIDR,223.5.5.5/32,DIRECT,no-resolve
 - IP-CIDR,223.6.6.6/32,DIRECT,no-resolve
 - DST-PORT,123,DIRECT
@@ -379,7 +377,6 @@ rules:
 - PROCESS-NAME,com.ss.android.ugc.aweme,默认代理
 - PROCESS-NAME,com.xingin.xhs,社交通讯
 - PROCESS-NAME,tv.danmaku.bili,流媒体
-- DOMAIN-KEYWORD,ipv6tracker,默认代理
 - DOMAIN-KEYWORD,bittorrent,默认代理
 - DOMAIN-KEYWORD,tracker,默认代理
 - MATCH,默认代理

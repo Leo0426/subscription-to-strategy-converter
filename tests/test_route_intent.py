@@ -26,6 +26,35 @@ proxies:
 """
 
 
+COMPACT_US_NAMES_SUBSCRIPTION = """
+proxies:
+  - name: US02
+    type: ss
+    server: us.example.com
+    port: 443
+    cipher: aes-128-gcm
+    password: secret
+  - name: LAX 01
+    type: ss
+    server: lax.example.com
+    port: 443
+    cipher: aes-128-gcm
+    password: secret
+  - name: RUSSIA 01
+    type: ss
+    server: ru.example.com
+    port: 443
+    cipher: aes-128-gcm
+    password: secret
+  - name: 新加坡 01
+    type: ss
+    server: sg.example.com
+    port: 443
+    cipher: aes-128-gcm
+    password: secret
+"""
+
+
 def test_user_can_route_claude_through_a_filtered_node_pool(monkeypatch) -> None:
     async def fake_fetch_subscription(url: str) -> str:
         return SUBSCRIPTION
@@ -64,6 +93,38 @@ def test_user_can_route_claude_through_a_filtered_node_pool(monkeypatch) -> None
     claude = next(group for group in workspace["proxy_groups"] if group["name"] == "Claude")
     assert claude["members"] == ["US-New-01", "DIRECT"]
     assert any(rule["raw"] == "DOMAIN-SUFFIX,claude.ai,Claude" for rule in workspace["rules"])
+
+
+def test_us_node_pool_recognizes_compact_codes_without_matching_russia(monkeypatch) -> None:
+    async def fake_fetch_subscription(url: str) -> str:
+        return COMPACT_US_NAMES_SUBSCRIPTION
+
+    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
+    response = TestClient(app).post(
+        "/workspace/preview",
+        json={
+            "subscription_url": "https://example.com/sub",
+            "preset": "ai",
+            "target": "mihomo",
+            "route_intent": {
+                "node_pools": [{"id": "us", "name": "美国", "regions": ["us"]}],
+                "routes": [
+                    {
+                        "service": "claude",
+                        "primary_pool": "us",
+                        "final_target": "DIRECT",
+                    }
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    claude = next(
+        group for group in response.json()["workspace"]["proxy_groups"]
+        if group["name"] == "Claude"
+    )
+    assert claude["members"] == ["US02", "LAX 01", "DIRECT"]
 
 
 def test_service_route_can_fallback_to_a_second_node_pool(monkeypatch) -> None:

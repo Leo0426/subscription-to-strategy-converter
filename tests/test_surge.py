@@ -263,7 +263,7 @@ def test_urltest_group_format() -> None:
     }
     line = _group_to_surge_line(group, ["HK", "TR"], {"AUTO"})
     assert "url-test" in line
-    assert "url=http://www.gstatic.com/generate_204" in line
+    assert "url=" not in line
     assert "interval=300" in line
     assert "tolerance=50" in line
 
@@ -278,6 +278,7 @@ def test_fallback_group_format() -> None:
     }
     line = _group_to_surge_line(group, ["HK", "TR"], {"FB"})
     assert "fallback" in line
+    assert "url=" not in line
     assert "interval=300" in line
 
 
@@ -443,9 +444,78 @@ def test_config_unsupported_protocol_skipped_with_warning() -> None:
     conf, warnings = build_surge_config([_ss(), tuic], [], [], {})
     assert "HK = ss" in conf
     assert "TUIC" not in conf
+    assert "t.example.com =" not in conf
     assert len(warnings) == 1
     assert warnings[0]["code"] == "unsupported_protocol"
     assert warnings[0]["value"] == "tuic"
+
+
+def test_rules_targeting_a_protocol_emptied_group_fail_closed() -> None:
+    tuic = ProxyNode(
+        name="US-TUIC",
+        protocol="tuic",
+        server="tuic.example.com",
+        port=443,
+        extra={"uuid": "u", "password": "p"},
+    )
+    conf, warnings = build_surge_config(
+        [tuic],
+        [{"name": "OnlyUS", "type": "select", "proxies": ["US-TUIC"]}],
+        ["DOMAIN,example.com,OnlyUS", "MATCH,OnlyUS"],
+        {},
+    )
+
+    assert "OnlyUS =" not in conf
+    assert "DOMAIN,example.com,REJECT" in conf
+    assert "FINAL,REJECT" in conf
+    assert any(warning["code"] == "unavailable_proxy_groups" for warning in warnings)
+
+
+def test_exclude_only_dynamic_group_cannot_fall_through_to_direct() -> None:
+    conf, warnings = build_surge_config(
+        [_ss()],
+        [{"name": "Excluded", "type": "url-test", "exclude-filter": ".*"}],
+        ["MATCH,Excluded"],
+        {},
+    )
+
+    assert "Excluded =" not in conf
+    assert "FINAL,REJECT" in conf
+    assert any(warning["code"] == "unavailable_proxy_groups" for warning in warnings)
+
+
+def test_rules_targeting_an_unsupported_node_fail_closed() -> None:
+    tuic = ProxyNode(
+        name="US-TUIC",
+        protocol="tuic",
+        server="tuic.example.com",
+        port=443,
+        extra={"uuid": "u", "password": "p"},
+    )
+    conf, _ = build_surge_config(
+        [tuic],
+        [],
+        ["DOMAIN,example.com,US-TUIC", "MATCH,US-TUIC"],
+        {},
+    )
+
+    assert "DOMAIN,example.com,REJECT" in conf
+    assert "FINAL,REJECT" in conf
+
+
+def test_unsupported_node_name_cannot_shadow_a_builtin_target() -> None:
+    tuic = ProxyNode(
+        name="DIRECT",
+        protocol="tuic",
+        server="tuic.example.com",
+        port=443,
+        extra={"uuid": "u", "password": "p"},
+    )
+
+    conf, _ = build_surge_config([tuic], [], ["MATCH,DIRECT"], {})
+
+    assert "FINAL,DIRECT" in conf
+    assert "FINAL,REJECT" not in conf
 
 
 def test_config_vmess_node_compiled() -> None:
@@ -616,6 +686,14 @@ _B7_CDN_BASE = f"https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@{_B7_R
 _B7_PROVIDERS: dict = {
     "tencent": {"type": "http", "url": f"{_B7_RAW_BASE}/rule/Clash/Tencent/Tencent_No_Resolve.yaml"},
     "global": {"type": "http", "url": f"{_B7_RAW_BASE}/rule/Clash/Global/Global_Classical_No_Resolve.yaml"},
+    "global-resolve": {
+        "type": "http",
+        "url": f"{_B7_RAW_BASE}/rule/Clash/Global/Global_Classical.yaml",
+    },
+    "netflix-classical": {
+        "type": "http",
+        "url": f"{_B7_RAW_BASE}/rule/Clash/Netflix/Netflix_Classical.yaml",
+    },
     "teams": {"type": "http", "url": f"{_B7_RAW_BASE}/rule/Clash/Teams/Teams.yaml"},
 }
 
@@ -627,10 +705,21 @@ def test_b7_clash_yaml_no_resolve_rewritten_to_surge_list() -> None:
     assert "/rule/Clash/" not in line
 
 
-def test_b7_clash_yaml_classical_segment_stripped() -> None:
+def test_b7_classical_no_resolve_maps_to_complete_surge_variant() -> None:
     line = _rule_to_surge_line("RULE-SET,global,Proxy", _B7_PROVIDERS)
-    # both the Clash-only _Classical and _No_Resolve segments are dropped
-    assert line == f"RULE-SET,{_B7_CDN_BASE}/rule/Surge/Global/Global.list,Proxy"
+    assert line == (
+        f"RULE-SET,{_B7_CDN_BASE}/rule/Surge/Global/Global_All_No_Resolve.list,Proxy"
+    )
+
+
+def test_b7_classical_maps_to_complete_surge_variant() -> None:
+    line = _rule_to_surge_line("RULE-SET,global-resolve,Proxy", _B7_PROVIDERS)
+    assert line == f"RULE-SET,{_B7_CDN_BASE}/rule/Surge/Global/Global_All.list,Proxy"
+
+
+def test_b7_unverified_classical_variant_fails_closed() -> None:
+    with pytest.raises(UnsupportedRuleTypeError):
+        _rule_to_surge_line("RULE-SET,netflix-classical,Proxy", _B7_PROVIDERS)
 
 
 def test_b7_clash_yaml_plain_name_rewritten() -> None:
@@ -694,16 +783,19 @@ def test_leo_surge_keeps_core_services_when_mihomo_only_rules_are_skipped() -> N
     ):
         assert f"DOMAIN-SUFFIX,{suffix},AI 服务" in conf
     native_rule_sets = {
-        "Claude": "AI 服务",
-        "GitHub": "开发服务",
-        "Apple": "Apple",
-        "YouTube": "流媒体",
-        "Google": "Google",
-        "Microsoft": "Microsoft",
-        "Telegram": "社交通讯",
+        "Claude": ("Claude", "AI 服务"),
+        "GitHub": ("GitHub", "开发服务"),
+        "Apple": ("Apple_All_No_Resolve", "Apple"),
+        "YouTube": ("YouTube", "流媒体"),
+        "Google": ("Google", "Google"),
+        "Microsoft": ("Microsoft", "Microsoft"),
+        "Telegram": ("Telegram", "社交通讯"),
     }
-    for service, target in native_rule_sets.items():
-        assert f"/rule/Surge/{service}/{service}.list,{target}" in conf
+    for service, (list_name, target) in native_rule_sets.items():
+        expected = f"/rule/Surge/{service}/{list_name}.list,{target}"
+        if service in {"YouTube", "Google"}:
+            expected += ",no-resolve"
+        assert expected in conf
     assert "/rule/Surge/Telegram/Telegram.list,社交通讯,no-resolve" in conf
     assert "raw.githubusercontent.com/blackmatrix7" not in conf
     assert "cdn.jsdelivr.net/gh/blackmatrix7" in conf
@@ -723,6 +815,41 @@ def test_leo_surge_keeps_core_services_when_mihomo_only_rules_are_skipped() -> N
     )
     assert skipped_sets["count"] == 1
     assert "category-ai-!cn.list" in skipped_sets["examples"][0]
+
+
+def test_leo_surge_prunes_ai_auto_when_all_us_nodes_are_unsupported() -> None:
+    nodes = [
+        _ss("香港 SS"),
+        ProxyNode(
+            name="美国 HY2",
+            protocol="hysteria2",
+            server="hy.example.com",
+            port=443,
+            extra={"password": "secret"},
+        ),
+        ProxyNode(
+            name="US-TUIC",
+            protocol="tuic",
+            server="tuic.example.com",
+            port=443,
+            extra={"uuid": "uuid", "password": "secret"},
+        ),
+    ]
+    config = apply_template(load_template(LEO_TEMPLATE_ID), nodes)
+
+    conf, warnings = build_surge_config(
+        nodes,
+        config["proxy-groups"],
+        config["rules"],
+        config["rule-providers"],
+    )
+
+    assert "AI自动 =" not in conf
+    assert "AI 服务 = select, 默认代理, 自动选择, 手动选择" in conf
+    assert [warning["value"] for warning in warnings if warning["code"] == "unsupported_protocol"] == [
+        "hysteria2",
+        "tuic",
+    ]
 
 
 def test_non_b7_clash_yaml_raises_unsupported() -> None:

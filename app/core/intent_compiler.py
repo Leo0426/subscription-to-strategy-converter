@@ -11,7 +11,10 @@ from app.core.rule_packs import list_rule_packs
 
 REGIONS: dict[str, dict[str, str]] = {
     "hk": {"label": "香港", "pattern": r"香港|Hong\s*Kong|\bHK\b"},
-    "us": {"label": "美国", "pattern": r"美国|美國|United\s*States|\bUSA?\b"},
+    "us": {
+        "label": "美国",
+        "pattern": r"美国|美國|🇺🇸|United\s*States|(^|[^A-Za-z])(US|USA|LAX|SJC|SFO)([^A-Za-z]|$)",
+    },
     "jp": {"label": "日本", "pattern": r"日本|Japan|\bJP\b"},
     "sg": {"label": "新加坡", "pattern": r"新加坡|狮城|獅城|Singapore|\bSG\b"},
     "tw": {"label": "台湾", "pattern": r"台湾|台灣|Taiwan|\bTW\b"},

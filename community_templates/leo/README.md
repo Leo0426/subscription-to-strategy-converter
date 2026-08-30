@@ -6,20 +6,20 @@
 
 1. 在 Subflow 页面填写自己的订阅地址，不要直接在模板中保存订阅 URL。
 2. Subflow 会把当前订阅节点写入全局自动选择和手动选择组；默认出口只额外维护香港低延迟池，避免同一批节点被多个地区组重复测速。
-3. `AI自动` 只匹配新加坡节点并验证 ChatGPT 可达性；没有匹配节点时，该组及父级引用会被自动删除。需要指定其他地区时使用手动选择。
+3. `AI自动` 只匹配美国节点；Mihomo/OpenClash 使用 ChatGPT 端点验证可达性，Surge 保留同一美国节点池但使用全局探针。没有匹配节点时，该组及父级引用会被自动删除；需要指定其他地区时使用手动选择。
 4. 根据运行环境决定是否启用 `tun.enable`；可用 `python -m app.core.rule_source_audit` 复查远程 RuleProvider。
 
 ## 测速说明
 
-- Mihomo/OpenClash 只保留三套健康检查：全局自动、香港自动和 AI 新加坡。通用自动组使用 `https://cp.cloudflare.com/generate_204`，要求 HTTP 204，单节点等待上限为 5000 ms，连续两次实际连接失败会强制复测；组保持 lazy，未被使用时不会继续周期测速。`AI自动` 不嵌套其他测速组，并以 `https://chatgpt.com/cdn-cgi/trace` 验证 ChatGPT TLS 可达性；实际连接失败一次就会强制复测。没有新加坡节点时，`AI 服务` 回退到默认、全局自动和手动策略。
+- Mihomo/OpenClash 只保留三套健康检查：全局自动、香港自动和 AI 美国。通用自动组使用 `https://cp.cloudflare.com/generate_204`，要求 HTTP 204，单节点等待上限为 5000 ms，连续两次实际连接失败会强制复测；组保持 lazy，未被使用时不会继续周期测速。`AI自动` 不嵌套其他测速组，并以 `https://chatgpt.com/cdn-cgi/trace` 验证 ChatGPT TLS 可达性；实际连接失败一次就会强制复测。没有美国节点时，`AI 服务` 回退到默认、全局自动和手动策略。
 - OpenClash 的“URL-Test 地址修改”会覆写模板中的探针地址；若已开启，应改成同一个 Cloudflare 204 地址，或关闭覆写后重新生成运行配置。
-- 当前 Surge 版本使用 `[General] proxy-test-url` 而不是策略组中的旧 `url=`。Subflow 的 Surge 产物统一使用 Apple 轻量探针，并设置 `test-timeout = 3`。
+- Surge 兼容基线为 5.21+：当前版本使用 `[General] proxy-test-url` 而不是策略组中的旧 `url=`，Subflow 统一使用 Apple 轻量探针并设置 `test-timeout = 3`；Apple Provider 使用上游完整的 `Apple_All_No_Resolve.list`，避免基础列表漏掉域名规则。
 - `默认代理` 首选低延迟的香港池；Apple 与 Homebrew Formula API 保持直连优先。当前 8 个 RuleProvider 全部固定到 40 位提交，Mihomo 下载地址会改写到 canonical jsDelivr CDN 并明确固定为 `DIRECT`；Surge 产物也使用同一 CDN 上的原生 `.list`。冷启动不依赖尚未就绪的代理节点，也不再需要隐藏的规则更新组。`interval` 控制结果有效期，`tolerance` 控制切换阻尼，都不会缩短一次手动测速。轻量版删除了旧地区组和兼容别名；客户端若保存过这些组的选择，需要删除旧配置后重新导入。
 
 ## 合并原则
 
 - 扫描完整配置：59 份。
-- 原始规则：2103 条；当前模板收敛为 138 条，其中仅 8 条 `RULE-SET`。OpenAI 核心域名内联以保证 Surge 主链路；Telegram 使用一份同时覆盖域名与无域名 IP 流量的 classical 规则源。
+- 原始规则：2103 条；当前模板收敛为 134 条，其中仅 8 条 `RULE-SET`。OpenAI 核心域名内联以保证 Surge 主链路；Telegram 使用一份同时覆盖域名与无域名 IP 流量的 classical 规则源。
 - 初始远程规则源 716 个；内容审计先压缩到 161 个，本轮按 ADR 0011 的 intent-based consolidation 只保留 AI/Claude、GitHub、Apple、Google、Microsoft、YouTube 和 Telegram 八个核心来源。长尾服务使用 Mihomo 内置 GEOSITE/GEOIP 或最终默认代理，不再为每个小站点单独下载列表。
 - 同名但定义冲突的社区策略组没有机械拼接，而是映射到统一的地区、服务和兜底策略组。
 - 广告类规则映射到 `REJECT`，国内和网络基础规则映射到 `DIRECT`，其余规则映射到对应服务组。
@@ -28,10 +28,11 @@
 ## 当前质量基线
 
 - 2026-08-30 公开审计快照与模板 SHA 匹配：8 个来源全部可用，0 个格式无效，0 个完整重复组，0 个高重叠对。审计工具使用客户端等效 UA（`clash.meta/1.18.0 (subflow-rule-audit)`），避免把来源的 UA 白名单误判为不可用。
-- 结构评分公式 v2（含供应链与冷启动维度）：99.99/100（A）。当前只有 2 个可信上游、0 个第三方代理中转、0 个不可固定版本来源；冷启动规则下载量为 115,548 B，较 161 源快照减少约 96.1%。
+- 结构评分公式 v2（含供应链与冷启动维度）：99.99/100（A）。当前只有 2 个可信上游、0 个第三方代理中转、0 个不可固定版本来源；冷启动规则下载量为 115,603 B，较 161 源快照减少约 96.1%。
 - 轻量回归预算：RuleProvider 不超过 8 个、规则不超过 140 条、模板不超过 12 KiB；固定 144 节点 SS 策略夹具最多 14 个组、3 个健康检查组、380 条组成员边、200 条潜在探针成员边，渲染结果不超过 34 KiB。34 KiB 保留了全局自动回退；同一夹具在精简前超过 84 KiB。真实节点若带 TLS/transport 等字段，输出字节数会更大，验收以结构预算与真实编译为准。
 - 评分不替代语义准确率、覆盖率、长期新鲜度和内容漂移验证。
 - 当前没有 MRS-only 依赖；7 个 classical YAML 核心来源可转换为 Surge 原生列表，`ai-4` 是 Mihomo 的 domain 裸列表，Surge 会明确跳过并给出 warning。OpenAI 四个核心后缀已内联，Telegram 的原生 Surge 列表覆盖域名与 IP；其他 Mihomo 专属规则仍以生成结果中的 warning 为准，公开接口会把模板标记为非完全兼容。
+- 已知边界例外：固定版本的 Google/YouTube classical 上游分别夹带 5/3 条 IP 规则。审计快照会通过 `rule_type_counts` 公开它们；当前来源和外层 `RULE-SET` 均使用 `no-resolve`，可防止为匹配这些规则而主动解析域名，但原始 IP 或已解析请求仍可命中。这是对严格“共享基础设施不做 IP 层服务分流”边界的已知技术债，不是新 RuleSource 的准入先例；彻底移除需要发布经审计的 Mihomo/Surge 等义纯域名双版本。
 
 ## 规则源准入清单
 

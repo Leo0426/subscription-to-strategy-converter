@@ -408,6 +408,74 @@ async def test_audit_rule_sources_isolates_fetch_failures_and_summarizes_results
 
 
 @pytest.mark.asyncio
+async def test_audit_rule_sources_records_hidden_ip_types_in_classical_sources() -> None:
+    providers = {
+        "Mixed": {
+            "url": "https://rules.example/mixed.yaml",
+            "format": "yaml",
+            "behavior": "classical",
+        }
+    }
+
+    async def fetch(url: str) -> dict:
+        return {
+            "status_code": 200,
+            "final_url": url,
+            "content_type": "text/yaml",
+            "content": (
+                b"payload:\n"
+                b"  - DOMAIN-SUFFIX,example.com\n"
+                b"  - IP-CIDR,192.0.2.0/24,no-resolve\n"
+                b"  - IP-CIDR6,2001:db8::/32\n"
+                b"  - IP-SUFFIX,0.0.0.1/24\n"
+                b"  - AND,((IP-CIDR,198.51.100.0/24),(DOMAIN,example.com))\n"
+            ),
+            "elapsed_ms": 1,
+        }
+
+    report = await audit_rule_sources(
+        providers,
+        {"Mixed": ["流媒体"]},
+        fetch=fetch,
+    )
+
+    assert report["sources"][0]["rule_type_counts"] == {
+        "AND": 1,
+        "DOMAIN-SUFFIX": 1,
+        "IP-CIDR": 1,
+        "IP-CIDR6": 1,
+        "IP-SUFFIX": 1,
+    }
+    assert report["sources"][0]["resolving_ip_rule_count"] == 3
+
+
+@pytest.mark.asyncio
+async def test_audit_rule_sources_does_not_report_uninspected_mrs_as_ip_safe() -> None:
+    providers = {
+        "Binary": {
+            "url": "https://rules.example/ip.mrs",
+            "format": "mrs",
+            "behavior": "ipcidr",
+        }
+    }
+
+    async def fetch(url: str) -> dict:
+        return {
+            "status_code": 200,
+            "final_url": url,
+            "content_type": "application/octet-stream",
+            "content": b"MRS\x00\x01binary",
+            "elapsed_ms": 1,
+        }
+
+    report = await audit_rule_sources(providers, {}, fetch=fetch)
+    source = report["sources"][0]
+
+    assert source["rule_type_counts"] is None
+    assert source["resolving_ip_rule_count"] is None
+
+
+@pytest.mark.asyncio
 async def test_audit_leo_rule_sources_records_template_fingerprint(monkeypatch) -> None:
     monkeypatch.setattr(
         "app.core.rule_source_audit.load_template",

@@ -113,6 +113,7 @@ def _ai_groups() -> list[dict]:
             "name": "AI Auto",
             "type": "url-test",
             "include-all": True,
+            "filter": r"(?i)(美国|美國|🇺🇸|United States|(^|[^A-Za-z])(US|USA|LAX|SJC|SFO)([^A-Za-z]|$))",
             # Latency alone (e.g. Auto/gstatic) can't tell a Cloudflare-blocked
             # exit apart from a clean one — both answer generate_204 fine.
             # Testing against claude.ai directly and requiring a 200 excludes

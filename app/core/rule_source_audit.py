@@ -68,6 +68,14 @@ _ORDERED_INLINE_RULE_TYPES = frozenset(
     }
 )
 _INLINE_RULE_PROVIDER = "<inline-rule>"
+_TARGET_IP_RULE_TYPES = frozenset(
+    {"IP-CIDR", "IP-CIDR6", "IP-SUFFIX", "IP-ASN", "GEOIP"}
+)
+_LOGICAL_RULE_TYPES = frozenset({"AND", "OR", "NOT"})
+_NESTED_TARGET_IP_RULE = re.compile(
+    r"(?:^|[(,])\s*(?:ip-cidr6?|ip-suffix|ip-asn|geoip)\s*,",
+    re.IGNORECASE,
+)
 
 
 def template_content_sha256(path: Path = LEO_TEMPLATE_PATH) -> str:
@@ -160,6 +168,56 @@ def extract_normalized_rule_entries(
             continue
         normalized.add(",".join(part.strip() for part in rule.split(",")).lower())
     return frozenset(normalized)
+
+
+def summarize_rule_entry_types(
+    entries: frozenset[str],
+    *,
+    behavior: str = "",
+) -> dict[str, int]:
+    """Count effective rule kinds, including IP rules hidden in classical sets."""
+    normalized_behavior = behavior.strip().lower()
+    counts: Counter[str] = Counter()
+    for entry in entries:
+        parts = [part.strip() for part in entry.split(",")]
+        if len(parts) >= 2 and re.fullmatch(r"[a-z][a-z0-9-]*", parts[0]):
+            counts[parts[0].upper()] += 1
+            continue
+        if normalized_behavior == "domain":
+            counts["DOMAIN-SUFFIX" if entry.startswith(("+.", "*.", ".")) else "DOMAIN"] += 1
+            continue
+        if normalized_behavior == "ipcidr":
+            try:
+                network = ip_network(entry, strict=False)
+            except ValueError:
+                counts["UNKNOWN"] += 1
+            else:
+                counts["IP-CIDR6" if network.version == 6 else "IP-CIDR"] += 1
+            continue
+        counts["UNKNOWN"] += 1
+    return dict(sorted(counts.items()))
+
+
+def count_resolving_ip_rules(
+    entries: frozenset[str],
+    *,
+    behavior: str = "",
+) -> int:
+    """Count IP-layer entries that can trigger destination resolution."""
+    normalized_behavior = behavior.strip().lower()
+    count = 0
+    for entry in entries:
+        parts = [part.strip().lower() for part in entry.split(",")]
+        rule_type = parts[0].upper() if parts else ""
+        if len(parts) >= 2 and rule_type in _TARGET_IP_RULE_TYPES:
+            count += "no-resolve" not in parts[2:]
+        elif rule_type in _LOGICAL_RULE_TYPES and _NESTED_TARGET_IP_RULE.search(entry):
+            # Nested logical payloads can mix multiple target-IP clauses. Count
+            # them conservatively until every nested flag can be proven safe.
+            count += 1
+        elif normalized_behavior == "ipcidr":
+            count += 1
+    return count
 
 
 def find_high_overlap_pairs(
@@ -772,11 +830,22 @@ async def audit_rule_sources(
                 if entries
                 else ""
             )
+            rule_types_inspectable = inspection["detected_format"] != "mrs-binary"
             return {
                 **base,
                 **inspection,
                 "unique_entry_count": len(entries) if entries else inspection["entry_count"],
                 "normalized_sha256": normalized_digest,
+                "rule_type_counts": (
+                    summarize_rule_entry_types(entries, behavior=base["behavior"])
+                    if rule_types_inspectable
+                    else None
+                ),
+                "resolving_ip_rule_count": (
+                    count_resolving_ip_rules(entries, behavior=base["behavior"])
+                    if rule_types_inspectable
+                    else None
+                ),
                 "_entries": entries,
                 "status": "valid" if inspection["valid"] else "invalid",
                 "status_code": status_code,

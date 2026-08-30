@@ -1,6 +1,8 @@
+import json
 from pathlib import Path
 
 from app.core.policy_analyzer import analyze_workspace
+from app.core.rule_source_audit import audit_snapshot_matches_template
 from app.core.policy_workspace import compile_mihomo_config, config_to_workspace
 from app.core.renderer import render_yaml
 from app.core.template_engine import LEO_TEMPLATE_ID, apply_template, load_template
@@ -11,6 +13,7 @@ from app.models.strategy import SelectedPolicy
 _LEO_TEMPLATE_PATH = (
     Path(__file__).resolve().parents[1] / "community_templates" / "leo" / "leo.yaml"
 )
+_LEO_AUDIT_PATH = _LEO_TEMPLATE_PATH.with_name("audit.json")
 _CORE_PROVIDER_NAMES = {
     "ai-4",
     "Claude",
@@ -33,9 +36,9 @@ def _group(config: dict, name: str) -> dict:
 
 
 def _fixed_144_nodes() -> list[ProxyNode]:
-    # Mirrors the current real subscription's distribution so the probe/member
-    # budget catches growth against the deployment that motivated this template.
-    regions = (("香港", 31), ("新加坡", 23), ("其他", 90))
+    # Keep the 144-node stress scale with both SG nodes and a conservative
+    # 23-member US AI pool, without depending on the live subscription shape.
+    regions = (("香港", 31), ("美国", 23), ("新加坡", 23), ("其他", 67))
     nodes: list[ProxyNode] = []
     for region, count in regions:
         for index in range(1, count + 1):
@@ -203,6 +206,21 @@ def test_leo_fake_ip_filter_has_no_duplicate_patterns() -> None:
     patterns = template["dns"]["fake-ip-filter"]
 
     assert len(patterns) == len(set(patterns))
+
+
+def test_leo_fake_ip_filter_has_no_exact_name_covered_by_plus_suffix() -> None:
+    patterns = load_template(LEO_TEMPLATE_ID)["dns"]["fake-ip-filter"]
+    plus_suffixes = [pattern[2:].lower() for pattern in patterns if pattern.startswith("+.")]
+
+    assert not {
+        pattern
+        for pattern in patterns
+        if not pattern.startswith("+.")
+        and any(
+            pattern.lower() == suffix or pattern.lower().endswith(f".{suffix}")
+            for suffix in plus_suffixes
+        )
+    }
 
 
 def test_leo_sniffer_preserves_sensitive_destinations() -> None:
@@ -424,7 +442,7 @@ def test_leo_missing_rule_target_uses_first_available_compatibility_fallback() -
         assert config["rules"] == [f"MATCH,{expected}"]
 
 
-def test_leo_has_no_ip_layer_routing_for_shared_infrastructure_services() -> None:
+def test_leo_has_no_explicit_ip_provider_or_inline_route_for_shared_services() -> None:
     template = load_template(LEO_TEMPLATE_ID)
     providers = template["rule-providers"]
 
@@ -450,6 +468,61 @@ def test_leo_has_no_ip_layer_routing_for_shared_infrastructure_services() -> Non
     }
 
 
+def test_leo_audit_exposes_and_contains_shared_service_ip_exceptions() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+    report = json.loads(_LEO_AUDIT_PATH.read_text(encoding="utf-8"))
+
+    assert audit_snapshot_matches_template(report, _LEO_TEMPLATE_PATH)
+    shared_targets = {"AI 服务", "Google", "流媒体"}
+    shared_providers = {
+        parts[1]
+        for rule in template["rules"]
+        if isinstance(rule, str)
+        and len(parts := [part.strip() for part in rule.split(",")]) >= 3
+        and parts[0] == "RULE-SET"
+        and parts[2] in shared_targets
+    }
+    source_by_name = {source["name"]: source for source in report["sources"]}
+
+    assert shared_providers <= set(source_by_name)
+    ip_counts: dict[str, int] = {}
+    for name in shared_providers:
+        assert "rule_type_counts" in source_by_name[name]
+        type_counts = source_by_name[name]["rule_type_counts"]
+        ip_counts[name] = sum(
+            int(type_counts.get(rule_type, 0))
+            for rule_type in (
+                "IP-CIDR",
+                "IP-CIDR6",
+                "IP-SUFFIX",
+                "GEOIP",
+                "IP-ASN",
+            )
+        )
+        assert source_by_name[name]["resolving_ip_rule_count"] == 0
+
+    assert {name: count for name, count in ip_counts.items() if count} == {
+        "Google-2": 5,
+        "YouTube-6": 3,
+    }
+    for name, count in ip_counts.items():
+        if not count:
+            continue
+        route = next(
+            rule
+            for rule in template["rules"]
+            if isinstance(rule, str) and rule.startswith(f"RULE-SET,{name},")
+        )
+        assert route.endswith(",no-resolve")
+
+
+def test_leo_uses_no_resolve_variants_for_mixed_google_sources() -> None:
+    providers = load_template(LEO_TEMPLATE_ID)["rule-providers"]
+
+    assert providers["Google-2"]["url"].endswith("/Google_No_Resolve.yaml")
+    assert providers["YouTube-6"]["url"].endswith("/YouTube_No_Resolve.yaml")
+
+
 def test_leo_ai_service_reuses_bounded_supported_region_groups() -> None:
     template = load_template(LEO_TEMPLATE_ID)
     config = apply_template(template, [_node("其他 01"), _node("香港 01")])
@@ -459,16 +532,23 @@ def test_leo_ai_service_reuses_bounded_supported_region_groups() -> None:
     assert ai_service["proxies"] == ["默认代理", "自动选择", "手动选择"]
 
 
-def test_leo_ai_auto_uses_direct_singapore_nodes_and_a_chatgpt_probe() -> None:
+def test_leo_ai_auto_uses_direct_us_nodes_and_a_chatgpt_probe() -> None:
     template = load_template(LEO_TEMPLATE_ID)
     config = apply_template(
         template,
-        [_node("新加坡 01"), _node("其他 01"), _node("香港 01")],
+        [
+            _node("美国 01"),
+            _node("US02"),
+            _node("LAX 01"),
+            _node("RUSSIA 01"),
+            _node("新加坡 01"),
+            _node("香港 01"),
+        ],
     )
 
     ai_auto = _group(config, "AI自动")
     assert ai_auto["type"] == "url-test"
-    assert ai_auto["proxies"] == ["新加坡 01"]
+    assert ai_auto["proxies"] == ["美国 01", "US02", "LAX 01"]
     assert ai_auto["url"] == "https://chatgpt.com/cdn-cgi/trace"
     assert ai_auto["expected-status"] == 200
     assert ai_auto["timeout"] == 5000
@@ -498,7 +578,7 @@ def test_leo_latency_groups_use_a_bounded_lightweight_probe() -> None:
     } == {"自动选择", "香港自动", "AI自动"}
 
 
-def test_leo_defaults_to_nearby_routes_and_avoids_forced_us_egress() -> None:
+def test_leo_keeps_non_ai_services_on_nearby_default_routes() -> None:
     template = load_template(LEO_TEMPLATE_ID)
 
     assert _group(template, "默认代理")["proxies"][0] == "香港自动"
@@ -516,6 +596,66 @@ def test_leo_direct_cloud_routes_precede_broad_vendor_providers() -> None:
     assert rules.index("GEOSITE,microsoft@cn,DIRECT") < microsoft_provider
     assert rules.index("GEOSITE,apple@cn,DIRECT") < apple_provider
     assert rules.index("GEOSITE,icloud,DIRECT") < apple_provider
+    assert rules.index("DOMAIN,t-ring-fdv2.msedge.net,REJECT,no-resolve") < microsoft_provider
+    assert rules.index("DOMAIN-SUFFIX,ls.apple.com,DIRECT") < apple_provider
+    for rule in (
+        "DOMAIN-SUFFIX,api.microsoftapp.net,AI 服务",
+        "DOMAIN-SUFFIX,copilot.azure.com,AI 服务",
+        "DOMAIN-SUFFIX,openai.azure.com,AI 服务",
+        "DOMAIN,edgeservices.bing.com,AI 服务",
+        "DOMAIN,sydney.bing.com,AI 服务",
+        "DOMAIN,img.bing.com,AI 服务",
+    ):
+        assert rules.index(rule) < microsoft_provider
+
+
+def test_leo_has_no_specific_suffix_shadowed_by_an_earlier_same_target_suffix() -> None:
+    rules = load_template(LEO_TEMPLATE_ID)["rules"]
+    earlier_suffixes: list[tuple[str, str]] = []
+    shadowed: list[str] = []
+    for rule in rules:
+        if not isinstance(rule, str):
+            continue
+        parts = [part.strip() for part in rule.split(",")]
+        if len(parts) < 3 or parts[0] != "DOMAIN-SUFFIX":
+            continue
+        domain, target = parts[1].lower(), parts[2]
+        if any(
+            target == earlier_target and domain.endswith(f".{earlier_domain}")
+            for earlier_domain, earlier_target in earlier_suffixes
+        ):
+            shadowed.append(rule)
+        earlier_suffixes.append((domain, target))
+
+    assert shadowed == []
+
+
+def test_leo_has_no_domain_rule_subsumed_before_the_next_target_change() -> None:
+    rules = load_template(LEO_TEMPLATE_ID)["rules"]
+    parsed = [
+        [part.strip() for part in rule.split(",")]
+        for rule in rules
+        if isinstance(rule, str)
+    ]
+    redundant: list[str] = []
+    domain_types = {"DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD"}
+    for index, parts in enumerate(parsed):
+        if len(parts) < 3 or parts[0] not in domain_types:
+            continue
+        value, target = parts[1].lower(), parts[2]
+        for later in parsed[index + 1 :]:
+            if len(later) < 3:
+                continue
+            if later[2] != target:
+                break
+            if (
+                later[0] == "DOMAIN-KEYWORD"
+                and later[1].lower() in value
+            ):
+                redundant.append(",".join(parts))
+                break
+
+    assert redundant == []
 
 
 def test_leo_specific_services_precede_overlapping_vendor_sources() -> None:
@@ -523,8 +663,8 @@ def test_leo_specific_services_precede_overlapping_vendor_sources() -> None:
 
     claude = rules.index("RULE-SET,Claude,AI 服务")
     generic_ai = rules.index("RULE-SET,ai-4,AI 服务")
-    youtube = rules.index("RULE-SET,YouTube-6,流媒体")
-    google = rules.index("RULE-SET,Google-2,Google")
+    youtube = rules.index("RULE-SET,YouTube-6,流媒体,no-resolve")
+    google = rules.index("RULE-SET,Google-2,Google,no-resolve")
     apple = rules.index("RULE-SET,Apple-4,Apple")
 
     assert claude < generic_ai
