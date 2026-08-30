@@ -10,11 +10,12 @@ from app.ir import ProxyNode, TLSConfig, TransportConfig
 # ── dict → IR ─────────────────────────────────────────────────────────────
 
 
-_COMMON_OWNED_FIELDS = {
-    "name", "type", "server", "port", "tls", "sni", "servername",
-    "skip-cert-verify", "alpn", "fingerprint", "reality-opts", "network",
-    "ws-opts", "h2-opts", "grpc-opts",
+_IDENTITY_FIELDS = {"name", "type", "server", "port"}
+_COMMON_OWNED_FIELDS = _IDENTITY_FIELDS | {
+    "tls", "sni", "servername",
+    "skip-cert-verify", "alpn", "fingerprint",
 }
+_MODELED_TRANSPORTS = {"ws", "http", "h2", "grpc"}
 _PROTOCOL_OWNED_FIELDS = {
     "ss": {"cipher", "password", "plugin", "plugin-opts", "udp"},
     "vmess": {"uuid", "alterId", "cipher", "udp"},
@@ -29,7 +30,16 @@ _PROTOCOL_OWNED_FIELDS = {
 
 
 def _passthrough_fields(proxy: dict, protocol: str) -> dict[str, Any]:
-    owned = _COMMON_OWNED_FIELDS | _PROTOCOL_OWNED_FIELDS.get(protocol, set())
+    # Only consume common transport/TLS fields for protocols whose semantics
+    # this adapter actually models.  New Mihomo protocols must otherwise pass
+    # through byte-for-byte (apart from YAML formatting); treating their common
+    # looking fields as owned can silently drop connection-critical options.
+    if protocol in _PROTOCOL_OWNED_FIELDS:
+        owned = _COMMON_OWNED_FIELDS | _PROTOCOL_OWNED_FIELDS[protocol]
+        if str(proxy.get("network") or "").lower() in _MODELED_TRANSPORTS:
+            owned = owned | {"network"}
+    else:
+        owned = _IDENTITY_FIELDS
     return deepcopy({key: value for key, value in proxy.items() if key not in owned})
 
 
@@ -77,7 +87,12 @@ def _transport(proxy: dict) -> TransportConfig:
             headers=headers,
         )
 
-    if network in {"h2", "http"}:
+    if network == "http":
+        # http-opts remains in _clash_passthrough.  Keep the transport kind so
+        # rendering does not accidentally turn VMess HTTP into HTTP/2.
+        return TransportConfig(type="http")
+
+    if network == "h2":
         opts = proxy.get("h2-opts") or {}
         hosts = opts.get("host") or []
         host = str(hosts[0]) if isinstance(hosts, list) and hosts else ""
@@ -195,21 +210,39 @@ def ir_to_clash_dict(node: ProxyNode) -> dict[str, Any]:
         if node.tls.fingerprint:
             d["fingerprint"] = node.tls.fingerprint
         if node.tls.reality:
-            d["reality-opts"] = {
-                "public-key": node.tls.reality.get("public_key", ""),
-                "short-id": node.tls.reality.get("short_id", ""),
-            }
+            raw_reality_opts = d.get("reality-opts")
+            if isinstance(raw_reality_opts, dict):
+                reality_opts = raw_reality_opts
+                public_key = node.tls.reality.get("public_key", "")
+                short_id = node.tls.reality.get("short_id", "")
+                if public_key or "public-key" in reality_opts:
+                    reality_opts["public-key"] = public_key
+                if short_id or "short-id" in reality_opts:
+                    reality_opts["short-id"] = short_id
+            else:
+                reality_opts = {
+                    "public-key": node.tls.reality.get("public_key", ""),
+                    "short-id": node.tls.reality.get("short_id", ""),
+                }
+            d["reality-opts"] = reality_opts
 
     # Transport
     t = node.transport
     if t.type == "ws":
         d["network"] = "ws"
-        ws_opts: dict[str, Any] = {}
-        if t.path:
+        raw_ws_opts = d.get("ws-opts")
+        ws_opts: dict[str, Any] = raw_ws_opts if isinstance(raw_ws_opts, dict) else {}
+        if t.path or "path" in ws_opts:
             ws_opts["path"] = t.path
-        headers = dict(t.headers)
-        if t.host and "Host" not in headers:
-            headers["Host"] = t.host
+        raw_headers = ws_opts.get("headers")
+        headers: dict[str, Any] = raw_headers if isinstance(raw_headers, dict) else {}
+        headers.update(t.headers)
+        host_key = next(
+            (key for key in headers if str(key).lower() == "host"),
+            "Host",
+        )
+        if t.host or host_key in headers:
+            headers[host_key] = t.host
         if headers:
             ws_opts["headers"] = headers
         if ws_opts:
@@ -217,18 +250,32 @@ def ir_to_clash_dict(node: ProxyNode) -> dict[str, Any]:
 
     elif t.type == "grpc":
         d["network"] = "grpc"
-        if t.service_name:
-            d["grpc-opts"] = {"grpc-service-name": t.service_name}
+        raw_grpc_opts = d.get("grpc-opts")
+        grpc_opts: dict[str, Any] = raw_grpc_opts if isinstance(raw_grpc_opts, dict) else {}
+        if t.service_name or "grpc-service-name" in grpc_opts:
+            grpc_opts["grpc-service-name"] = t.service_name
+        if grpc_opts:
+            d["grpc-opts"] = grpc_opts
 
     elif t.type == "h2":
         d["network"] = "h2"
-        h2_opts: dict[str, Any] = {}
-        if t.path:
+        raw_h2_opts = d.get("h2-opts")
+        h2_opts: dict[str, Any] = raw_h2_opts if isinstance(raw_h2_opts, dict) else {}
+        if t.path or "path" in h2_opts:
             h2_opts["path"] = t.path
         if t.host:
-            h2_opts["host"] = [t.host]
+            raw_hosts = h2_opts.get("host")
+            if isinstance(raw_hosts, list) and raw_hosts:
+                h2_opts["host"] = [t.host, *raw_hosts[1:]]
+            else:
+                h2_opts["host"] = [t.host]
+        elif "host" in h2_opts:
+            h2_opts["host"] = []
         if h2_opts:
             d["h2-opts"] = h2_opts
+
+    elif t.type == "http":
+        d["network"] = "http"
 
     # Protocol-specific fields
     if proto == "ss":

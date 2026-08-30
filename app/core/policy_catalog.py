@@ -201,6 +201,7 @@ _SERVICE_PATTERNS: list[tuple[str, str, str]] = [
     (r"soundcloud", "SoundCloud", "流媒体"),
     (r"netease ?music", "网易云音乐", "流媒体"),
     (r"encoretvb|mytv|viutv|tvb", "港台媒体", "流媒体"),
+    (r"line ?tv", "Line TV", "流媒体"),
     (r"dazn|dmm|discovery|bbc|fox|pbs|popcorn", "国际媒体", "流媒体"),
     (r"joox|kkbox|pandora", "音乐服务", "流媒体"),
     # 社交通讯
@@ -210,7 +211,7 @@ _SERVICE_PATTERNS: list[tuple[str, str, str]] = [
     (r"whatsapp", "WhatsApp", "社交通讯"),
     (r"discord", "Discord", "社交通讯"),
     (r"signal", "Signal", "社交通讯"),
-    (r"line ?tv|^line[_ ]|line_domain", "Line", "社交通讯"),
+    (r"^line[_ ]|line_domain", "Line", "社交通讯"),
     (r"reddit", "Reddit", "社交通讯"),
     (r"tumblr", "Tumblr", "社交通讯"),
     (r"wechat|微信", "微信", "社交通讯"),

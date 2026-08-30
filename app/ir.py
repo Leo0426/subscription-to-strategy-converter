@@ -22,7 +22,7 @@ class TLSConfig:
 
 @dataclass
 class TransportConfig:
-    type: str = ""            # "ws" | "grpc" | "h2" | ""
+    type: str = ""            # "ws" | "grpc" | "h2" | "http" | ""
     path: str = ""
     host: str = ""
     headers: dict[str, str] = field(default_factory=dict)
@@ -38,7 +38,7 @@ class ProxyNode:
     VMess, obfs settings for Hysteria2).
     """
     name: str
-    protocol: str   # ss | vmess | vless | trojan | hysteria2 | tuic | socks5 | http
+    protocol: str   # Known protocols are modeled; newer Mihomo types pass through.
     server: str
     port: int
     tls: TLSConfig = field(default_factory=TLSConfig)

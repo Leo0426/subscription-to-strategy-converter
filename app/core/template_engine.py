@@ -7,13 +7,14 @@ from pathlib import Path
 import re
 import warnings
 from typing import Any
+from urllib.parse import unquote
 
 from ruamel.yaml import YAML
 from ruamel.yaml.error import ReusedAnchorWarning
 
 from app.core.parsers.clash import ir_to_clash_dict
 from app.core.powerfullz import PowerfullzTemplateError, load_powerfullz_template
-from app.ir import ProxyNode
+from app.ir import BUILTIN_POLICY_TARGETS, ProxyNode
 from app.models.powerfullz import PowerfullzOptions
 from app.models.strategy import CustomStrategy, SelectedPolicy
 
@@ -41,6 +42,17 @@ DIRECT_NODE_GROUP_NAMES = {
     "🚀 节点选择",
 }
 DIRECT_NODE_GROUP_KEYWORDS = ("手动", "全部节点", "节点选择")
+
+_DNS_BUILTIN_OUTBOUNDS = {
+    "DIRECT",
+    "REJECT",
+    "REJECT-DROP",
+    "COMPATIBLE",
+    "PASS",
+    "PASS-RULE",
+    "GLOBAL",
+    "RULES",
+}
 
 _RESOLVED_LOCAL_TEMPLATE_ROOTS = tuple(r.resolve() for r in LOCAL_TEMPLATE_ROOTS)
 
@@ -554,11 +566,226 @@ def _prune_groups(groups: list[dict], removed_names: set[str]) -> None:
         ]
 
 
+def _prune_missing_group_members(
+    groups: list[dict],
+    node_names: list[str],
+    initially_removed_names: set[str] | None = None,
+) -> set[str]:
+    """Close group membership after every policy layer has been merged.
+
+    Saved profiles can outlive a template group, and a filtered include-all
+    group can disappear for a particular subscription. Removing one such group
+    can empty a parent which in turn empties its parent, so closure must iterate
+    until no new group disappears. A group whose ``proxies`` list was explicitly
+    empty before closure is deliberately retained so the analyzer can still
+    report the authoring error instead of silently deleting it.
+    """
+    originally_nonempty = {
+        str(group["name"])
+        for group in groups
+        if isinstance(group, dict)
+        and group.get("name")
+        and isinstance(group.get("proxies"), list)
+        and bool(group["proxies"])
+    }
+    removed_names = set(initially_removed_names or ())
+    _prune_groups(groups, removed_names)
+
+    while True:
+        group_names = {
+            str(group["name"])
+            for group in groups
+            if isinstance(group, dict) and group.get("name")
+        }
+        valid_members = set(node_names) | group_names | _DNS_BUILTIN_OUTBOUNDS
+        newly_empty: set[str] = set()
+        for group in groups:
+            if not isinstance(group, dict) or not isinstance(group.get("proxies"), list):
+                continue
+            group["proxies"] = [
+                member for member in group["proxies"] if str(member) in valid_members
+            ]
+            name = str(group.get("name") or "")
+            if (
+                name in originally_nonempty
+                and not group["proxies"]
+                and not group.get("use")
+                and not group.get("include-all")
+            ):
+                newly_empty.add(name)
+
+        if not newly_empty:
+            return removed_names
+        removed_names.update(newly_empty)
+        _prune_groups(groups, newly_empty)
+
+
+_RULE_TARGET_KEYS = ("proxy", "policy", "target")
+_RULE_TARGET_FALLBACKS = ("默认代理", "PROXY", "Proxy", "DIRECT")
+
+
+def _string_rule_target_index(parts: list[str]) -> int | None:
+    if not parts:
+        return None
+    rule_type = parts[0].strip().upper()
+    has_no_resolve = len(parts) >= 2 and parts[-1].strip().lower() == "no-resolve"
+    target_index = len(parts) - (2 if has_no_resolve else 1)
+    minimum_parts = (2 if rule_type in {"MATCH", "FINAL"} else 3) + (
+        1 if has_no_resolve else 0
+    )
+    if len(parts) < minimum_parts or target_index <= 0:
+        return None
+    return target_index
+
+
+def _usable_rule_fallbacks(groups: list[dict], node_names: list[str]) -> set[str]:
+    usable = set(node_names) | BUILTIN_POLICY_TARGETS
+    for group in groups:
+        if not isinstance(group, dict) or not group.get("name"):
+            continue
+        proxies = group.get("proxies")
+        if (
+            (isinstance(proxies, list) and proxies)
+            or group.get("use")
+            or group.get("include-all")
+        ):
+            usable.add(str(group["name"]))
+    return usable
+
+
+def _redirect_missing_rule_targets(config: dict, node_names: list[str]) -> None:
+    """Redirect stale rule targets to the first usable compatibility fallback."""
+    groups = config.get("proxy-groups")
+    rules = config.get("rules")
+    if not isinstance(groups, list) or not isinstance(rules, list):
+        return
+
+    group_names = {
+        str(group["name"])
+        for group in groups
+        if isinstance(group, dict) and group.get("name")
+    }
+    valid_targets = set(node_names) | group_names | BUILTIN_POLICY_TARGETS
+    usable_fallbacks = _usable_rule_fallbacks(groups, node_names)
+    fallback = next(name for name in _RULE_TARGET_FALLBACKS if name in usable_fallbacks)
+
+    for index, rule in enumerate(rules):
+        if isinstance(rule, str):
+            parts = rule.split(",")
+            target_index = _string_rule_target_index(parts)
+            if target_index is None:
+                continue
+            target = parts[target_index].strip()
+            if target and target not in valid_targets:
+                parts[target_index] = fallback
+                rules[index] = ",".join(parts)
+            continue
+
+        if not isinstance(rule, dict):
+            continue
+        target_key = next(
+            (key for key in _RULE_TARGET_KEYS if rule.get(key) not in (None, "")),
+            None,
+        )
+        if target_key is None:
+            continue
+        target = str(rule[target_key]).strip()
+        if target and target not in valid_targets:
+            rule[target_key] = fallback
+
+
+def _dns_fragment_outbound(nameserver: str) -> str:
+    """Return Mihomo's outbound/interface token from a DNS URL fragment."""
+    _, separator, raw_fragment = nameserver.partition("#")
+    if not separator:
+        return ""
+    outbound = ""
+    for raw_part in raw_fragment.split("&"):
+        fragment_part = unquote(raw_part)
+        if "=" not in fragment_part:
+            outbound = fragment_part
+    return outbound
+
+
+def _available_dns_outbounds(config: dict) -> set[str]:
+    names = set(_DNS_BUILTIN_OUTBOUNDS)
+    for section in ("proxies", "proxy-groups"):
+        values = config.get(section)
+        if not isinstance(values, list):
+            continue
+        names.update(
+            str(item["name"])
+            for item in values
+            if isinstance(item, dict) and item.get("name")
+        )
+    return names
+
+
+def _apply_source_connectivity(config: dict, source_config: dict | None) -> None:
+    """Preserve upstream DNS hints used exclusively to resolve proxy servers.
+
+    Subscription providers can publish private or topology-aware resolvers for
+    their node hostnames.  Replacing those with the template's generic public
+    resolvers can send users to the wrong ingress or make every domain-backed
+    node intermittently unreachable.  Traffic-domain policy remains owned by
+    the Leo template; only ``proxy-server-nameserver`` crosses this boundary.
+    """
+    if not isinstance(source_config, dict):
+        return
+    source_dns = source_config.get("dns")
+    if not isinstance(source_dns, dict):
+        return
+    source_nameservers = source_dns.get("proxy-server-nameserver")
+    if isinstance(source_nameservers, str):
+        source_nameservers = [source_nameservers]
+    if not isinstance(source_nameservers, list):
+        return
+    available_outbounds = _available_dns_outbounds(config)
+    source_outbounds: set[str] = set()
+    for section in ("proxies", "proxy-groups"):
+        values = source_config.get(section)
+        if not isinstance(values, list):
+            continue
+        source_outbounds.update(
+            str(item["name"])
+            for item in values
+            if isinstance(item, dict) and item.get("name")
+        )
+
+    def _is_valid_nameserver(item: object) -> bool:
+        if not isinstance(item, str) or not item.strip():
+            return False
+        outbound = _dns_fragment_outbound(item)
+        # An unknown bare token is a legal network-interface name in Mihomo.
+        # Reject it only when the source itself proves that it named a proxy or
+        # group which was removed from the final generated configuration.
+        return (
+            not outbound
+            or outbound in available_outbounds
+            or outbound not in source_outbounds
+        )
+
+    nameservers = [
+        deepcopy(item)
+        for item in source_nameservers
+        if _is_valid_nameserver(item)
+    ]
+    if not nameservers:
+        return
+    target_dns = config.get("dns")
+    if not isinstance(target_dns, dict):
+        target_dns = {}
+        config["dns"] = target_dns
+    target_dns["proxy-server-nameserver"] = nameservers
+
+
 def apply_template(
     template: dict,
     nodes: list[ProxyNode],
     custom_strategy: CustomStrategy | None = None,
     selected_policy: SelectedPolicy | None = None,
+    *,
+    source_config: dict | None = None,
 ) -> dict:
     config = deepcopy(template)
     node_names = [node.name for node in nodes]
@@ -569,13 +796,26 @@ def apply_template(
         raise TemplateError("template must contain proxy-groups")
 
     _fill_node_groups(groups, node_names)
-    _prune_groups(groups, _materialize_include_all_groups(groups, node_names))
 
     if custom_strategy is not None:
         _apply_custom_strategy(config, node_names, custom_strategy)
 
     if selected_policy is not None:
         _apply_selected_policy(config, selected_policy, nodes)
+        # ``mode=replace`` swaps the list object, so refresh the local reference
+        # before materializing selectors and closing group membership.
+        groups = config.get("proxy-groups")
+        if not isinstance(groups, list):
+            raise TemplateError("selected policy proxy-groups must be a list")
+
+    # Materialize and close the graph only after custom/selected policy layers
+    # have been applied.  Otherwise they can reintroduce a group that was just
+    # removed because the current subscription had no matching nodes.
+    empty_filtered_groups = _materialize_include_all_groups(groups, node_names)
+    _prune_missing_group_members(groups, node_names, empty_filtered_groups)
+    _redirect_missing_rule_targets(config, node_names)
+
+    _apply_source_connectivity(config, source_config)
 
     return config
 

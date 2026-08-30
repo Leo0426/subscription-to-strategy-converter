@@ -16,6 +16,17 @@ _PROVIDER_COUNT_BUDGET = 200
 
 #: `format: mrs` rule sets require a Mihomo core; older Clash cores reject them.
 _MODERN_CORE_FORMATS = {"mrs"}
+_SHARED_INFRA_SERVICE_TARGETS = {
+    "AI",
+    "AI 服务",
+    "Claude",
+    "OpenAI",
+    "Gemini",
+    "Google",
+    "Streaming",
+    "流媒体",
+    "YouTube",
+}
 
 
 def _rule_key(raw: object) -> str:
@@ -105,27 +116,30 @@ def analyze_workspace(workspace: PolicyWorkspace) -> list[AnalyzerFinding]:
 
 
 def _shared_infra_ip_rule_findings(workspace: PolicyWorkspace) -> list[AnalyzerFinding]:
-    """Warn when an ipcidr RULE-SET routes to a service group without no-resolve.
+    """Warn when a service IP rule can split shared domain infrastructure.
 
     Service IPs are shared infrastructure (Google front IPs carry YouTube and
-    Gemini alike), so a resolving IP rule hijacks domain traffic that earlier
-    domain rules did not claim and splits one page across two egresses.
-    Geo/private fallbacks targeting DIRECT legitimately resolve and are exempt.
+    Gemini alike), so AI/Google/streaming never use IP-layer routing.  Services
+    with genuine domainless traffic may use it only with ``no-resolve``.
+    Geo/private fallbacks targeting DIRECT are exempt.
     """
     ipcidr_providers = {
         provider.name
         for provider in workspace.rule_providers
         if str(provider.raw.get("behavior") or "").lower() == "ipcidr"
     }
-    if not ipcidr_providers:
-        return []
     offending = [
         rule
         for rule in workspace.rules
-        if rule.type == "RULE-SET"
-        and rule.provider in ipcidr_providers
+        if (
+            (rule.type == "RULE-SET" and rule.provider in ipcidr_providers)
+            or rule.type in {"GEOIP", "IP-CIDR", "IP-CIDR6"}
+        )
         and rule.target not in {"DIRECT", ""}
-        and "no-resolve" not in str(rule.raw)
+        and (
+            rule.target in _SHARED_INFRA_SERVICE_TARGETS
+            or "no-resolve" not in str(rule.raw)
+        )
     ]
     if not offending:
         return []
@@ -134,9 +148,9 @@ def _shared_infra_ip_rule_findings(workspace: PolicyWorkspace) -> list[AnalyzerF
             severity="warning",
             code="ip_rule_resolves_shared_infra",
             message=(
-                f"{len(offending)} ipcidr rules route to service groups without no-resolve; "
-                f"they force DNS resolution and can hijack shared-infrastructure domains "
-                f"(e.g. Google front IPs) away from their domain rules."
+                f"{len(offending)} IP-layer rules violate service routing boundaries; "
+                f"AI/Google/streaming cannot use shared front IPs, and other service IP "
+                f"rules require no-resolve."
             ),
             path=f"rules[{offending[0].index}]",
             ref=offending[0].id,

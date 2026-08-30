@@ -100,6 +100,12 @@ def _resolve_mrs_url(url: str) -> str:
 # `_Classical` / `_No_Resolve` name segments — Surge `.list` files are already
 # classical text format and carry `no-resolve` inline on their IP rules.
 # Host-agnostic so mirror/proxy fronts of the same repo are handled too.
+_BLACKMATRIX7_CANONICAL_CLASH_YAML = re.compile(
+    r"^https://(?:raw\.githubusercontent\.com/blackmatrix7/ios_rule_script/"
+    r"(?P<raw_ref>[^/]+)|cdn\.jsdelivr\.net/gh/blackmatrix7/ios_rule_script@"
+    r"(?P<cdn_ref>[^/]+))/rule/Clash/"
+    r"(?P<category>[^/]+)/(?P<name>[^/]+)\.yaml$"
+)
 _BLACKMATRIX7_CLASH_YAML = re.compile(
     r"^(?P<prefix>.*/blackmatrix7/ios_rule_script/[^/]+)/rule/Clash/"
     r"(?P<category>[^/]+)/(?P<name>[^/]+)\.yaml$"
@@ -111,6 +117,15 @@ def _resolve_blackmatrix7_url(url: str) -> str | None:
 
     Returns None when the URL is not a blackmatrix7 Clash YAML rule set.
     """
+    canonical = _BLACKMATRIX7_CANONICAL_CLASH_YAML.match(url)
+    if canonical is not None:
+        ref = canonical["raw_ref"] or canonical["cdn_ref"]
+        name = canonical["name"].replace("_No_Resolve", "").replace("_Classical", "")
+        return (
+            "https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@"
+            f"{ref}/rule/Surge/{canonical['category']}/{name}.list"
+        )
+
     match = _BLACKMATRIX7_CLASH_YAML.match(url)
     if match is None:
         return None
@@ -369,6 +384,9 @@ def _group_to_surge_line(
         members = ["DIRECT"]
 
     member_str = ", ".join(members)
+    # Current Surge releases use the policy-level test-url or General's
+    # proxy-test-url. Keep the group-level url only for legacy clients; the
+    # actual probe timeout is General's test-timeout, not a group timeout.
     url = str(group.get("url") or "http://www.gstatic.com/generate_204")
     interval = int(group.get("interval") or 300)
     tolerance = int(group.get("tolerance") or 100)
@@ -467,6 +485,7 @@ def _general_section() -> str:
         "loglevel = notify",
         "dns-server = 223.5.5.5, 119.29.29.29",
         "proxy-test-url = http://www.apple.com/library/test/success.html",
+        "test-timeout = 3",
         (
             "skip-proxy = 127.0.0.1, 192.168.0.0/16, 10.0.0.0/8, "
             "172.16.0.0/12, 100.64.0.0/10, localhost, *.local"

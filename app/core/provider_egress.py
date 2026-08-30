@@ -1,25 +1,26 @@
 """Egress selection for RuleProvider downloads.
 
 A generated profile is only useful if the target client can actually fetch the
-RuleProviders it references. Mihomo downloads every `type: http` provider on a
-direct connection unless the provider declares `proxy: <group>`, so providers
-hosted where the client has no direct route silently produce empty rule sets.
+RuleProviders it references.  Without an explicit ``proxy`` setting, Mihomo's
+provider request can follow the ordinary routing rules.  Sending hundreds of
+bootstrap downloads through the newly-started proxy pool creates a connection
+storm and can leave providers empty.
 
-This module is the single place that decides which providers must download
-through a ProxyGroup instead of the direct route.
+This module is the single place that mirrors safely pinned GitHub files and
+decides which remaining providers must download through a ProxyGroup instead
+of the direct route.
 """
 
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Iterable, Mapping
 from typing import Any
 from urllib.parse import urlparse
 
 
-#: Hosts that a client on a restricted network cannot reach directly. Mirrors
-#: and CDN fronts (jsDelivr, gh-proxy, skk.moe, kelee.one) stay direct because
-#: routing them through a node is slower and usually unnecessary.
+#: Hosts that a client on a restricted network cannot reach directly.
 DIRECT_UNREACHABLE_HOSTS = frozenset(
     {
         "github.com",
@@ -30,12 +31,72 @@ DIRECT_UNREACHABLE_HOSTS = frozenset(
     }
 )
 
-#: Preferred egress groups in descending order. `自动选择` is a url-test group,
-#: so it stays usable regardless of what the operator selected in `默认代理`.
-PREFERRED_EGRESS_GROUPS = ("自动选择", "默认代理", "故障转移")
+#: Rule-source fronts verified to work directly in the supported deployment.
+#: Pinning them explicitly prevents provider bootstrap traffic from being
+#: captured by the profile's own GEO/rule-provider policy while it is still
+#: loading.  Keep this exact-host list deliberately narrow.
+DIRECT_PROVIDER_HOSTS = frozenset(
+    {
+        "cdn.jsdelivr.net",
+        "fastly.jsdelivr.net",
+        "gcore.jsdelivr.net",
+        "testingcf.jsdelivr.net",
+        "ruleset.skk.moe",
+    }
+)
+
+#: Preferred egress groups in descending order.  Leo's hidden ``规则更新`` group
+#: is independent from the operator's persisted ``默认代理`` choice, which may be
+#: DIRECT.  Older/custom templates retain the existing fallback order.
+PREFERRED_EGRESS_GROUPS = (
+    "规则更新",
+    "自动选择",
+    "默认代理",
+    "故障转移",
+)
 
 #: Set to a group name to override the choice, or to `DIRECT` to disable rewriting.
 EGRESS_ENV_VAR = "SUBFLOW_PROVIDER_EGRESS"
+
+_COMMIT_SHA = re.compile(r"^[0-9a-fA-F]{40}$")
+
+
+def immutable_github_mirror_url(url: str) -> str | None:
+    """Return a jsDelivr URL for an immutable GitHub file, if eligible.
+
+    Only exact HTTPS raw-file URLs pinned to a full commit SHA are safe to
+    mirror. Branches, tags, releases, URLs with query/fragment semantics, and
+    all other GitHub URL shapes deliberately return ``None``.
+    """
+    parsed = urlparse(url)
+    if parsed.scheme.lower() != "https" or parsed.params or parsed.query or parsed.fragment:
+        return None
+
+    host = parsed.hostname or ""
+    if parsed.netloc.lower() != host.lower():
+        return None
+
+    parts = parsed.path.removeprefix("/").split("/")
+    if host.lower() == "raw.githubusercontent.com":
+        if len(parts) < 4:
+            return None
+        owner, repo, commit, *path = parts
+    elif host.lower() == "github.com":
+        if len(parts) < 5 or parts[2] != "raw":
+            return None
+        owner, repo, _, commit, *path = parts
+    else:
+        return None
+
+    if (
+        not owner
+        or not repo
+        or not path
+        or any(part in {"", ".", ".."} for part in (owner, repo, *path))
+        or not _COMMIT_SHA.fullmatch(commit)
+    ):
+        return None
+    return f"https://cdn.jsdelivr.net/gh/{owner}/{repo}@{commit}/{'/'.join(path)}"
 
 
 def provider_host(provider: Mapping[str, Any]) -> str:
@@ -43,10 +104,12 @@ def provider_host(provider: Mapping[str, Any]) -> str:
 
 
 def needs_egress(provider: Mapping[str, Any]) -> bool:
-    """Report whether this provider would fail to download on a direct route."""
+    """Report whether compilation must attach a proxy for this provider."""
     if str(provider.get("type") or "http") != "http":
         return False
-    if provider.get("proxy"):
+    if "proxy" in provider:
+        return False
+    if immutable_github_mirror_url(str(provider.get("url") or "")) is not None:
         return False
     return provider_host(provider).lower() in DIRECT_UNREACHABLE_HOSTS
 
@@ -69,16 +132,28 @@ def apply_provider_egress(
     providers: dict[str, dict[str, Any]],
     group_names: Iterable[str],
 ) -> list[str]:
-    """Set `proxy` on every provider that cannot download directly.
+    """Mirror immutable files and proxy remaining unreachable providers.
 
-    Returns the names that were rewritten. Mutates `providers` in place.
+    Immutable mirrors are explicitly pinned to ``DIRECT`` so their bootstrap
+    requests cannot be captured by the profile's own proxy rules.  Returns only
+    names routed through the selected fallback group; direct mirror rewrites are
+    deliberately omitted to preserve the function's existing contract.
     """
     group = resolve_egress_group(group_names)
-    if group is None:
-        return []
     rewritten: list[str] = []
     for name, provider in providers.items():
-        if not isinstance(provider, dict) or not needs_egress(provider):
+        if not isinstance(provider, dict):
+            continue
+
+        if str(provider.get("type") or "http") == "http" and "proxy" not in provider:
+            mirror_url = immutable_github_mirror_url(str(provider.get("url") or ""))
+            if mirror_url is not None:
+                provider["url"] = mirror_url
+                provider["proxy"] = "DIRECT"
+            elif provider_host(provider).lower() in DIRECT_PROVIDER_HOSTS:
+                provider["proxy"] = "DIRECT"
+
+        if group is None or not needs_egress(provider):
             continue
         provider["proxy"] = group
         rewritten.append(name)

@@ -18,6 +18,7 @@ from app.core.policy_graph import build_policy_graph
 from app.core.policy_presets import list_policy_presets
 from app.core.policy_resolution import PolicyResolutionError, resolve_product_policy
 from app.core.rule_packs import list_rule_packs
+from app.core.rule_source_audit import template_content_sha256
 from app.core.intent_compiler import intent_catalog
 from app.core.profiles import ProfileStore
 from app.core.policy_simulator import simulate_destination
@@ -146,10 +147,22 @@ async def leo_template_audit() -> dict:
     loaded = load_template(LEO_TEMPLATE_ID)
     providers = loaded.get("rule-providers") or {}
     provider_count = len(providers) if isinstance(providers, dict) else 0
+    snapshot_template = report.get("template") or {}
+    audited_template_sha256 = (
+        str(snapshot_template.get("sha256") or "")
+        if isinstance(snapshot_template, dict)
+        else ""
+    )
+    current_template_sha256 = template_content_sha256(_LEO_SOURCE_PATH)
     report["publication"] = {
         "source_path": "community_templates/leo/audit.json",
         "template_provider_count": provider_count,
-        "template_current": report.get("summary", {}).get("total") == provider_count,
+        "audited_template_sha256": audited_template_sha256,
+        "current_template_sha256": current_template_sha256,
+        "template_current": (
+            bool(audited_template_sha256)
+            and audited_template_sha256 == current_template_sha256
+        ),
         "contains_remote_rule_content": False,
         "contains_subscription_credentials": False,
     }
@@ -267,7 +280,13 @@ async def _build_config(inputs: RenderInputs) -> tuple[list[ProxyNode], dict, di
 
     try:
         template = await load_any_template(inputs.template_name, inputs.powerfullz)
-        config = apply_template(template, nodes, inputs.custom_strategy, inputs.selected_policy)
+        config = apply_template(
+            template,
+            nodes,
+            inputs.custom_strategy,
+            inputs.selected_policy,
+            source_config=raw_config,
+        )
         if inputs.service_routes is not None:
             config = transform_service_routes(config, nodes, inputs.service_routes, target=inputs.target)
         else:

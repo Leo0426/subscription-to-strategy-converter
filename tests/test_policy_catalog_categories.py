@@ -21,12 +21,14 @@ def test_specific_service_wins_over_company_bucket():
     # Apple TV / Apple Music 是流媒体，不该被 Apple 桶吃掉
     assert classify_provider_name("Apple TV") == ("流媒体", "Apple TV")
     assert classify_provider_name("AppleMusic") == ("流媒体", "Apple Music")
+    assert classify_provider_name("Line TV") == ("流媒体", "Line TV")
     assert classify_provider_name("Apple-CN") == ("其他", "Apple")
     assert classify_provider_name("Xbox") == ("其他", "Xbox")
     assert classify_provider_name("OneDrive") == ("其他", "Microsoft")
     # Meta AI 是 AI，Meta 本体是社交
     assert classify_provider_name("Meta AI / Domain") == ("AI", "Meta AI")
     assert classify_provider_name("Meta") == ("社交通讯", "Meta")
+    assert classify_provider_name("line_domain") == ("社交通讯", "Line")
 
 
 def test_cn_and_ad_buckets_avoid_false_positives():

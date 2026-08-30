@@ -1,9 +1,13 @@
+import httpx
 import pytest
 
 from app.core.rule_source_audit import (
     COLD_START_BYTE_BUDGET,
+    PublicRuleSourceFetcher,
     apply_safe_duplicate_pruning,
     apply_verified_unusable_source_pruning,
+    audit_leo_rule_sources,
+    audit_snapshot_matches_template,
     audit_rule_sources,
     extract_normalized_rule_entries,
     find_entry_target_conflicts,
@@ -13,6 +17,7 @@ from app.core.rule_source_audit import (
     reorder_rules_by_target_priority,
     score_rule_source_report,
     supply_chain_facts,
+    template_audit_metadata,
     write_public_audit_snapshot,
 )
 
@@ -315,6 +320,67 @@ def test_find_ordered_entry_conflicts_identifies_effective_winner_and_risk_direc
     }
 
 
+def test_find_ordered_entry_conflicts_uses_an_earlier_inline_domain_override() -> None:
+    entry = "domain-suffix,crashlytics.com"
+    records = [
+        {
+            "name": "Apple",
+            "entries": frozenset({entry}),
+            "routes": [{"index": 47, "target": "Apple"}],
+        },
+        {
+            "name": "Google",
+            "entries": frozenset({entry}),
+            "routes": [{"index": 49, "target": "Google"}],
+        },
+    ]
+    inline_rule = "DOMAIN-SUFFIX,crashlytics.com,Google"
+
+    conflicts = find_ordered_entry_conflicts(
+        records,
+        inline_rules=[None] * 46 + [inline_rule],
+    )
+
+    assert conflicts["ordered_conflict_entry_count"] == 1
+    assert conflicts["transition_pairs"] == {"Google -> Apple": 1}
+    assert conflicts["affected_providers"] == ["Apple", "Google"]
+    winner = conflicts["examples"][0]["winner"]
+    assert winner["provider"] == "<inline-rule>"
+    assert winner["target"] == "Google"
+    assert winner["rule_index"] == 46
+    assert winner["rule"] == inline_rule
+
+
+@pytest.mark.parametrize(
+    ("provider_entry", "inline_rule"),
+    [
+        ("domain,api.example.com", "DOMAIN,api.example.com,DIRECT"),
+        ("domain-suffix,api.example.com", "DOMAIN-SUFFIX,example.com,DIRECT"),
+        ("domain-suffix,crashlytics.com", "DOMAIN-KEYWORD,crash,DIRECT"),
+        ("ip-cidr,10.1.0.0/16", "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve"),
+        ("ip-cidr6,2001:db8:1::/48", "IP-CIDR6,2001:db8::/32,DIRECT,no-resolve"),
+        ("geoip,cn", "GEOIP,CN,DIRECT,no-resolve"),
+    ],
+)
+def test_ordered_conflicts_include_supported_inline_rule_types(
+    provider_entry: str,
+    inline_rule: str,
+) -> None:
+    records = [
+        {
+            "name": "Provider",
+            "entries": frozenset({provider_entry}),
+            "routes": [{"index": 5, "target": "默认代理"}],
+        }
+    ]
+
+    conflicts = find_ordered_entry_conflicts(records, inline_rules=[inline_rule])
+
+    assert conflicts["ordered_conflict_entry_count"] == 1
+    assert conflicts["examples"][0]["winner"]["target"] == "DIRECT"
+    assert conflicts["examples"][0]["shadowed"][0]["provider"] == "Provider"
+
+
 @pytest.mark.asyncio
 async def test_audit_rule_sources_isolates_fetch_failures_and_summarizes_results() -> None:
     providers = {
@@ -341,29 +407,144 @@ async def test_audit_rule_sources_isolates_fetch_failures_and_summarizes_results
     assert "content" not in report["sources"][1]
 
 
+@pytest.mark.asyncio
+async def test_audit_leo_rule_sources_records_template_fingerprint(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.core.rule_source_audit.load_template",
+        lambda template_id: {"rule-providers": {}, "rules": []},
+    )
+
+    report = await audit_leo_rule_sources()
+
+    assert report["template"]["id"] == "local:community_templates/leo/leo.yaml"
+    assert len(report["template"]["sha256"]) == 64
+    assert report["template"]["provider_count"] == 0
+    assert report["template"]["rule_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_audit_leo_rule_sources_passes_inline_template_rules(monkeypatch) -> None:
+    rules = ["DOMAIN-SUFFIX,crashlytics.com,Google"]
+    captured: dict = {}
+
+    monkeypatch.setattr(
+        "app.core.rule_source_audit.load_template",
+        lambda template_id: {"rule-providers": {}, "rules": rules},
+    )
+
+    async def fake_audit_rule_sources(providers, targets, **kwargs):
+        captured.update(kwargs)
+        return {"summary": {"total": 0, "valid": 0, "invalid": 0, "failed": 0}}
+
+    monkeypatch.setattr(
+        "app.core.rule_source_audit.audit_rule_sources",
+        fake_audit_rule_sources,
+    )
+
+    await audit_leo_rule_sources()
+
+    assert captured["inline_rules"] == rules
+
+
+@pytest.mark.asyncio
+async def test_public_fetcher_retries_transient_transport_errors(monkeypatch) -> None:
+    attempts = 0
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        if attempts < 3:
+            raise httpx.ConnectError("transient", request=request)
+        return httpx.Response(200, content=b"payload", request=request)
+
+    async def skip_public_url_validation(url: str) -> None:
+        return None
+
+    fetcher = PublicRuleSourceFetcher()
+    fetcher._client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    monkeypatch.setattr(fetcher, "_validate_public_url", skip_public_url_validation)
+    try:
+        result = await fetcher.fetch("https://rules.example/list.txt")
+    finally:
+        await fetcher._client.aclose()
+
+    assert attempts == 3
+    assert result["status_code"] == 200
+    assert result["content"] == b"payload"
+
+
+def test_template_audit_metadata_detects_any_template_content_change(tmp_path) -> None:
+    template_path = tmp_path / "leo.yaml"
+    template_path.write_text("rules:\n  - MATCH,DIRECT\n", encoding="utf-8")
+    report = {
+        "template": template_audit_metadata(
+            {"rule-providers": {"A": {}}, "rules": ["MATCH,DIRECT"]},
+            template_path,
+        )
+    }
+
+    assert report["template"]["provider_count"] == 1
+    assert report["template"]["rule_count"] == 1
+    assert audit_snapshot_matches_template(report, template_path) is True
+
+    template_path.write_text("rules:\n  - MATCH,Proxy\n", encoding="utf-8")
+
+    assert audit_snapshot_matches_template(report, template_path) is False
+
+
+def _report_for_template(template_path, *, total: int, valid: int, failed: int) -> dict:
+    return {
+        "summary": {"total": total, "valid": valid, "invalid": 0, "failed": failed},
+        "sources": [],
+        "template": template_audit_metadata(
+            {"rule-providers": {}, "rules": []},
+            template_path,
+        ),
+    }
+
+
 def test_write_public_audit_snapshot_refuses_a_fully_failed_audit(tmp_path) -> None:
-    all_failed = {"summary": {"total": 508, "valid": 0, "invalid": 0, "failed": 508}, "sources": []}
+    template_path = tmp_path / "leo.yaml"
+    template_path.write_text("rules: []\n", encoding="utf-8")
+    all_failed = _report_for_template(template_path, total=508, valid=0, failed=508)
     target = tmp_path / "audit.json"
 
     with pytest.raises(ValueError, match="audit-environment failure"):
-        write_public_audit_snapshot(all_failed, target)
+        write_public_audit_snapshot(all_failed, target, template_path=template_path)
 
     assert not target.exists()
 
 
 def test_write_public_audit_snapshot_publishes_when_failures_are_a_minority(tmp_path) -> None:
-    report = {"summary": {"total": 10, "valid": 8, "invalid": 0, "failed": 2}, "sources": []}
+    template_path = tmp_path / "leo.yaml"
+    template_path.write_text("rules: []\n", encoding="utf-8")
+    report = _report_for_template(template_path, total=10, valid=8, failed=2)
     target = tmp_path / "audit.json"
 
-    assert write_public_audit_snapshot(report, target) == target
+    assert write_public_audit_snapshot(report, target, template_path=template_path) == target
     assert target.exists()
 
 
+def test_write_public_audit_snapshot_refuses_stale_template(tmp_path) -> None:
+    template_path = tmp_path / "leo.yaml"
+    template_path.write_text("rules: []\n", encoding="utf-8")
+    report = _report_for_template(template_path, total=1, valid=1, failed=0)
+    template_path.write_text("rules:\n  - MATCH,DIRECT\n", encoding="utf-8")
+    target = tmp_path / "audit.json"
+
+    with pytest.raises(ValueError, match="different template content"):
+        write_public_audit_snapshot(report, target, template_path=template_path)
+
+    assert not target.exists()
+
+
 def test_write_public_audit_snapshot_refuses_a_majority_failed_audit(tmp_path) -> None:
-    degraded = {"summary": {"total": 373, "valid": 171, "invalid": 0, "failed": 202}, "sources": []}
+    template_path = tmp_path / "leo.yaml"
+    template_path.write_text("rules: []\n", encoding="utf-8")
+    degraded = _report_for_template(template_path, total=373, valid=171, failed=202)
     target = tmp_path / "audit.json"
 
     with pytest.raises(ValueError, match="audit-environment failure"):
-        write_public_audit_snapshot(degraded, target)
+        write_public_audit_snapshot(degraded, target, template_path=template_path)
 
     assert not target.exists()

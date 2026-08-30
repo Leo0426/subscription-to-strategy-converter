@@ -167,6 +167,7 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 
 - `ProxyNode` is the only internal representation of a proxy — never pass raw dicts across module boundaries
 - Clash fields not yet modeled by `ProxyNode` must survive Mihomo round trips through the private `_clash_passthrough` payload; policy code must not depend on that payload
+- A non-empty Clash source `dns.proxy-server-nameserver` is a node-connectivity hint and must survive into the Mihomo artifact; Leo continues to own all other traffic-domain DNS policy
 - Subconverter is an opt-in input compatibility Adapter used only after direct Clash/Surge parsing fails; it never owns templates, rules, target rendering, or the Profile lifecycle
 - Every URL forwarded to an external fetcher (subscription source, Subconverter) must pass the same DNS-rebinding check as `fetch_subscription()`; a hostname that resolves to a private/loopback IP is rejected before the request is made
 - Shadowsocks transport options required for connectivity, including Surge `obfs` and `obfs-host`, must survive input normalization and map to the equivalent target-client syntax
@@ -199,6 +200,7 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - Rules after the first `MATCH` or `FINAL` are unreachable and must be reported by the analyzer
 - A structurally valid artifact is not necessarily a runnable one; the analyzer reports target-client runtime feasibility (RuleProvider reachability, cold-start provider budget, core version requirements) as warnings that never block publication
 - New RuleSources must pass the admission checklist in `community_templates/leo/README.md` (trusted upstream, no third-party proxy fronts, pin when possible, cost-proportional, no high overlap, no target conflicts); the structural-v2 score and the analyzer share one provider-count budget
+- Leo is intentionally a lightweight runtime policy: its regression budget is at most 8 RuleProviders, 140 rules, 12 KiB of source YAML, 14 ProxyGroups, 3 health-check groups, 380 total group-member edges, 200 potential probe memberships, and 34 KiB of rendered YAML for the fixed 144-node SS fixture; exceeding one budget requires an explicit architecture decision and cold-start evidence
 - IP-layer RULE-SETs may route to a service group only for services with genuine domainless direct-IP traffic (Telegram, Discord voice) and must carry `no-resolve`; shared-infrastructure services (AI, Google, streaming) get no IP-layer routing at all, because their front IPs carry unrelated services and a resolving IP rule splits one page across two egresses — geo/private fallbacks targeting DIRECT legitimately resolve
 - RuleProviders hosted where the client has no direct route must declare `proxy: <group>`; `provider_egress.py` owns that decision for both the compiler and the analyzer
 - The published Subscription URL host is unknowable from the request; the page guesses `location.origin` and `SUBFLOW_PUBLIC_BASE_URL` overrides it for clients running on another host

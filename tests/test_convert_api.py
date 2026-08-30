@@ -2,7 +2,9 @@ import json
 
 import pytest
 from fastapi.testclient import TestClient
+from ruamel.yaml import YAML
 
+import app.api.convert as convert_api
 from app.main import app
 
 
@@ -160,6 +162,56 @@ def test_subscribe_returns_yaml(client: TestClient, monkeypatch: pytest.MonkeyPa
     assert "name: 香港 01" in response.text
 
 
+def test_subscribe_preserves_source_proxy_dns_without_replacing_leo_dns_policy(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    clash_subscription = """
+dns:
+  enable: false
+  enhanced-mode: redir-host
+  fake-ip-range: 203.0.113.1/24
+  nameserver:
+    - https://traffic-dns.example/dns-query
+  proxy-server-nameserver:
+    - https://node-dns.example/dns-query/subscriber
+proxies:
+  - name: HK-01
+    type: ss
+    server: node.example.com
+    port: 443
+    cipher: aes-128-gcm
+    password: secret
+"""
+
+    async def fake_fetch_subscription(url: str) -> str:
+        return clash_subscription
+
+    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
+
+    response = client.get(
+        "/subscribe",
+        params={
+            "subscription_url": "https://example.com/sub",
+            "template": _LOCAL_TEMPLATE,
+            "target": "mihomo",
+        },
+    )
+
+    assert response.status_code == 200
+    config = YAML(typ="safe").load(response.text)
+    assert config["dns"]["proxy-server-nameserver"] == [
+        "https://node-dns.example/dns-query/subscriber"
+    ]
+    assert config["dns"]["enable"] is True
+    assert config["dns"]["enhanced-mode"] == "fake-ip"
+    assert config["dns"]["fake-ip-range"] == "198.18.0.1/16"
+    assert config["dns"]["nameserver"] == [
+        "https://dns.alidns.com/dns-query",
+        "https://doh.pub/dns-query",
+    ]
+
+
 def test_templates_endpoint_lists_local_templates(client: TestClient) -> None:
     response = client.get("/templates")
 
@@ -233,12 +285,60 @@ def test_leo_public_data_endpoints_expose_source_rules_and_audit(client: TestCli
     assert audit_body["quality_score"]["kind"] == "structural-v2"
     assert "supply_chain" in audit_body["quality_score"]["dimensions"]
     assert "cold_start_cost" in audit_body["quality_score"]["dimensions"]
-    assert audit_body["publication"]["template_current"] is True
+    publication = audit_body["publication"]
+    assert publication["template_current"] is (
+        bool(publication["audited_template_sha256"])
+        and publication["audited_template_sha256"] == publication["current_template_sha256"]
+    )
+    assert publication["template_current"] is True
     assert {item["href"] for item in detail.json()["public_data"]} == {
         "/templates/source",
         "/community/rules",
         "/templates/audit",
     }
+
+
+def test_leo_audit_marks_matching_template_fingerprint_current(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    audit_path = tmp_path / "audit.json"
+    report = json.loads(convert_api._LEO_AUDIT_PATH.read_text(encoding="utf-8"))
+    report["template"] = {
+        "sha256": convert_api.template_content_sha256(convert_api._LEO_SOURCE_PATH)
+    }
+    audit_path.write_text(json.dumps(report), encoding="utf-8")
+    monkeypatch.setattr(convert_api, "_LEO_AUDIT_PATH", audit_path)
+
+    response = client.get("/templates/audit")
+
+    assert response.status_code == 200
+    assert response.json()["publication"]["template_current"] is True
+
+
+def test_leo_audit_marks_snapshot_stale_when_template_content_changes(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    audit_path = tmp_path / "audit.json"
+    source_path = tmp_path / "leo.yaml"
+    report = json.loads(convert_api._LEO_AUDIT_PATH.read_text(encoding="utf-8"))
+    report["template"] = {
+        "sha256": convert_api.template_content_sha256(convert_api._LEO_SOURCE_PATH)
+    }
+    audit_path.write_text(json.dumps(report), encoding="utf-8")
+    source_path.write_bytes(convert_api._LEO_SOURCE_PATH.read_bytes() + b"\n# changed\n")
+    monkeypatch.setattr(convert_api, "_LEO_AUDIT_PATH", audit_path)
+    monkeypatch.setattr(convert_api, "_LEO_SOURCE_PATH", source_path)
+
+    response = client.get("/templates/audit")
+
+    assert response.status_code == 200
+    publication = response.json()["publication"]
+    assert publication["template_current"] is False
+    assert publication["audited_template_sha256"] != publication["current_template_sha256"]
 
 
 def test_subscribe_accepts_encoded_custom_strategy(

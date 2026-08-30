@@ -1,10 +1,11 @@
 """Tests for the community template browser API (GET /community/templates*)."""
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.api.community import _build_meta, _detect_format, _is_surge_compatible
-from pathlib import Path
 
 
 _YAML_ID = "community:leo/leo.yaml"
@@ -39,9 +40,9 @@ def test_list_item_has_required_fields(client: TestClient) -> None:
     item = yaml_items[0]
     assert item["format"] == "yaml"
     assert isinstance(item["proxy_group_count"], int)
-    assert item["proxy_group_count"] > 0
+    assert item["proxy_group_count"] == 14
     assert isinstance(item["rule_count"], int)
-    assert isinstance(item["surge_compatible"], bool)
+    assert item["surge_compatible"] is False
     assert "source_path" in item
     assert item["source_path"].startswith("community_templates/")
 
@@ -69,7 +70,7 @@ def test_rule_catalog_exposes_every_parseable_community_rule_with_its_source(cli
     assert all(template["source_path"].startswith("community_templates/") for template in body["templates"])
     assert all(template["rules"] for template in body["templates"])
     assert any(
-        rule == "RULE-SET,ads,REJECT"
+        rule == "GEOSITE,category-ads-all,REJECT"
         for template in body["templates"]
         for rule in template["rules"]
     )
@@ -84,7 +85,18 @@ def test_rule_catalog_uses_the_consolidated_template(client: TestClient) -> None
     )
 
     assert leo["extraction"] == "yaml"
-    assert "RULE-SET,ads,REJECT" in leo["rules"]
+    assert leo["provider_count"] == 8
+    assert {provider["name"] for provider in leo["providers"]} == {
+        "ai-4",
+        "Claude",
+        "GitHub-5",
+        "Apple-4",
+        "Google-2",
+        "Microsoft-6",
+        "YouTube-6",
+        "Telegram",
+    }
+    assert "GEOSITE,category-ads-all,REJECT" in leo["rules"]
 
 
 # ── Preview endpoint ───────────────────────────────────────────────────────
@@ -177,4 +189,20 @@ def test_surge_compatible_false_for_mrs_provider() -> None:
             }
         },
     }
+    assert _is_surge_compatible(loaded, "yaml") is False
+
+
+def test_surge_compatible_false_when_compiler_drops_domain_provider() -> None:
+    loaded = {
+        "proxy-groups": [{"name": "PROXY", "type": "select", "proxies": ["DIRECT"]}],
+        "rule-providers": {
+            "ai": {
+                "type": "http",
+                "behavior": "domain",
+                "url": "https://example.com/ai.txt",
+            }
+        },
+        "rules": ["RULE-SET,ai,PROXY", "MATCH,DIRECT"],
+    }
+
     assert _is_surge_compatible(loaded, "yaml") is False

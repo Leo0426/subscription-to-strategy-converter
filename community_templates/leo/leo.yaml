@@ -45,10 +45,12 @@ dns:
   - stun.*.*.*
   # DIRECT 规则依赖真实 IP,fake-ip 会导致该域名解析异常。
   - +.tokfinity.com
-  - stun.*.*.*
 sniffer:
   enable: true
   parse-pure-ip: true
+  # TLS/QUIC 只用于规则识别，不把应用已经选择的 CDN 目标改写成 SNI 域名；
+  # HTTP 段在下方按协议显式开启改写。
+  override-destination: false
   sniff:
     HTTP:
       ports:
@@ -63,6 +65,10 @@ sniffer:
       ports:
       - 443
       - 8443
+  # 避免局域网设备发现与 Apple Push 被 SNI 嗅探改写目标。
+  skip-domain:
+  - Mijia Cloud
+  - +.push.apple.com
 tun:
   enable: false
   stack: mixed
@@ -77,26 +83,18 @@ proxy-groups:
   proxies:
   - 香港自动
   - 自动选择
-  - 故障转移
-  - 台湾自动
-  - 日本自动
-  - 新加坡自动
-  - 美国自动
-  - 韩国自动
-  - 欧洲自动
   - 手动选择
   - DIRECT
 - name: 自动选择
   type: url-test
   include-all: true
-  url: https://www.gstatic.com/generate_204
+  url: https://cp.cloudflare.com/generate_204
+  expected-status: 204
+  timeout: 5000
+  max-failed-times: 2
+  lazy: true
   interval: 600
   tolerance: 150
-- name: 故障转移
-  type: fallback
-  include-all: true
-  url: https://www.gstatic.com/generate_204
-  interval: 300
 - name: 手动选择
   type: select
   include-all: true
@@ -104,139 +102,82 @@ proxy-groups:
   type: url-test
   include-all: true
   filter: (?i)(香港|🇭🇰|Hong Kong|(^|[^A-Za-z])(HK|HKG)([^A-Za-z]|$))
-  url: https://www.gstatic.com/generate_204
-  interval: 600
-  tolerance: 150
-- name: 台湾自动
-  type: url-test
-  include-all: true
-  filter: (?i)(台湾|台北|台中|🇹🇼|Taiwan|(^|[^A-Za-z])(TW|TPE)([^A-Za-z]|$))
-  url: https://www.gstatic.com/generate_204
-  interval: 600
-  tolerance: 150
-- name: 日本自动
-  type: url-test
-  include-all: true
-  filter: (?i)(日本|东京|大阪|🇯🇵|Japan|(^|[^A-Za-z])(JP|NRT|HND)([^A-Za-z]|$))
-  url: https://www.gstatic.com/generate_204
-  interval: 600
-  tolerance: 150
-- name: 新加坡自动
-  type: url-test
-  include-all: true
-  filter: (?i)(新加坡|狮城|🇸🇬|Singapore|(^|[^A-Za-z])(SG|SIN)([^A-Za-z]|$))
-  url: https://www.gstatic.com/generate_204
-  interval: 600
-  tolerance: 150
-- name: 美国自动
-  type: url-test
-  include-all: true
-  filter: (?i)(美国|美國|🇺🇸|United States|(^|[^A-Za-z])(US|USA|LAX|SJC|SFO)([^A-Za-z]|$))
-  url: https://www.gstatic.com/generate_204
-  interval: 600
-  tolerance: 150
-- name: 韩国自动
-  type: url-test
-  include-all: true
-  filter: (?i)(韩国|韓國|首尔|首爾|🇰🇷|Korea|(^|[^A-Za-z])KR([^A-Za-z]|$))
-  url: https://www.gstatic.com/generate_204
-  interval: 600
-  tolerance: 150
-- name: 欧洲自动
-  type: url-test
-  include-all: true
-  filter: (?i)(英国|法國|法国|德国|德國|荷兰|荷蘭|瑞士|欧洲|歐洲|🇬🇧|🇫🇷|🇩🇪|(^|[^A-Za-z])(UK|GB|DE|FR|EU)([^A-Za-z]|$))
-  url: https://www.gstatic.com/generate_204
-  interval: 600
-  tolerance: 150
-- name: AI自动
-  type: url-test
-  include-all: true
-  url: https://claude.ai/
-  expected-status: 200
+  url: https://cp.cloudflare.com/generate_204
+  expected-status: 204
+  timeout: 5000
+  max-failed-times: 2
+  lazy: true
   interval: 600
   tolerance: 150
 - name: AI 服务
   type: select
   proxies:
   - AI自动
-  - 美国自动
   - 默认代理
-  - 日本自动
-  - 新加坡自动
+  - 自动选择
   - 手动选择
+- name: AI自动
+  # ChatGPT 可达性与通用 204 延迟不是一回事。只测试较近且通常支持 AI
+  # 服务的新加坡节点，失败一次即重测；无新加坡节点时编译器会删除本组。
+  type: url-test
+  include-all: true
+  filter: (?i)(新加坡|狮城|🇸🇬|Singapore|(^|[^A-Za-z])(SG|SIN)([^A-Za-z]|$))
+  url: https://chatgpt.com/cdn-cgi/trace
+  expected-status: 200
+  timeout: 5000
+  max-failed-times: 1
+  lazy: true
+  interval: 300
+  tolerance: 50
 - name: 流媒体
   type: select
-  proxies: &id001
+  proxies: &service_proxies
   - 默认代理
-  - 香港自动
-  - 台湾自动
-  - 日本自动
-  - 新加坡自动
-  - 美国自动
-  - 韩国自动
-  - 欧洲自动
   - 自动选择
-  - 故障转移
   - 手动选择
   - DIRECT
 - name: 社交通讯
   type: select
-  proxies: *id001
+  proxies: *service_proxies
 - name: 游戏服务
   type: select
-  proxies:
-  - 默认代理
-  - 香港自动
-  - 台湾自动
-  - 日本自动
-  - 新加坡自动
-  - 美国自动
-  - 韩国自动
-  - 欧洲自动
-  - DIRECT
+  proxies: *service_proxies
 - name: 开发服务
   type: select
   proxies:
-  - 美国自动
   - 默认代理
-  - 日本自动
-  - 新加坡自动
+  - 自动选择
   - DIRECT
+  - 手动选择
 - name: 金融服务
   type: select
   proxies:
   - 默认代理
-  - 美国自动
-  - 新加坡自动
-  - 日本自动
+  - 自动选择
+  - 手动选择
 - name: Google
   type: select
   proxies:
-  - 美国自动
   - 默认代理
-  - 新加坡自动
-  - 日本自动
+  - 自动选择
+  - 手动选择
 - name: Microsoft
   type: select
   proxies:
-  - 美国自动
   - 默认代理
   - DIRECT
-  - 日本自动
+  - 自动选择
+  - 手动选择
 - name: Apple
   type: select
   proxies:
   - DIRECT
   - 默认代理
-  - 美国自动
-  - 日本自动
-- name: 兜底
-  type: select
-  proxies:
-  - 默认代理
-  - DIRECT
+  - 自动选择
+  - 手动选择
 rule-providers:
+  # 轻量核心：每项只保留一个固定版本的可信来源；classical YAML 可由
+  # Surge 转换，AI domain 裸列表保留为 Mihomo 的广覆盖来源。
   ai-4:
     type: http
     behavior: domain
@@ -244,195 +185,13 @@ rule-providers:
     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-ai-!cn.list
     path: ./rule_provider/leo/005.txt
     interval: 7200
-  # Claude provider 是 Claude 策略子系统的产品契约依赖,不参与族合并。
+  # Claude provider 是 Claude 策略子系统的产品契约依赖，不参与合并。
   Claude:
     type: http
     behavior: classical
     format: yaml
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Claude/Claude_No_Resolve.yaml
     path: ./rule_provider/leo/020.yaml
-    interval: 86400
-    proxy: 自动选择
-  AI-CN:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-ai-cn.mrs
-    path: ./rule_provider/leo/014.mrs
-    interval: 86400
-  Accelerator:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-game-accelerator-cn.mrs
-    path: ./rule_provider/leo/039.mrs
-    interval: 86400
-  custom_proxy:
-    type: http
-    behavior: domain
-    format: yaml
-    url: https://raw.githubusercontent.com/JohnsonRan/CRules/e60d312c610b84c0fdddd0e91aabf5e49da02be7/rules/customProxy.yaml
-    path: ./rule_provider/leo/040.yaml
-    interval: 86400
-  Global:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Global/Global_Classical_No_Resolve.yaml
-    path: ./rule_provider/leo/049.yaml
-    interval: 86400
-  GlobalMedia:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/GlobalMedia/GlobalMedia_Classical_No_Resolve.yaml
-    path: ./rule_provider/leo/051.yaml
-    interval: 86400
-  ProxyIP:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://github.com/666OS/rules/raw/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/ip/Proxy.mrs
-    path: ./rule_provider/leo/068.mrs
-    interval: 86400
-  1Password:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://kelee.one/Tool/Clash/Rule/1PasswordUS.yaml
-    path: ./rule_provider/leo/071.yaml
-    interval: 3600
-  category-porn:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-porn.mrs
-    path: ./rule_provider/leo/073.mrs
-    interval: 86400
-  ifast_domain:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/ifast.mrs
-    path: ./rule_provider/leo/077.mrs
-    interval: 86400
-  JapanWeb:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/ameyukisora/Clash-Rule/fd849948e4073ff94e4c04d5199c407bfff14e51/provider/JapanWeb.yaml
-    path: ./rule_provider/leo/078.yaml
-    interval: 86400
-  myignore:
-    type: http
-    behavior: classical
-    format: text
-    url: https://raw.githubusercontent.com/Pililink/AirRules/e1f177e32be784989d35c78390f762c5c784d600/clash/ruleset/ignore.list
-    path: ./rule_provider/leo/081.txt
-    interval: 7200
-  Pixiv:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Pixiv/Pixiv.yaml
-    path: ./rule_provider/leo/082.yaml
-    interval: 86400
-  Special:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Special.yaml
-    path: ./rule_provider/leo/087.yaml
-    interval: 604800
-  TeamViewer:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/TeamViewer/TeamViewer_No_Resolve.yaml
-    path: ./rule_provider/leo/088.yaml
-    interval: 86400
-  TEST / Domain:
-    type: http
-    behavior: classical
-    format: text
-    url: https://raw.githubusercontent.com/liandu2024/clash/3fa176d30b02f2f105ee3de9a5126bdd47b5e0f5/list/Check.list
-    path: ./rule_provider/leo/089.txt
-    interval: 86400
-  Amazon:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Amazon/Amazon.yaml
-    path: ./rule_provider/leo/094.yaml
-    interval: 604800
-  Amazon_ip:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/IP/amazon-ip.mrs
-    path: ./rule_provider/leo/097.mrs
-    interval: 86400
-  Apple-4:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Apple/Apple_Classical_No_Resolve.yaml
-    path: ./rule_provider/leo/101.yaml
-    interval: 86400
-  Apple-IP:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo-lite/geoip/apple.mrs
-    path: ./rule_provider/leo/112.mrs
-    interval: 86400
-  AppStore:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/AppStore/AppStore.yaml
-    path: ./rule_provider/leo/132.yaml
-    interval: 3600
-  Blizzard / Domain:
-    type: http
-    behavior: classical
-    format: text
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Blizzard/Blizzard.list
-    path: ./rule_provider/leo/137.txt
-    interval: 86400
-  Docker:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Docker/Docker.yaml
-    path: ./rule_provider/leo/139.yaml
-    interval: 86400
-  EA / Domain:
-    type: http
-    behavior: classical
-    format: text
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/EA/EA.list
-    path: ./rule_provider/leo/141.txt
-    interval: 86400
-  EpicCN:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/classical/epicgames%40cn.yaml
-    path: ./rule_provider/leo/150.yaml
-    interval: 86400
-  GOG:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Gog/Gog.yaml
-    path: ./rule_provider/leo/151.yaml
-    interval: 86400
-  GOGCN:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/gog@cn.mrs
-    path: ./rule_provider/leo/152.mrs
-    interval: 86400
-  gitbook_domain:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/GitBook/GitBook.yaml
-    path: ./rule_provider/leo/153.yaml
     interval: 86400
   GitHub-5:
     type: http
@@ -441,439 +200,26 @@ rule-providers:
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/GitHub/GitHub_No_Resolve.yaml
     path: ./rule_provider/leo/158.yaml
     interval: 86400
-  fcm_domain:
+  Apple-4:
     type: http
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/GoogleFCM/GoogleFCM.yaml
-    path: ./rule_provider/leo/167.yaml
+    format: yaml
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Apple/Apple_Classical_No_Resolve.yaml
+    path: ./rule_provider/leo/101.yaml
     interval: 86400
   Google-2:
     type: http
     behavior: classical
+    format: yaml
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Google/Google.yaml
     path: ./rule_provider/leo/169.yaml
     interval: 604800
-  Google_IP-4:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@42c2a789e19516f0a8bb2bca8eb1541505599940/geo-lite/geoip/google.mrs
-    path: ./rule_provider/leo/193.mrs
-    interval: 86400
-  Bing:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Bing/Bing.yaml
-    path: ./rule_provider/leo/205.yaml
-    interval: 86400
   Microsoft-6:
     type: http
     behavior: classical
     format: yaml
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Microsoft/Microsoft_No_Resolve.yaml
     path: ./rule_provider/leo/211.yaml
-    interval: 86400
-  Nvidia / Domain:
-    type: http
-    behavior: classical
-    format: text
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Nvidia/Nvidia.list
-    path: ./rule_provider/leo/232.txt
-    interval: 86400
-  PrivateTracker:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/PrivateTracker/PrivateTracker_No_Resolve.yaml
-    path: ./rule_provider/leo/238.yaml
-    interval: 86400
-  trackerslist:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/DustinWin/ruleset_geodata/raw/05cb71a6617dcbceae1457f7168339704017f5aa/trackerslist.mrs
-    path: ./rule_provider/leo/242.mrs
-    interval: 86400
-  PayPal:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/PayPal/PayPal.yaml
-    path: ./rule_provider/leo/244.yaml
-    interval: 604800
-  Sony:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Sony/Sony_No_Resolve.yaml
-    path: ./rule_provider/leo/250.yaml
-    interval: 86400
-  steamcdn_ip:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/IP/steamCDN-ip.mrs
-    path: ./rule_provider/leo/267.mrs
-    interval: 86400
-  UbisoftCN:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/ubisoft@cn.mrs
-    path: ./rule_provider/leo/274.mrs
-    interval: 86400
-  Wise_domain:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/wise.mrs
-    path: ./rule_provider/leo/276.mrs
-    interval: 86400
-  XboxCN:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/xbox@cn.mrs
-    path: ./rule_provider/leo/279.mrs
-    interval: 86400
-  115_domain:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/115/115.yaml
-    path: ./rule_provider/leo/280.yaml
-    interval: 86400
-  ChinaDownloadCDN:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://kelee.one/Tool/Clash/Rule/ChinaDownloadCDN.yaml
-    path: ./rule_provider/leo/281.yaml
-    interval: 3600
-  download_domainset:
-    type: http
-    behavior: domain
-    format: text
-    url: https://ruleset.skk.moe/Clash/domainset/download.txt
-    path: ./rule_provider/leo/284.txt
-    interval: 86400
-  Xunlei:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Xunlei/Xunlei.yaml
-    path: ./rule_provider/leo/287.yaml
-    interval: 86400
-  Crypto-2:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Crypto/Crypto.yaml
-    path: ./rule_provider/leo/291.yaml
-    interval: 604800
-  Scholar:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Scholar/Scholar.yaml
-    path: ./rule_provider/leo/294.yaml
-    interval: 604800
-  xiaomi_domain:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/XiaoMi/XiaoMi.yaml
-    path: ./rule_provider/leo/296.yaml
-    interval: 86400
-  Game:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Game/Game.yaml
-    path: ./rule_provider/leo/298.yaml
-    interval: 86400
-  games-cn:
-    type: http
-    behavior: domain
-    format: text
-    url: https://raw.githubusercontent.com/DustinWin/ruleset_geodata/05cb71a6617dcbceae1457f7168339704017f5aa/games-cn.list
-    path: ./rule_provider/leo/306.txt
-    interval: 7200
-  ebay_domain:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/eBay/eBay.yaml
-    path: ./rule_provider/leo/312.yaml
-    interval: 86400
-  Ecommerce:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-ecommerce.mrs
-    path: ./rule_provider/leo/313.mrs
-    interval: 86400
-  miHoYo:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/HoYoverse/HoYoverse.yaml
-    path: ./rule_provider/leo/316.yaml
-    interval: 604800
-  Tencent-2:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Tencent/Tencent_No_Resolve.yaml
-    path: ./rule_provider/leo/318.yaml
-    interval: 86400
-  tencent!cn_domain:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/tencent%40!cn.mrs
-    path: ./rule_provider/leo/319.mrs
-    interval: 86400
-  bank_cn_domain:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-bank-cn.mrs
-    path: ./rule_provider/leo/321.mrs
-    interval: 86400
-  aliyun_domain:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Alibaba/Alibaba.yaml
-    path: ./rule_provider/leo/324.yaml
-    interval: 86400
-  china_ip_ipv6:
-    type: http
-    behavior: ipcidr
-    format: text
-    url: https://ruleset.skk.moe/Clash/ip/china_ip_ipv6.txt
-    path: ./rule_provider/leo/335.txt
-    interval: 86400
-  ChinaAPP:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://fastly.jsdelivr.net/gh/0xWans/my-backup@fdcc41d26806332a9eba870c230b1669610006ba/clash/rules/Process/ChinaAPP.yaml
-    path: ./rule_provider/leo/336.yaml
-    interval: 86400
-  ChinaIPs:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/ChinaIPs/ChinaIPs_Classical_No_Resolve.yaml
-    path: ./rule_provider/leo/340.yaml
-    interval: 86400
-  cn:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/ChinaMax/ChinaMax.yaml
-    path: ./rule_provider/leo/342.yaml
-    interval: 7200
-  cn_v6:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://raw.githubusercontent.com/ameyukisora/Clash-Rule/fd849948e4073ff94e4c04d5199c407bfff14e51/autoupdate/cn_v6.mrs
-    path: ./rule_provider/leo/352.mrs
-    interval: 86400
-  cnip:
-    type: http
-    behavior: ipcidr
-    format: text
-    url: https://raw.githubusercontent.com/DustinWin/ruleset_geodata/05cb71a6617dcbceae1457f7168339704017f5aa/cnip.list
-    path: ./rule_provider/leo/354.txt
-    interval: 7200
-  custom_direct:
-    type: http
-    behavior: domain
-    format: yaml
-    url: https://raw.githubusercontent.com/JohnsonRan/CRules/e60d312c610b84c0fdddd0e91aabf5e49da02be7/rules/custom.yaml
-    path: ./rule_provider/leo/355.yaml
-    interval: 86400
-  ecs-no-cn:
-    type: http
-    behavior: domain
-    format: text
-    url: https://raw.githubusercontent.com/JohnsonRan/CRules/e60d312c610b84c0fdddd0e91aabf5e49da02be7/rules/ecs-no-cn.txt
-    path: ./rule_provider/leo/369.txt
-    interval: 86400
-  ads:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/AdvertisingLite/AdvertisingLite.yaml
-    path: ./rule_provider/leo/381.yaml
-    interval: 7200
-  AdvertisingIP:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://github.com/666OS/rules/raw/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/ip/Advertising.mrs
-    path: ./rule_provider/leo/384.mrs
-    interval: 86400
-  custom_reject:
-    type: http
-    behavior: domain
-    format: text
-    url: https://raw.githubusercontent.com/JohnsonRan/CRules/e60d312c610b84c0fdddd0e91aabf5e49da02be7/rules/reject.txt
-    path: ./rule_provider/leo/396.txt
-    interval: 86400
-  F1 TV:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/Media/F1%20TV.yaml
-    path: ./rule_provider/leo/406.yaml
-    interval: 604800
-  iptv_domain:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/Domain/iptv.mrs
-    path: ./rule_provider/leo/407.mrs
-    interval: 86400
-  KKTV:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/KKTV/KKTV.yaml
-    path: ./rule_provider/leo/408.yaml
-    interval: 604800
-  mediaip:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo-ruleset/mediaip.mrs
-    path: ./rule_provider/leo/413.mrs
-    interval: 86400
-  NewsMedia:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/666OS/rules/raw/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/domain/NewsMedia.mrs
-    path: ./rule_provider/leo/414.mrs
-    interval: 86400
-  stream_non_ip:
-    type: http
-    behavior: classical
-    format: text
-    url: https://ruleset.skk.moe/Clash/non_ip/stream.txt
-    path: ./rule_provider/leo/416.txt
-    interval: 43200
-  XPTV:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/666OS/rules/raw/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/domain/XPTV.mrs
-    path: ./rule_provider/leo/419.mrs
-    interval: 86400
-  XPTVIP:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://github.com/666OS/rules/raw/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/ip/XPTV.mrs
-    path: ./rule_provider/leo/420.mrs
-    interval: 86400
-  Abema TV:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/AbemaTV/AbemaTV.yaml
-    path: ./rule_provider/leo/421.yaml
-    interval: 604800
-  Crunchyroll / Domain:
-    type: http
-    behavior: classical
-    format: text
-    url: https://raw.githubusercontent.com/liandu2024/clash/3fa176d30b02f2f105ee3de9a5126bdd47b5e0f5/list/Crunchyroll.list
-    path: ./rule_provider/leo/425.txt
-    interval: 86400
-  Disney-5:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Disney/Disney_No_Resolve.yaml
-    path: ./rule_provider/leo/430.yaml
-    interval: 86400
-  Emby-5:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Emby/Emby_No_Resolve.yaml
-    path: ./rule_provider/leo/439.yaml
-    interval: 86400
-  EmbyIP:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://github.com/666OS/rules/raw/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/ip/Emby.mrs
-    path: ./rule_provider/leo/445.mrs
-    interval: 86400
-  HBO-3:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/HBO/HBO_No_Resolve.yaml
-    path: ./rule_provider/leo/448.yaml
-    interval: 86400
-  Hulu:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Hulu/Hulu.yaml
-    path: ./rule_provider/leo/454.yaml
-    interval: 604800
-  Hulu Japan:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/HuluJP/HuluJP.yaml
-    path: ./rule_provider/leo/456.yaml
-    interval: 604800
-  Netflix-6:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Netflix/Netflix_Classical_No_Resolve.yaml
-    path: ./rule_provider/leo/462.yaml
-    interval: 86400
-  Netflix_IP-2:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@42c2a789e19516f0a8bb2bca8eb1541505599940/geo-lite/geoip/netflix.mrs
-    path: ./rule_provider/leo/470.mrs
-    interval: 86400
-  Niconico:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Niconico/Niconico.yaml
-    path: ./rule_provider/leo/474.yaml
-    interval: 604800
-  PrimeVideo-3:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/PrimeVideo/PrimeVideo_No_Resolve.yaml
-    path: ./rule_provider/leo/477.yaml
-    interval: 86400
-  Soundcloud:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/SoundCloud/SoundCloud.yaml
-    path: ./rule_provider/leo/480.yaml
-    interval: 604800
-  Spotify-5:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Spotify/Spotify_No_Resolve.yaml
-    path: ./rule_provider/leo/485.yaml
-    interval: 86400
-  TikTok-4:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/TikTok/TikTok_No_Resolve.yaml
-    path: ./rule_provider/leo/495.yaml
-    interval: 86400
-  Twitch:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Twitch/Twitch_No_Resolve.yaml
-    path: ./rule_provider/leo/504.yaml
     interval: 86400
   YouTube-6:
     type: http
@@ -882,436 +228,12 @@ rule-providers:
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/YouTube/YouTube_No_Resolve.yaml
     path: ./rule_provider/leo/512.yaml
     interval: 86400
-  Letv:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/LeTV/LeTV.yaml
-    path: ./rule_provider/leo/524.yaml
-    interval: 604800
-  Youku:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Youku/Youku.yaml
-    path: ./rule_provider/leo/525.yaml
-    interval: 604800
-  Bilibili-5:
+  Telegram:
     type: http
     behavior: classical
     format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/BiliBili/BiliBili_No_Resolve.yaml
-    path: ./rule_provider/leo/530.yaml
-    interval: 86400
-  bilibili_ip:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo-lite/geoip/bilibili.mrs
-    path: ./rule_provider/leo/534.mrs
-    interval: 86400
-  # biliintl 保证模板不依赖可选的 biliintl geosite tag(见 test_leo_template)。
-  biliintl:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/BiliBiliIntl/BiliBiliIntl.yaml
-    path: ./rule_provider/leo/538.yaml
-    interval: 86400
-    proxy: 自动选择
-  BBC iPlayer:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/BBC/BBC.yaml
-    path: ./rule_provider/leo/541.yaml
-    interval: 604800
-  DAZN:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/DAZN/DAZN.yaml
-    path: ./rule_provider/leo/542.yaml
-    interval: 604800
-  Discovery Plus:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/DiscoveryPlus/DiscoveryPlus.yaml
-    path: ./rule_provider/leo/543.yaml
-    interval: 604800
-  DMM:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/DMM/DMM.yaml
-    path: ./rule_provider/leo/544.yaml
-    interval: 604800
-  Fox+:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Fox/Fox.yaml
-    path: ./rule_provider/leo/546.yaml
-    interval: 604800
-  Popcorn / Domain:
-    type: http
-    behavior: classical
-    format: text
-    url: https://raw.githubusercontent.com/liandu2024/clash/3fa176d30b02f2f105ee3de9a5126bdd47b5e0f5/list/Popcorn.list
-    path: ./rule_provider/leo/548.txt
-    interval: 86400
-  Bahamut:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Bahamut/Bahamut.yaml
-    path: ./rule_provider/leo/549.yaml
-    interval: 604800
-  douyin-zj:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/DouYin/DouYin_No_Resolve.yaml
-    path: ./rule_provider/leo/555.yaml
-    interval: 86400
-  encoreTVB:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/EncoreTVB/EncoreTVB.yaml
-    path: ./rule_provider/leo/557.yaml
-    interval: 604800
-  TVB_domain:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/TVB/TVB.yaml
-    path: ./rule_provider/leo/559.yaml
-    interval: 86400
-  ViuTV:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/ViuTV/ViuTV.yaml
-    path: ./rule_provider/leo/560.yaml
-    interval: 604800
-  IQ:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/iQIYIIntl/iQIYIIntl.yaml
-    path: ./rule_provider/leo/561.yaml
-    interval: 604800
-  IQIYI:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/iQIYI/iQIYI.yaml
-    path: ./rule_provider/leo/562.yaml
-    interval: 604800
-  Netease Music:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/NetEaseMusic/NetEaseMusic.yaml
-    path: ./rule_provider/leo/563.yaml
-    interval: 604800
-  NetEaseMusic_ip:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/IP/NetEaseMusic-ip.mrs
-    path: ./rule_provider/leo/565.mrs
-    interval: 86400
-  Tencent Video:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/TencentVideo/TencentVideo.yaml
-    path: ./rule_provider/leo/566.yaml
-    interval: 604800
-  WeTV:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/WeTV/WeTV.yaml
-    path: ./rule_provider/leo/567.yaml
-    interval: 604800
-  JOOX:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/JOOX/JOOX.yaml
-    path: ./rule_provider/leo/568.yaml
-    interval: 604800
-  Pandora:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Pandora/Pandora.yaml
-    path: ./rule_provider/leo/570.yaml
-    interval: 604800
-  Discord-2:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Discord/Discord_No_Resolve.yaml
-    path: ./rule_provider/leo/572.yaml
-    interval: 86400
-  Line TV:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/LineTV/LineTV.yaml
-    path: ./rule_provider/leo/576.yaml
-    interval: 604800
-  line_domain:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Line/Line.yaml
-    path: ./rule_provider/leo/577.yaml
-    interval: 86400
-  Facebook-IP:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/facebook.mrs
-    path: ./rule_provider/leo/580.mrs
-    interval: 86400
-  Facebook-zj:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Facebook/Facebook_No_Resolve.yaml
-    path: ./rule_provider/leo/581.yaml
-    interval: 86400
-  Instagram:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Instagram/Instagram_No_Resolve.yaml
-    path: ./rule_provider/leo/588.yaml
-    interval: 86400
-  threads_domain:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Threads/Threads.yaml
-    path: ./rule_provider/leo/592.yaml
-    interval: 86400
-  Reddit / Domain:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Reddit/Reddit.yaml
-    path: ./rule_provider/leo/594.yaml
-    interval: 86400
-  talkatone_domain:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/Domain/Talkatone-domain.mrs
-    path: ./rule_provider/leo/596.mrs
-    interval: 86400
-  talkatone_ip:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/IP/Talkatone-ip.mrs
-    path: ./rule_provider/leo/597.mrs
-    interval: 86400
-  ip_telegram:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/telegram.mrs
-    path: ./rule_provider/leo/598.mrs
-    interval: 86400
-  telegram_domain:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Telegram/Telegram.yaml
-    path: ./rule_provider/leo/614.yaml
-    interval: 86400
-  Tumblr:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Tumblr/Tumblr.yaml
-    path: ./rule_provider/leo/628.yaml
-    interval: 86400
-  geoip_twitter:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/twitter.mrs
-    path: ./rule_provider/leo/629.mrs
-    interval: 86400
-  Twitter-4:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Twitter/Twitter_No_Resolve.yaml
-    path: ./rule_provider/leo/633.yaml
-    interval: 86400
-  WhatsApp / Domain:
-    type: http
-    behavior: classical
-    format: text
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Whatsapp/Whatsapp.list
-    path: ./rule_provider/leo/645.txt
-    interval: 86400
-  xiaohongshu:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/XiaoHongShu/XiaoHongShu_No_Resolve.yaml
-    path: ./rule_provider/leo/647.yaml
-    interval: 86400
-  WeChat:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/WeChat/WeChat_No_Resolve.yaml
-    path: ./rule_provider/leo/649.yaml
-    interval: 86400
-  Communication:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-communication.mrs
-    path: ./rule_provider/leo/652.mrs
-    interval: 86400
-  SocialMedia-2:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-social-media-!cn.mrs
-    path: ./rule_provider/leo/654.mrs
-    interval: 86400
-  SocialMediaIP:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://github.com/666OS/rules/raw/cd2e7adee6c87a61a6bf6abcef7616972f01e360/mihomo/ip/SocialMedia.mrs
-    path: ./rule_provider/leo/655.mrs
-    interval: 86400
-  Category-DoH:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-doh.mrs
-    path: ./rule_provider/leo/657.mrs
-    interval: 86400
-  cdn_domainset:
-    type: http
-    behavior: domain
-    format: text
-    url: https://ruleset.skk.moe/Clash/domainset/cdn.txt
-    path: ./rule_provider/leo/658.txt
-    interval: 86400
-  cdn_non_ip:
-    type: http
-    behavior: classical
-    format: text
-    url: https://ruleset.skk.moe/Clash/non_ip/cdn.txt
-    path: ./rule_provider/leo/659.txt
-    interval: 86400
-  Cloudflare-2:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Cloudflare/Cloudflare_No_Resolve.yaml
-    path: ./rule_provider/leo/661.yaml
-    interval: 86400
-  cloudflare-ip:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/cloudflare.mrs
-    path: ./rule_provider/leo/662.mrs
-    interval: 86400
-  cloudfront-ip:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/cloudfront.mrs
-    path: ./rule_provider/leo/665.mrs
-    interval: 86400
-  DNS-IP:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://gcore.jsdelivr.net/gh/Aethersailor/Custom_OpenClash_Rules@ed3c535fd747589fdb9e1a60f4df77122a839d70/rule/Encrypted_DNS_IP.mrs
-    path: ./rule_provider/leo/666.mrs
-    interval: 86400
-  DNSLeak:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://fastly.jsdelivr.net/gh/0xWans/my-backup@fdcc41d26806332a9eba870c230b1669610006ba/clash/rules/DNSLeak.mrs
-    path: ./rule_provider/leo/667.mrs
-    interval: 86400
-  fakeip-filter-2:
-    type: http
-    behavior: domain
-    url: https://raw.githubusercontent.com/ameyukisora/Clash-Rule/fd849948e4073ff94e4c04d5199c407bfff14e51/provider/fakeip-filter.yaml
-    path: ./rule_provider/leo/671.yaml
-    interval: 86400
-  fakeip_filter_domain:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://raw.githubusercontent.com/Lanlan13-14/Rules/8f14bdfa22b937a27e5dfada1eca1526d0bf1d79/rules/Domain/fakeip-filter.mrs
-    path: ./rule_provider/leo/672.mrs
-    interval: 86400
-  fastly-ip:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://github.com/MetaCubeX/meta-rules-dat/raw/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geoip/fastly.mrs
-    path: ./rule_provider/leo/675.mrs
-    interval: 86400
-  HTTPDNS:
-    type: http
-    behavior: classical
-    url: https://testingcf.jsdelivr.net/gh/dler-io/Rules@d54c1d67c4f425a583d183b9f719e67eb48c81fd/Clash/Provider/HTTPDNS.yaml
-    path: ./rule_provider/leo/678.yaml
-    interval: 604800
-  ip_httpdns:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://testingcf.jsdelivr.net/gh/yiteei/Share@d46fd38f37f03d0000c007bb0749ab4c883d5da6/rules/ip/httpdns.mrs
-    path: ./rule_provider/leo/680.mrs
-    interval: 86400
-  ip_webrtc:
-    type: http
-    behavior: ipcidr
-    format: mrs
-    url: https://testingcf.jsdelivr.net/gh/yiteei/Share@d46fd38f37f03d0000c007bb0749ab4c883d5da6/rules/ip/webrtc.mrs
-    path: ./rule_provider/leo/682.mrs
-    interval: 86400
-  lan_ip:
-    type: http
-    behavior: classical
-    format: text
-    url: https://ruleset.skk.moe/Clash/ip/lan.txt
-    path: ./rule_provider/leo/688.txt
-    interval: 43200
-  no-fakeip:
-    type: http
-    behavior: domain
-    format: text
-    url: https://raw.githubusercontent.com/JohnsonRan/CRules/e60d312c610b84c0fdddd0e91aabf5e49da02be7/rules/no-fakeip.txt
-    path: ./rule_provider/leo/692.txt
-    interval: 86400
-  private-2:
-    type: http
-    behavior: domain
-    format: text
-    url: https://raw.githubusercontent.com/DustinWin/ruleset_geodata/05cb71a6617dcbceae1457f7168339704017f5aa/private.list
-    path: ./rule_provider/leo/694.txt
-    interval: 7200
-  privateip-2:
-    type: http
-    behavior: ipcidr
-    format: text
-    url: https://raw.githubusercontent.com/DustinWin/ruleset_geodata/05cb71a6617dcbceae1457f7168339704017f5aa/privateip.list
-    path: ./rule_provider/leo/708.txt
-    interval: 7200
-  site_webrtc:
-    type: http
-    behavior: domain
-    format: mrs
-    url: https://testingcf.jsdelivr.net/gh/yiteei/Share@d46fd38f37f03d0000c007bb0749ab4c883d5da6/rules/site/webrtc.mrs
-    path: ./rule_provider/leo/711.mrs
-    interval: 86400
-  speedtest-3:
-    type: http
-    behavior: domain
-    format: text
-    url: https://ruleset.skk.moe/Clash/domainset/speedtest.txt
-    path: ./rule_provider/leo/714.txt
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Telegram/Telegram_No_Resolve.yaml
+    path: ./rule_provider/leo/515.yaml
     interval: 86400
 rules:
 - DOMAIN-SUFFIX,tokfinity.com,DIRECT
@@ -1319,27 +241,6 @@ rules:
 - DOMAIN-SUFFIX,challenges.cloudflare.com,AI 服务
 - DOMAIN-SUFFIX,recaptcha.net,AI 服务
 - DOMAIN-SUFFIX,gvt1.com,Google
-- RULE-SET,Category-DoH,DIRECT
-- RULE-SET,cdn_non_ip,默认代理
-- RULE-SET,Cloudflare-2,默认代理
-- RULE-SET,cloudflare-ip,默认代理,no-resolve
-- RULE-SET,cloudfront-ip,默认代理,no-resolve
-- RULE-SET,custom_direct,DIRECT
-- RULE-SET,DNS-IP,DIRECT
-- RULE-SET,DNSLeak,DIRECT
-- RULE-SET,ecs-no-cn,DIRECT
-- RULE-SET,fakeip-filter-2,DIRECT
-- RULE-SET,fakeip_filter_domain,DIRECT
-- RULE-SET,fastly-ip,默认代理,no-resolve
-- RULE-SET,games-cn,DIRECT
-- RULE-SET,HTTPDNS,DIRECT
-- RULE-SET,ip_httpdns,DIRECT
-- RULE-SET,ip_webrtc,DIRECT
-- RULE-SET,lan_ip,DIRECT
-- RULE-SET,no-fakeip,DIRECT
-- RULE-SET,privateip-2,DIRECT
-- RULE-SET,site_webrtc,DIRECT
-- RULE-SET,speedtest-3,DIRECT
 # WebRTC (STUN/TURN) — inlined from GitMetaio/Surfing WebRTC.list; kept native
 # because Surge rejects DST-PORT inside external RULE-SET files ("Invalid line").
 - DOMAIN,stun1.l.google.com,DIRECT
@@ -1372,142 +273,30 @@ rules:
 - DST-PORT,5349,DIRECT
 - DST-PORT,10000,DIRECT
 - DST-PORT,5350,DIRECT
-- RULE-SET,ai-4,AI 服务
+# 先让已知可直连的更新与云服务数据面命中，避免后面的广义厂商
+# RuleProvider 抢先将 Homebrew、iCloud 和中国区服务绕到远端节点。
+- DOMAIN,formulae.brew.sh,DIRECT
+- GEOSITE,apple@cn,DIRECT
+- GEOSITE,icloud,DIRECT
+- GEOSITE,microsoft@cn,DIRECT
+# 这些核心域名同时是 Surge 的保底契约；Surge 无法读取 ai-4 的 domain
+# 裸列表，也不支持后面的 GEOSITE。
+- DOMAIN-SUFFIX,openai.com,AI 服务
+- DOMAIN-SUFFIX,chatgpt.com,AI 服务
+- DOMAIN-SUFFIX,oaistatic.com,AI 服务
+- DOMAIN-SUFFIX,oaiusercontent.com,AI 服务
+# 专属服务必须先于广义集合，确保自定义 Claude/YouTube 出口真实生效。
 - RULE-SET,Claude,AI 服务
-- RULE-SET,AI-CN,AI 服务
-- RULE-SET,Docker,开发服务
-- RULE-SET,gitbook_domain,开发服务
+- RULE-SET,ai-4,AI 服务
 - RULE-SET,GitHub-5,开发服务
+- DOMAIN-SUFFIX,crashlytics.com,Google
 - RULE-SET,Apple-4,Apple
-- RULE-SET,Apple-IP,Apple,no-resolve
+- RULE-SET,YouTube-6,流媒体
 - RULE-SET,Google-2,Google
-- RULE-SET,Google_IP-4,Google,no-resolve
 - GEOSITE,google,Google
-- GEOIP,google,Google,no-resolve
 - GEOSITE,google-cn,Google
 - RULE-SET,Microsoft-6,Microsoft
-- RULE-SET,bank_cn_domain,金融服务
-- RULE-SET,Crypto-2,金融服务
-- RULE-SET,PayPal,金融服务
-- RULE-SET,Wise_domain,金融服务
-- RULE-SET,Communication,社交通讯
-- RULE-SET,Discord-2,社交通讯
-- RULE-SET,Facebook-IP,社交通讯,no-resolve
-- RULE-SET,Facebook-zj,社交通讯
-- RULE-SET,geoip_twitter,社交通讯,no-resolve
-- RULE-SET,Instagram,社交通讯
-- RULE-SET,ip_telegram,社交通讯,no-resolve
-- RULE-SET,Line TV,社交通讯
-- RULE-SET,line_domain,社交通讯
-- RULE-SET,Reddit / Domain,社交通讯
-- RULE-SET,SocialMedia-2,社交通讯
-- RULE-SET,SocialMediaIP,社交通讯,no-resolve
-- RULE-SET,talkatone_domain,社交通讯
-- RULE-SET,talkatone_ip,社交通讯,no-resolve
-- RULE-SET,telegram_domain,社交通讯
-- RULE-SET,threads_domain,社交通讯
-- RULE-SET,Tumblr,社交通讯
-- RULE-SET,Twitter-4,社交通讯
-- RULE-SET,WeChat,社交通讯
-- RULE-SET,WhatsApp / Domain,社交通讯
-- RULE-SET,xiaohongshu,社交通讯
-- RULE-SET,EpicCN,游戏服务
-- RULE-SET,Game,游戏服务
-- RULE-SET,steamcdn_ip,游戏服务,no-resolve
-- RULE-SET,XboxCN,游戏服务
-- RULE-SET,Abema TV,流媒体
-- RULE-SET,Bahamut,流媒体
-- RULE-SET,BBC iPlayer,流媒体
-- RULE-SET,Bilibili-5,流媒体
-- RULE-SET,bilibili_ip,流媒体,no-resolve
-- RULE-SET,biliintl,流媒体
-- RULE-SET,Crunchyroll / Domain,流媒体
-- RULE-SET,DAZN,流媒体
-- RULE-SET,Discovery Plus,流媒体
-- RULE-SET,Disney-5,流媒体
-- RULE-SET,DMM,流媒体
-- RULE-SET,douyin-zj,流媒体
-- RULE-SET,Emby-5,流媒体
-- RULE-SET,EmbyIP,流媒体,no-resolve
-- RULE-SET,encoreTVB,流媒体
-- RULE-SET,F1 TV,流媒体
-- RULE-SET,Fox+,流媒体
-- RULE-SET,HBO-3,流媒体
-- RULE-SET,Hulu Japan,流媒体
-- RULE-SET,Hulu,流媒体
-- RULE-SET,iptv_domain,流媒体
-- RULE-SET,IQ,流媒体
-- RULE-SET,IQIYI,流媒体
-- RULE-SET,JOOX,流媒体
-- RULE-SET,KKTV,流媒体
-- RULE-SET,Letv,流媒体
-- RULE-SET,mediaip,流媒体,no-resolve
-- RULE-SET,Netease Music,流媒体
-- RULE-SET,NetEaseMusic_ip,流媒体,no-resolve
-- RULE-SET,Netflix-6,流媒体
-- RULE-SET,Netflix_IP-2,流媒体,no-resolve
-- RULE-SET,NewsMedia,流媒体
-- RULE-SET,Niconico,流媒体
-- RULE-SET,Pandora,流媒体
-- RULE-SET,Popcorn / Domain,流媒体
-- RULE-SET,PrimeVideo-3,流媒体
-- RULE-SET,Soundcloud,流媒体
-- RULE-SET,Spotify-5,流媒体
-- RULE-SET,stream_non_ip,流媒体
-- RULE-SET,Tencent Video,流媒体
-- RULE-SET,TikTok-4,流媒体
-- RULE-SET,TVB_domain,流媒体
-- RULE-SET,Twitch,流媒体
-- RULE-SET,ViuTV,流媒体
-- RULE-SET,WeTV,流媒体
-- RULE-SET,XPTV,流媒体
-- RULE-SET,XPTVIP,流媒体,no-resolve
-- RULE-SET,Youku,流媒体
-- RULE-SET,YouTube-6,流媒体
-- RULE-SET,115_domain,默认代理
-- RULE-SET,1Password,默认代理
-- RULE-SET,Accelerator,默认代理
-- RULE-SET,aliyun_domain,默认代理
-- RULE-SET,Amazon,默认代理
-- RULE-SET,Amazon_ip,默认代理,no-resolve
-- RULE-SET,AppStore,默认代理
-- RULE-SET,Bing,默认代理
-- RULE-SET,Blizzard / Domain,默认代理
-- RULE-SET,category-porn,默认代理
-- RULE-SET,cdn_domainset,默认代理
-- RULE-SET,ChinaDownloadCDN,默认代理
-- RULE-SET,custom_proxy,默认代理
-- RULE-SET,download_domainset,默认代理
-- RULE-SET,EA / Domain,默认代理
-- RULE-SET,ebay_domain,默认代理
-- RULE-SET,Ecommerce,默认代理
-- RULE-SET,fcm_domain,默认代理
-- RULE-SET,Global,默认代理
-- RULE-SET,GlobalMedia,默认代理
-- RULE-SET,GOG,默认代理
-- RULE-SET,GOGCN,默认代理
-- RULE-SET,ifast_domain,默认代理
-- RULE-SET,JapanWeb,默认代理
-- RULE-SET,miHoYo,默认代理
-- RULE-SET,myignore,默认代理
-- RULE-SET,Nvidia / Domain,默认代理
-- RULE-SET,Pixiv,默认代理
-- RULE-SET,PrivateTracker,默认代理
-- RULE-SET,ProxyIP,默认代理,no-resolve
-- RULE-SET,Scholar,默认代理
-- RULE-SET,Sony,默认代理
-- RULE-SET,Special,默认代理
-- RULE-SET,TeamViewer,默认代理
-- RULE-SET,tencent!cn_domain,默认代理
-- RULE-SET,Tencent-2,默认代理
-- RULE-SET,TEST / Domain,默认代理
-- RULE-SET,trackerslist,默认代理
-- RULE-SET,UbisoftCN,默认代理
-- RULE-SET,xiaomi_domain,默认代理
-- RULE-SET,Xunlei,默认代理
-- RULE-SET,ads,REJECT
-- RULE-SET,AdvertisingIP,REJECT,no-resolve
-- RULE-SET,custom_reject,REJECT
+- RULE-SET,Telegram,社交通讯,no-resolve
 - DST-PORT,6881-6999,REJECT
 - GEOSITE,category-ads-all,REJECT
 - IP-CIDR,198.18.0.1/16,REJECT,no-resolve
@@ -1519,7 +308,6 @@ rules:
 - DOMAIN,access.mypikpak.net,REJECT
 - DOMAIN,access.pikpak.me,REJECT
 - GEOSITE,openai,AI 服务
-- GEOIP,ai,AI 服务,no-resolve
 - DOMAIN-SUFFIX,lingq.com,AI 服务
 - DOMAIN-SUFFIX,youglish.com,AI 服务
 - DOMAIN-SUFFIX,deepl.com,AI 服务
@@ -1531,7 +319,6 @@ rules:
 - DOMAIN,edgeservices.bing.com,AI 服务
 - DOMAIN,sydney.bing.com,AI 服务
 - DOMAIN,img.bing.com,AI 服务
-- GEOSITE,apple@cn,DIRECT
 - GEOSITE,apple,Apple
 - GEOSITE,apple-tvplus,Apple
 - GEOSITE,apple-cn,Apple
@@ -1546,17 +333,14 @@ rules:
 - GEOSITE,spotify,流媒体
 - GEOSITE,tiktok,流媒体
 - GEOSITE,category-media-cn,流媒体
-- GEOIP,netflix,流媒体,no-resolve
 - DOMAIN-KEYWORD,speedtest,默认代理
 - DOMAIN-SUFFIX,3gppnetwork.org,默认代理
-- PROCESS-NAME-REGEX,.*telegram.*,默认代理
-- GEOSITE,microsoft@cn,DIRECT
-- GEOSITE,microsoft,默认代理
+- GEOSITE,microsoft,Microsoft
 - DOMAIN-KEYWORD,hk.tv.global.mi.com,默认代理
 - DOMAIN-SUFFIX,mytv.com.hk,默认代理
-- GEOSITE,facebook,默认代理
-- GEOSITE,bahamut,默认代理
-- GEOSITE,bilibili,默认代理
+- GEOSITE,facebook,社交通讯
+- GEOSITE,bahamut,流媒体
+- GEOSITE,bilibili,流媒体
 - GEOSITE,gfw,默认代理
 - GEOSITE,geolocation-!cn,默认代理
 - DOMAIN-SUFFIX,edclub.com,默认代理
@@ -1565,8 +349,8 @@ rules:
 - DOMAIN-SUFFIX,typingclub-cdn.typingclub.com,默认代理
 - DOMAIN-KEYWORD,typingclub,默认代理
 - GEOSITE,category-games@cn,DIRECT
-- GEOSITE,category-games,默认代理
-- GEOSITE,twitter,默认代理
+- GEOSITE,category-games,游戏服务
+- GEOSITE,twitter,社交通讯
 - GEOSITE,category-speedtest,默认代理
 - AND,((DST-PORT,53),(NOT,((IN-TYPE,Inner)))),默认代理
 - IN-NAME,in_mixed,默认代理
@@ -1576,23 +360,13 @@ rules:
 - AND,((NOT,((OR,((PROCESS-NAME,mihomo),(PROCESS-NAME,ClashMeta))))),(DST-PORT,853)),默认代理
 - GEOSITE,category-httpdns-cn,默认代理
 - GEOSITE,connectivity-check,默认代理
-- GEOSITE,googlefcm,默认代理
+- GEOSITE,googlefcm,Google
 - GEOSITE,private,DIRECT
 - GEOSITE,category-public-tracker,DIRECT
-- GEOSITE,icloud,DIRECT
-- GEOSITE,onedrive,DIRECT
 - GEOIP,private,DIRECT,no-resolve
-# 广谱"中国大陆/内网即直连"兜底规则,必须排在所有具名服务规则之后——
-# 否则任何被这几个大列表误判命中的服务域名/IP(如 Netflix、IQIYI、Bilibili)
-# 会在到达自己的分组之前被直接拦下,见 rule-target-semantics-bugs 类型二。
-- RULE-SET,china_ip_ipv6,DIRECT
-- RULE-SET,ChinaAPP,DIRECT
-- RULE-SET,ChinaIPs,DIRECT
-- RULE-SET,private-2,DIRECT
+# 广谱中国大陆与私网兜底必须排在具名服务规则之后，避免误判命中
+# 抢先覆盖 Netflix、YouTube、Microsoft 等专用出口。
 - DOMAIN-SUFFIX,cn,DIRECT
-- RULE-SET,cn,DIRECT
-- RULE-SET,cn_v6,DIRECT
-- RULE-SET,cnip,DIRECT
 - GEOSITE,cn,DIRECT
 - GEOIP,cn,DIRECT,no-resolve
 - DOMAIN-SUFFIX,ls.apple.com,DIRECT
@@ -1603,9 +377,9 @@ rules:
 - DOMAIN-KEYWORD,dl-z01a-,DIRECT
 - DOMAIN-REGEX,^dl-[A-Za-z0-9-]+\.mypikpak\.com$,DIRECT
 - PROCESS-NAME,com.ss.android.ugc.aweme,默认代理
-- PROCESS-NAME,com.xingin.xhs,默认代理
-- PROCESS-NAME,tv.danmaku.bili,默认代理
+- PROCESS-NAME,com.xingin.xhs,社交通讯
+- PROCESS-NAME,tv.danmaku.bili,流媒体
 - DOMAIN-KEYWORD,ipv6tracker,默认代理
 - DOMAIN-KEYWORD,bittorrent,默认代理
 - DOMAIN-KEYWORD,tracker,默认代理
-- MATCH,兜底
+- MATCH,默认代理

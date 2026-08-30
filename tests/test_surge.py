@@ -11,6 +11,7 @@ from app.core.platforms.surge import (
     _rule_to_surge_line,
     build_surge_config,
 )
+from app.core.template_engine import LEO_TEMPLATE_ID, apply_template, load_template
 from app.ir import ProxyNode, TLSConfig, TransportConfig
 
 
@@ -464,6 +465,7 @@ def test_general_section_fields() -> None:
     assert "skip-proxy" in result
     assert "bypass-system" in result
     assert "proxy-test-url = http://www.apple.com/library/test/success.html" in result
+    assert "test-timeout = 3" in result
 
 
 def test_host_section_assigns_proxy_hostnames_to_real_dns() -> None:
@@ -604,21 +606,23 @@ def test_build_surge_config_substitutes_known_mrs() -> None:
 
 # ── blackmatrix7 Clash YAML → Surge .list substitution ─────────────────────
 
-_B7_BASE = (
+_B7_REF = "8818705adee20571a856daf11c9fc69c4929109a"
+_B7_RAW_BASE = (
     "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script"
-    "/8818705adee20571a856daf11c9fc69c4929109a"
+    f"/{_B7_REF}"
 )
+_B7_CDN_BASE = f"https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@{_B7_REF}"
 
 _B7_PROVIDERS: dict = {
-    "tencent": {"type": "http", "url": f"{_B7_BASE}/rule/Clash/Tencent/Tencent_No_Resolve.yaml"},
-    "global": {"type": "http", "url": f"{_B7_BASE}/rule/Clash/Global/Global_Classical_No_Resolve.yaml"},
-    "teams": {"type": "http", "url": f"{_B7_BASE}/rule/Clash/Teams/Teams.yaml"},
+    "tencent": {"type": "http", "url": f"{_B7_RAW_BASE}/rule/Clash/Tencent/Tencent_No_Resolve.yaml"},
+    "global": {"type": "http", "url": f"{_B7_RAW_BASE}/rule/Clash/Global/Global_Classical_No_Resolve.yaml"},
+    "teams": {"type": "http", "url": f"{_B7_RAW_BASE}/rule/Clash/Teams/Teams.yaml"},
 }
 
 
 def test_b7_clash_yaml_no_resolve_rewritten_to_surge_list() -> None:
     line = _rule_to_surge_line("RULE-SET,tencent,DIRECT", _B7_PROVIDERS)
-    assert line == f"RULE-SET,{_B7_BASE}/rule/Surge/Tencent/Tencent.list,DIRECT"
+    assert line == f"RULE-SET,{_B7_CDN_BASE}/rule/Surge/Tencent/Tencent.list,DIRECT"
     assert ".yaml" not in line
     assert "/rule/Clash/" not in line
 
@@ -626,24 +630,41 @@ def test_b7_clash_yaml_no_resolve_rewritten_to_surge_list() -> None:
 def test_b7_clash_yaml_classical_segment_stripped() -> None:
     line = _rule_to_surge_line("RULE-SET,global,Proxy", _B7_PROVIDERS)
     # both the Clash-only _Classical and _No_Resolve segments are dropped
-    assert line == f"RULE-SET,{_B7_BASE}/rule/Surge/Global/Global.list,Proxy"
+    assert line == f"RULE-SET,{_B7_CDN_BASE}/rule/Surge/Global/Global.list,Proxy"
 
 
 def test_b7_clash_yaml_plain_name_rewritten() -> None:
     line = _rule_to_surge_line("RULE-SET,teams,Microsoft", _B7_PROVIDERS)
-    assert line == f"RULE-SET,{_B7_BASE}/rule/Surge/Teams/Teams.list,Microsoft"
+    assert line == f"RULE-SET,{_B7_CDN_BASE}/rule/Surge/Teams/Teams.list,Microsoft"
 
 
 def test_b7_clash_yaml_preserves_no_resolve_flag() -> None:
     line = _rule_to_surge_line("RULE-SET,tencent,DIRECT,no-resolve", _B7_PROVIDERS)
-    assert line == f"RULE-SET,{_B7_BASE}/rule/Surge/Tencent/Tencent.list,DIRECT,no-resolve"
+    assert line == f"RULE-SET,{_B7_CDN_BASE}/rule/Surge/Tencent/Tencent.list,DIRECT,no-resolve"
+
+
+def test_b7_jsdelivr_clash_yaml_is_rewritten_idempotently_to_canonical_cdn() -> None:
+    providers = {
+        "telegram": {
+            "type": "http",
+            "url": f"{_B7_CDN_BASE}/rule/Clash/Telegram/Telegram_No_Resolve.yaml",
+        }
+    }
+    line = _rule_to_surge_line(
+        "RULE-SET,telegram,社交通讯,no-resolve",
+        providers,
+    )
+    assert line == (
+        f"RULE-SET,{_B7_CDN_BASE}/rule/Surge/Telegram/Telegram.list,"
+        "社交通讯,no-resolve"
+    )
 
 
 def test_b7_clash_list_left_unchanged() -> None:
     # .list files under rule/Clash/ are already classical text and parse in Surge
-    providers = {"ea": {"type": "http", "url": f"{_B7_BASE}/rule/Clash/EA/EA.list"}}
+    providers = {"ea": {"type": "http", "url": f"{_B7_RAW_BASE}/rule/Clash/EA/EA.list"}}
     line = _rule_to_surge_line("RULE-SET,ea,DIRECT", providers)
-    assert line == f"RULE-SET,{_B7_BASE}/rule/Clash/EA/EA.list,DIRECT"
+    assert line == f"RULE-SET,{_B7_RAW_BASE}/rule/Clash/EA/EA.list,DIRECT"
 
 
 def test_build_surge_config_has_no_clash_yaml_urls() -> None:
@@ -651,6 +672,57 @@ def test_build_surge_config_has_no_clash_yaml_urls() -> None:
     assert "/rule/Clash/" not in result
     assert ".yaml" not in result
     assert "/rule/Surge/Tencent/Tencent.list" in result
+    assert _B7_CDN_BASE in result
+
+
+def test_leo_surge_keeps_core_services_when_mihomo_only_rules_are_skipped() -> None:
+    node = _ss()
+    config = apply_template(load_template(LEO_TEMPLATE_ID), [node])
+
+    conf, warnings = build_surge_config(
+        [node],
+        config["proxy-groups"],
+        config["rules"],
+        config["rule-providers"],
+    )
+
+    for suffix in (
+        "openai.com",
+        "chatgpt.com",
+        "oaistatic.com",
+        "oaiusercontent.com",
+    ):
+        assert f"DOMAIN-SUFFIX,{suffix},AI 服务" in conf
+    native_rule_sets = {
+        "Claude": "AI 服务",
+        "GitHub": "开发服务",
+        "Apple": "Apple",
+        "YouTube": "流媒体",
+        "Google": "Google",
+        "Microsoft": "Microsoft",
+        "Telegram": "社交通讯",
+    }
+    for service, target in native_rule_sets.items():
+        assert f"/rule/Surge/{service}/{service}.list,{target}" in conf
+    assert "/rule/Surge/Telegram/Telegram.list,社交通讯,no-resolve" in conf
+    assert "raw.githubusercontent.com/blackmatrix7" not in conf
+    assert "cdn.jsdelivr.net/gh/blackmatrix7" in conf
+
+    assert conf.index("/rule/Surge/Claude/Claude.list") < conf.index(
+        "/rule/Surge/Google/Google.list"
+    )
+    assert conf.index("/rule/Surge/YouTube/YouTube.list") < conf.index(
+        "/rule/Surge/Google/Google.list"
+    )
+    assert {warning["code"] for warning in warnings} == {
+        "unsupported_rule_sets",
+        "unsupported_rule_types",
+    }
+    skipped_sets = next(
+        warning for warning in warnings if warning["code"] == "unsupported_rule_sets"
+    )
+    assert skipped_sets["count"] == 1
+    assert "category-ai-!cn.list" in skipped_sets["examples"][0]
 
 
 def test_non_b7_clash_yaml_raises_unsupported() -> None:

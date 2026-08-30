@@ -100,11 +100,19 @@ function setNotice(message = "") {
 }
 
 function leoEgressGroups() {
-  return [...new Set([
-    ...state.leoGroups.filter((group) => group.type === "select").map((group) => group.name),
-    ...state.leoGroups.flatMap((group) => Array.isArray(group.proxies) ? group.proxies : []),
-    "DIRECT",
-  ])].filter(Boolean);
+  const availableGroups = state.leoGroups.filter((group) => {
+    if (!state.nodes.length || !group["include-all"] || !group.filter) return true;
+    try {
+      const include = new RegExp(String(group.filter).replace(/^\(\?i\)/, ""), "i");
+      const exclude = group["exclude-filter"]
+        ? new RegExp(String(group["exclude-filter"]).replace(/^\(\?i\)/, ""), "i")
+        : null;
+      return state.nodes.some((node) => include.test(node.name) && (!exclude || !exclude.test(node.name)));
+    } catch {
+      return false;
+    }
+  });
+  return [...new Set([...availableGroups.map((group) => group.name), "DIRECT"])].filter(Boolean);
 }
 
 function defaultServiceTarget(serviceId) {
@@ -131,7 +139,6 @@ function renderDataLedger() {
   const audit = state.leoAudit;
   const score = audit.quality_score || {};
   const summary = audit.summary || {};
-  const mrsCount = (audit.sources || []).filter((source) => source.declared_format === "mrs").length;
   const observed = Number(summary.invalid || 0) + Number(summary.failed || 0);
   const dataLinks = state.publicData.length ? state.publicData : [
     { label: "完整模板 YAML", href: "/templates/source" },
@@ -154,10 +161,10 @@ function renderDataLedger() {
       <p><span>审计时间</span><b>${escapeHtml(auditTime(audit.generated_at))}</b></p>
       <p><span>观察项</span><b>${escapeHtml(observed)} 个失败或异常，未静默删除</b></p>
       <p><span>Mihomo</span><b>完整读取 Leo 规则格式</b></p>
-      <p><span>Surge</span><b>${escapeHtml(mrsCount)} 个 MRS 会降级跳过并告警</b></p>
+      <p><span>Surge</span><b>核心域名兼容；Mihomo 专属项会跳过并告警</b></p>
     </div>
     <div class="route-order" aria-label="规则命中顺序">
-      <span>REJECT</span><i>→</i><span>DIRECT</span><i>→</i><span>专用服务</span><i>→</i><span>默认代理</span>
+      <span>启动直连</span><i>→</i><span>核心服务</span><i>→</i><span>广告拦截</span><i>→</i><span>国内直连</span><i>→</i><span>默认代理</span>
     </div>
     <nav class="public-data-links" aria-label="公开数据接口">
       ${dataLinks.map((item, index) => `<a href="${escapeHtml(item.href)}" target="_blank" rel="noopener"><small>0${index + 1}</small><span>${escapeHtml(item.label)}</span><b>↗</b></a>`).join("")}
@@ -173,8 +180,8 @@ function renderLeoReference() {
   }
 
   const groupByName = Object.fromEntries(state.leoGroups.map((group) => [group.name, group]));
-  const coreNames = ["默认代理", "自动选择", "故障转移", "手动选择"];
-  const regionNames = ["香港自动", "台湾自动", "日本自动", "新加坡自动", "美国自动", "韩国自动", "欧洲自动"]
+  const coreNames = ["默认代理", "自动选择", "香港自动", "手动选择"];
+  const regionNames = ["香港自动"]
     .filter((name) => groupByName[name]);
   const coreRows = coreNames.filter((name) => groupByName[name]).map((name) => {
     const group = groupByName[name];
@@ -195,11 +202,11 @@ function renderLeoReference() {
   root.innerHTML = `
     <details class="reference-module" open>
       <summary>核心出口骨架</summary>
-      <div class="reference-module-body"><p class="reference-note">默认代理按自动选择、故障转移和地区组逐级组织。</p><div class="reference-flow">${coreRows}</div></div>
+      <div class="reference-module-body"><p class="reference-note">默认代理优先香港低延迟池，再回退到全局自动和手动选择。</p><div class="reference-flow">${coreRows}</div></div>
     </details>
     <details class="reference-module" open>
       <summary>地区自动选择</summary>
-      <div class="reference-module-body"><p class="reference-note">地区组只收录名称匹配的节点，并独立测速。</p><div class="reference-chips">${regionNames.map((name) => `<span class="reference-chip">${escapeHtml(name)}</span>`).join("")}</div></div>
+      <div class="reference-module-body"><p class="reference-note">仅保留香港低延迟池；AI 新加坡节点使用独立的 ChatGPT 可达性检查。</p><div class="reference-chips">${regionNames.map((name) => `<span class="reference-chip">${escapeHtml(name)}</span>`).join("")}</div></div>
     </details>
     <details class="reference-module">
       <summary>服务默认出口</summary>
@@ -211,7 +218,7 @@ function renderLeoReference() {
         <div class="reference-capability"><b>DNS</b><span>${state.leoSummary.has_dns ? "已内置" : "未配置"}</span></div>
         <div class="reference-capability"><b>TUN</b><span>${state.leoSummary.has_tun ? "模板可用" : "未配置"}</span></div>
         <div class="reference-capability"><b>Mihomo</b><span>完整输出</span></div>
-        <div class="reference-capability"><b>Surge</b><span>自动适配</span></div>
+        <div class="reference-capability"><b>Surge</b><span>兼容输出，跳过项会告警</span></div>
       </div>
     </details>`;
 }
@@ -236,7 +243,7 @@ function renderServices() {
           <span class="service-name"><strong>${escapeHtml(pack.label)}</strong><small>${escapeHtml(pack.description)}</small></span>
           <select data-service-choice aria-label="${escapeHtml(pack.label)}服务出口">
             <option value=""${selected ? "" : " selected"}>跟随 Leo · ${escapeHtml(defaultTarget)}</option>
-            <optgroup label="Leo 策略组">${groupOptions.map((target) => `<option value="${escapeHtml(target)}"${target === selected ? " selected" : ""}>${escapeHtml(target)}</option>`).join("")}</optgroup>
+            <optgroup label="Leo 策略组">${groupOptions.filter((target) => target !== pack.group.name).map((target) => `<option value="${escapeHtml(target)}"${target === selected ? " selected" : ""}>${escapeHtml(target)}</option>`).join("")}</optgroup>
             ${nodeOptions.length ? `<optgroup label="具体节点">${nodeOptions.map((node) => `<option value="${escapeHtml(node)}"${node === selected ? " selected" : ""}>${escapeHtml(node)}</option>`).join("")}</optgroup>` : ""}
           </select>
         </label>`;
@@ -341,7 +348,10 @@ async function loadNodes() {
     state.nodes = body.nodes || [];
     const validTargets = new Set([...leoEgressGroups(), ...state.nodes.map((node) => node.name)]);
     for (const [service, choice] of Object.entries(state.serviceChoices)) {
-      if (choice && !validTargets.has(choice)) state.serviceChoices[service] = "";
+      const pack = state.servicePacks.find((item) => item.id === service);
+      if (choice && (!validTargets.has(choice) || choice === pack?.group?.name)) {
+        state.serviceChoices[service] = "";
+      }
     }
     renderServices();
     result.className = "inline-status";

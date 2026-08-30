@@ -15,6 +15,8 @@ from fastapi.responses import PlainTextResponse
 from ruamel.yaml import YAML
 from ruamel.yaml.error import ReusedAnchorWarning
 
+from app.core.platforms.surge import build_surge_config
+
 router = APIRouter(prefix="/community", tags=["community"])
 
 _APP_DIR = Path(__file__).resolve().parent.parent
@@ -209,10 +211,21 @@ def _has_mrs_providers(loaded: dict) -> bool:
 
 
 def _is_surge_compatible(loaded: dict | None, fmt: str) -> bool:
-    """True when the template can be compiled for Surge without URL substitution."""
+    """True when Surge compilation does not have to drop any policy rules."""
     if fmt != "yaml" or not isinstance(loaded, dict):
         return False
-    return not _has_mrs_providers(loaded)
+    if _has_mrs_providers(loaded):
+        return False
+    try:
+        _, warnings = build_surge_config(
+            [],
+            loaded.get("proxy-groups") or [],
+            loaded.get("rules") or [],
+            loaded.get("rule-providers") or {},
+        )
+    except (TypeError, ValueError, KeyError):
+        return False
+    return not warnings
 
 
 # ── ID ↔ path helpers ──────────────────────────────────────────────────────

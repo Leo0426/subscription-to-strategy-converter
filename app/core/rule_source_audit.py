@@ -6,6 +6,7 @@ from collections import Counter, defaultdict
 from copy import deepcopy
 from datetime import datetime, timezone
 from hashlib import sha256
+from ipaddress import ip_network
 from itertools import combinations
 import json
 from pathlib import Path
@@ -27,6 +28,7 @@ FetchRuleSource = Callable[[str], Awaitable[dict[str, Any]]]
 DEFAULT_REPORT_DIR = Path(".scratch/leo-rule-source-quality/reports")
 LEO_TEMPLATE_PATH = Path(__file__).resolve().parents[2] / "community_templates" / "leo" / "leo.yaml"
 PUBLIC_AUDIT_PATH = LEO_TEMPLATE_PATH.with_name("audit.json")
+LEO_TEMPLATE_SOURCE_PATH = "community_templates/leo/leo.yaml"
 MAX_RULE_SOURCE_BYTES = 32 * 1024 * 1024
 
 #: Total bytes a client downloads on every cold start across all providers.
@@ -36,6 +38,7 @@ COLD_START_BYTE_BUDGET = 16 * 1024 * 1024
 #: Above this failure ratio a run is treated as an audit-environment failure
 #: and cannot replace the published snapshot. Healthy runs fail well under it.
 _PUBLISH_MAX_FAILED_RATIO = 0.25
+_FETCH_TRANSPORT_ATTEMPTS = 3
 
 _TARGET_PRIORITY = {
     "REJECT": 0,
@@ -53,6 +56,47 @@ _TARGET_PRIORITY = {
     "默认代理": 90,
     "兜底": 99,
 }
+
+_ORDERED_INLINE_RULE_TYPES = frozenset(
+    {
+        "DOMAIN",
+        "DOMAIN-SUFFIX",
+        "DOMAIN-KEYWORD",
+        "IP-CIDR",
+        "IP-CIDR6",
+        "GEOIP",
+    }
+)
+_INLINE_RULE_PROVIDER = "<inline-rule>"
+
+
+def template_content_sha256(path: Path = LEO_TEMPLATE_PATH) -> str:
+    """Return a byte-for-byte fingerprint of the template being audited."""
+    return sha256(path.read_bytes()).hexdigest()
+
+
+def template_audit_metadata(
+    template: Mapping[str, Any],
+    path: Path = LEO_TEMPLATE_PATH,
+) -> dict[str, Any]:
+    providers = template.get("rule-providers") or {}
+    rules = template.get("rules") or []
+    return {
+        "id": LEO_TEMPLATE_ID,
+        "source_path": LEO_TEMPLATE_SOURCE_PATH,
+        "sha256": template_content_sha256(path),
+        "provider_count": len(providers) if isinstance(providers, Mapping) else 0,
+        "rule_count": len(rules) if isinstance(rules, list) else 0,
+    }
+
+
+def audit_snapshot_matches_template(
+    report: Mapping[str, Any],
+    path: Path = LEO_TEMPLATE_PATH,
+) -> bool:
+    template = report.get("template") or {}
+    audited_digest = str(template.get("sha256") or "") if isinstance(template, Mapping) else ""
+    return bool(audited_digest) and audited_digest == template_content_sha256(path)
 
 
 def _rule_target(rule: Any) -> str:
@@ -200,21 +244,36 @@ def find_ordered_entry_conflicts(
     records: list[Mapping[str, Any]],
     *,
     example_limit: int = 50,
+    inline_rules: list[Any] | None = None,
 ) -> dict[str, Any]:
     entry_routes: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    entry_behaviors: dict[str, set[str]] = defaultdict(set)
     for record in records:
         for entry in record.get("entries") or ():
+            normalized_entry = str(entry)
+            behavior = str(record.get("behavior") or "").strip().lower()
+            if behavior:
+                entry_behaviors[normalized_entry].add(behavior)
             for route in record.get("routes") or ():
                 target = str(route.get("target") or "")
                 if not target:
                     continue
-                entry_routes[str(entry)].append(
+                entry_routes[normalized_entry].append(
                     {
                         "provider": str(record["name"]),
                         "target": target,
                         "rule_index": int(route.get("index") or 0),
                     }
                 )
+
+    parsed_inline_rules = _ordered_inline_rule_routes(inline_rules or [])
+    for entry, routes in entry_routes.items():
+        behaviors = entry_behaviors.get(entry) or set()
+        routes.extend(
+            route
+            for route in parsed_inline_rules
+            if _inline_rule_covers_entry(route, entry, behaviors)
+        )
 
     transition_pairs: Counter[str] = Counter()
     risk_directions: Counter[str] = Counter()
@@ -228,6 +287,12 @@ def find_ordered_entry_conflicts(
             continue
         conflict_count += 1
         winner = ordered[0]
+        if any(route.get("source") == "inline" for route in ordered):
+            affected_providers.update(
+                route["provider"]
+                for route in ordered
+                if route.get("source") != "inline"
+            )
         later_by_target: dict[str, dict[str, Any]] = {}
         for route in ordered[1:]:
             if route["target"] == winner["target"]:
@@ -240,7 +305,11 @@ def find_ordered_entry_conflicts(
                 transition_examples[transition].append(
                     {"entry": entry, "winner": winner, "shadowed": route}
                 )
-            affected_providers.update({winner["provider"], route["provider"]})
+            affected_providers.update(
+                provider
+                for provider in (winner["provider"], route["provider"])
+                if provider != _INLINE_RULE_PROVIDER
+            )
             if winner["target"] == "REJECT" and target == "DIRECT":
                 risk_directions["reject_overrides_direct"] += 1
             elif winner["target"] == "DIRECT" and target == "REJECT":
@@ -268,6 +337,101 @@ def find_ordered_entry_conflicts(
         "transition_examples": dict(sorted(transition_examples.items())),
         "examples": examples,
     }
+
+
+def _ordered_inline_rule_routes(rules: list[Any]) -> list[dict[str, Any]]:
+    routes: list[dict[str, Any]] = []
+    for index, rule in enumerate(rules):
+        if not isinstance(rule, str):
+            continue
+        parts = [part.strip() for part in rule.split(",")]
+        if len(parts) < 3:
+            continue
+        rule_type = parts[0].upper()
+        if rule_type not in _ORDERED_INLINE_RULE_TYPES:
+            continue
+        target = _rule_target(rule)
+        value = parts[1].lower()
+        if not target or not value:
+            continue
+        routes.append(
+            {
+                "provider": _INLINE_RULE_PROVIDER,
+                "source": "inline",
+                "rule": rule,
+                "rule_type": rule_type,
+                "value": value,
+                "target": target,
+                "rule_index": index,
+            }
+        )
+    return routes
+
+
+def _entry_rule_type_and_value(
+    entry: str,
+    behaviors: set[str],
+) -> tuple[str, str] | None:
+    parts = [part.strip() for part in entry.split(",")]
+    explicit_type = parts[0].upper() if parts else ""
+    if len(parts) >= 2 and explicit_type in _ORDERED_INLINE_RULE_TYPES:
+        return explicit_type, parts[1].lower()
+
+    value = entry.strip().lower()
+    if "domain" in behaviors:
+        if value.startswith(("+.", "*.")):
+            return "DOMAIN-SUFFIX", value[2:]
+        if value.startswith("."):
+            return "DOMAIN-SUFFIX", value[1:]
+        return "DOMAIN", value
+    if "ipcidr" in behaviors:
+        try:
+            network = ip_network(value, strict=False)
+        except ValueError:
+            return None
+        return ("IP-CIDR6" if network.version == 6 else "IP-CIDR", value)
+    return None
+
+
+def _inline_rule_covers_entry(
+    inline_route: Mapping[str, Any],
+    entry: str,
+    behaviors: set[str],
+) -> bool:
+    parsed_entry = _entry_rule_type_and_value(entry, behaviors)
+    if parsed_entry is None:
+        return False
+    entry_type, entry_value = parsed_entry
+    rule_type = str(inline_route["rule_type"])
+    rule_value = str(inline_route["value"])
+
+    if rule_type == "DOMAIN":
+        return entry_type == "DOMAIN" and entry_value == rule_value
+
+    if rule_type == "DOMAIN-SUFFIX":
+        if entry_type not in {"DOMAIN", "DOMAIN-SUFFIX"}:
+            return False
+        return entry_value == rule_value or entry_value.endswith(f".{rule_value}")
+
+    if rule_type == "DOMAIN-KEYWORD":
+        if entry_type in {"DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD"}:
+            return rule_value in entry_value
+        return False
+
+    if rule_type in {"IP-CIDR", "IP-CIDR6"}:
+        if entry_type not in {"IP-CIDR", "IP-CIDR6"}:
+            return False
+        try:
+            inline_network = ip_network(rule_value, strict=False)
+            entry_network = ip_network(entry_value, strict=False)
+        except ValueError:
+            return False
+        return (
+            inline_network.version == entry_network.version
+            and entry_network.subnet_of(inline_network)
+        )
+
+    return rule_type == "GEOIP" and entry_type == "GEOIP" and entry_value == rule_value
 
 
 _GITHUB_ORIGIN_HOSTS = frozenset(
@@ -568,6 +732,7 @@ async def audit_rule_sources(
     fetch: FetchRuleSource,
     concurrency: int = 20,
     routes: Mapping[str, list[dict[str, Any]]] | None = None,
+    inline_rules: list[Any] | None = None,
 ) -> dict[str, Any]:
     """Audit RuleProviders concurrently while isolating every remote failure."""
     semaphore = asyncio.Semaphore(max(1, concurrency))
@@ -643,6 +808,7 @@ async def audit_rule_sources(
             "entries": source.get("_entries") or frozenset(),
             "targets": source.get("targets") or [],
             "routes": source.get("routes") or [],
+            "behavior": source.get("behavior") or "",
         }
         for source in sources
         if source.get("status") == "valid" and source.get("_entries")
@@ -654,7 +820,10 @@ async def audit_rule_sources(
     ]
     high_overlap_pairs = find_high_overlap_pairs(comparison_records)
     entry_target_conflicts = find_entry_target_conflicts(comparison_records)
-    ordered_entry_conflicts = find_ordered_entry_conflicts(comparison_records)
+    ordered_entry_conflicts = find_ordered_entry_conflicts(
+        comparison_records,
+        inline_rules=inline_rules,
+    )
     for source in sources:
         source.pop("_entries", None)
     report = {
@@ -743,7 +912,14 @@ class PublicRuleSourceFetcher:
         started = perf_counter()
         for _ in range(6):
             await self._validate_public_url(current_url)
-            response = await self._client.get(current_url)
+            for attempt in range(_FETCH_TRANSPORT_ATTEMPTS):
+                try:
+                    response = await self._client.get(current_url)
+                    break
+                except httpx.TransportError:
+                    if attempt + 1 == _FETCH_TRANSPORT_ATTEMPTS:
+                        raise
+                    await asyncio.sleep(0.2 * (2**attempt))
             if response.is_redirect:
                 location = response.headers.get("location")
                 if not location:
@@ -828,16 +1004,20 @@ def render_markdown_report(report: Mapping[str, Any]) -> str:
 
 async def audit_leo_rule_sources(*, concurrency: int = 24, timeout: float = 15.0) -> dict[str, Any]:
     template = load_template(LEO_TEMPLATE_ID)
+    template_metadata = template_audit_metadata(template)
     providers = template.get("rule-providers") or {}
     rules = template.get("rules") or []
     async with PublicRuleSourceFetcher(timeout=timeout) as fetcher:
-        return await audit_rule_sources(
+        report = await audit_rule_sources(
             providers,
             rule_provider_targets(rules),
             fetch=fetcher.fetch,
             concurrency=concurrency,
             routes=rule_provider_routes(rules),
+            inline_rules=rules,
         )
+    report["template"] = template_metadata
+    return report
 
 
 def write_audit_report(report: Mapping[str, Any], output_dir: Path = DEFAULT_REPORT_DIR) -> tuple[Path, Path]:
@@ -857,6 +1037,8 @@ def write_audit_report(report: Mapping[str, Any], output_dir: Path = DEFAULT_REP
 def write_public_audit_snapshot(
     report: Mapping[str, Any],
     path: Path = PUBLIC_AUDIT_PATH,
+    *,
+    template_path: Path = LEO_TEMPLATE_PATH,
 ) -> Path:
     """Publish the complete metadata-only audit beside leo.yaml.
 
@@ -873,6 +1055,11 @@ def write_public_audit_snapshot(
         raise ValueError(
             f"refusing to publish an audit with {failed}/{total} failed sources; "
             "this indicates an audit-environment failure, not source quality"
+        )
+    if not audit_snapshot_matches_template(report, template_path):
+        raise ValueError(
+            "refusing to publish an audit for different template content; "
+            "rerun the audit against the current Leo template"
         )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

@@ -1,5 +1,27 @@
+from pathlib import Path
+
+from app.core.policy_analyzer import analyze_workspace
+from app.core.policy_workspace import compile_mihomo_config, config_to_workspace
+from app.core.renderer import render_yaml
 from app.core.template_engine import LEO_TEMPLATE_ID, apply_template, load_template
 from app.ir import ProxyNode
+from app.models.strategy import SelectedPolicy
+
+
+_LEO_TEMPLATE_PATH = (
+    Path(__file__).resolve().parents[1] / "community_templates" / "leo" / "leo.yaml"
+)
+_CORE_PROVIDER_NAMES = {
+    "ai-4",
+    "Claude",
+    "GitHub-5",
+    "Apple-4",
+    "Google-2",
+    "Microsoft-6",
+    "YouTube-6",
+    "Telegram",
+}
+_HEALTH_GROUP_TYPES = {"url-test", "fallback", "load-balance"}
 
 
 def _node(name: str) -> ProxyNode:
@@ -10,6 +32,24 @@ def _group(config: dict, name: str) -> dict:
     return next(group for group in config["proxy-groups"] if group["name"] == name)
 
 
+def _fixed_144_nodes() -> list[ProxyNode]:
+    # Mirrors the current real subscription's distribution so the probe/member
+    # budget catches growth against the deployment that motivated this template.
+    regions = (("香港", 31), ("新加坡", 23), ("其他", 90))
+    nodes: list[ProxyNode] = []
+    for region, count in regions:
+        for index in range(1, count + 1):
+            nodes.append(
+                ProxyNode(
+                    name=f"{region} {index:03d}",
+                    protocol="ss",
+                    server=f"node-{len(nodes) + 1}.example.com",
+                    port=443,
+                )
+            )
+    return nodes
+
+
 def test_leo_materializes_subscription_backed_groups_from_current_nodes() -> None:
     template = load_template(LEO_TEMPLATE_ID)
     config = apply_template(template, [_node("香港 01"), _node("US01"), _node("日本 01")])
@@ -17,6 +57,60 @@ def test_leo_materializes_subscription_backed_groups_from_current_nodes() -> Non
     assert "Leo订阅" not in config.get("proxy-providers", {})
     assert _group(config, "自动选择")["proxies"] == ["香港 01", "US01", "日本 01"]
     assert "use" not in _group(config, "自动选择")
+
+
+def test_leo_keeps_only_core_rule_providers() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+
+    assert set(template["rule-providers"]) == _CORE_PROVIDER_NAMES
+
+
+def test_leo_lightweight_shape_and_generated_footprint() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+    nodes = _fixed_144_nodes()
+    generated = apply_template(template, nodes)
+    compiled = compile_mihomo_config(generated, nodes)
+    groups = compiled["proxy-groups"]
+    rules = compiled["rules"]
+
+    assert _LEO_TEMPLATE_PATH.stat().st_size <= 12 * 1024
+    assert len(template["rule-providers"]) == 8
+    assert len(template["proxy-groups"]) == 14
+    assert len(template["rules"]) <= 140
+    assert len(groups) == 14
+    assert sum(group["type"] == "url-test" for group in groups) == 3
+    assert sum(len(group.get("proxies", [])) for group in groups) <= 380
+    assert sum(
+        len(group.get("proxies", []))
+        for group in groups
+        if group.get("type") in _HEALTH_GROUP_TYPES
+    ) <= 200
+    # Preserve the global automatic fallback: removing it would save roughly
+    # 1.5 KiB, but would trade away useful cross-region recovery for a cosmetic
+    # size target.  The previous 144-node artifact was over 84 KiB.
+    assert len(render_yaml(compiled).encode("utf-8")) <= 34 * 1024
+    assert len(rules) <= 140
+
+    provider_rules = [
+        rule
+        for rule in rules
+        if isinstance(rule, str) and rule.startswith("RULE-SET,")
+    ]
+    assert len(provider_rules) == 8
+    referenced_providers = {rule.split(",", 2)[1].strip() for rule in provider_rules}
+    assert referenced_providers == set(compiled["rule-providers"])
+
+    dangling_codes = {
+        "missing_provider",
+        "missing_group_member",
+        "missing_rule_target",
+    }
+    findings = analyze_workspace(config_to_workspace(compiled, nodes))
+    assert [
+        finding
+        for finding in findings
+        if finding.code in dangling_codes
+    ] == []
 
 
 def test_leo_defaults_to_openclash_safe_ipv4_dns() -> None:
@@ -30,38 +124,304 @@ def test_leo_defaults_to_openclash_safe_ipv4_dns() -> None:
     ]
 
 
-def test_leo_does_not_require_optional_biliintl_geosite_tag() -> None:
-    template = load_template(LEO_TEMPLATE_ID)
-
-    # Some OpenClash GeoSite.dat builds omit this tag. The equivalent
-    # RuleProvider is already declared and ordered earlier in the rule graph.
-    assert "RULE-SET,biliintl,流媒体" in template["rules"]
-    assert not any(rule.startswith("GEOSITE,biliintl,") for rule in template["rules"])
-
-
-def test_leo_region_groups_do_not_match_ambiguous_country_fragments() -> None:
+def test_leo_preserves_source_proxy_server_nameservers() -> None:
     template = load_template(LEO_TEMPLATE_ID)
     config = apply_template(
         template,
-        [_node("US01"), _node("RUSSIA 01"), _node("新西兰 01"), _node("新加坡 01")],
+        [_node("HK-01")],
+        source_config={
+            "dns": {
+                "proxy-server-nameserver": [
+                    "https://resolver.example/dns-query/subscriber",
+                    "tls://resolver-backup.example",
+                ]
+            }
+        },
     )
 
-    assert _group(config, "美国自动")["proxies"] == ["US01"]
-    assert _group(config, "新加坡自动")["proxies"] == ["新加坡 01"]
+    assert config["dns"]["proxy-server-nameserver"] == [
+        "https://resolver.example/dns-query/subscriber",
+        "tls://resolver-backup.example",
+    ]
+
+
+def test_leo_preserves_dns_fragment_parameters_and_existing_outbounds() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+    source_nameservers = [
+        "https://params.example/dns-query#h3=true&skip-cert-verify=true",
+        "https://group.example/dns-query#默认代理&h3=true",
+        "https://builtin.example/dns-query#DIRECT&ecs=1.1.1.1/24",
+    ]
+
+    config = apply_template(
+        template,
+        [_node("HK-01")],
+        source_config={"dns": {"proxy-server-nameserver": source_nameservers}},
+    )
+
+    assert config["dns"]["proxy-server-nameserver"] == source_nameservers
+
+
+def test_leo_preserves_dns_interface_and_encoded_outbound_names() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+    source_nameservers = [
+        "https://interface.example/dns-query#en0&h3=true",
+        "https://encoded.example/dns-query#utun%26work",
+    ]
+
+    config = apply_template(
+        template,
+        [_node("HK-01")],
+        source_config={"dns": {"proxy-server-nameserver": source_nameservers}},
+    )
+
+    assert config["dns"]["proxy-server-nameserver"] == source_nameservers
+
+
+def test_leo_ignores_source_dns_with_a_dangling_group_reference() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+    default_nameservers = list(template["dns"]["proxy-server-nameserver"])
+
+    config = apply_template(
+        template,
+        [_node("HK-01")],
+        source_config={
+            "proxy-groups": [{"name": "Source-Only"}],
+            "dns": {
+                "proxy-server-nameserver": [
+                    "https://resolver.example/dns-query#Source-Only&h3=true"
+                ]
+            }
+        },
+    )
+
+    assert config["dns"]["proxy-server-nameserver"] == default_nameservers
+
+
+def test_leo_fake_ip_filter_has_no_duplicate_patterns() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+    patterns = template["dns"]["fake-ip-filter"]
+
+    assert len(patterns) == len(set(patterns))
+
+
+def test_leo_sniffer_preserves_sensitive_destinations() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+
+    assert template["sniffer"]["override-destination"] is False
+    assert template["sniffer"]["sniff"]["HTTP"]["override-destination"] is True
+    assert template["sniffer"]["skip-domain"] == [
+        "Mijia Cloud",
+        "+.push.apple.com",
+    ]
+
+
+def test_leo_routes_core_providers_and_builtin_services_to_expected_targets() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+    rules = template["rules"]
+
+    provider_rules = [
+        rule
+        for rule in rules
+        if isinstance(rule, str) and rule.startswith("RULE-SET,")
+    ]
+    assert len(provider_rules) == 8
+    provider_targets = {
+        parts[1]: parts[2]
+        for rule in provider_rules
+        if len(parts := [part.strip() for part in rule.split(",")]) >= 3
+    }
+    assert provider_targets == {
+        "ai-4": "AI 服务",
+        "Claude": "AI 服务",
+        "GitHub-5": "开发服务",
+        "Apple-4": "Apple",
+        "Google-2": "Google",
+        "Microsoft-6": "Microsoft",
+        "YouTube-6": "流媒体",
+        "Telegram": "社交通讯",
+    }
+
+    assert {
+        "DOMAIN-SUFFIX,openai.com,AI 服务",
+        "DOMAIN-SUFFIX,chatgpt.com,AI 服务",
+        "DOMAIN-SUFFIX,oaistatic.com,AI 服务",
+        "DOMAIN-SUFFIX,oaiusercontent.com,AI 服务",
+        "GEOSITE,openai,AI 服务",
+        "GEOSITE,google,Google",
+        "GEOSITE,microsoft,Microsoft",
+        "GEOSITE,apple,Apple",
+        "GEOSITE,github,开发服务",
+        "GEOSITE,youtube,流媒体",
+        "GEOSITE,category-ads-all,REJECT",
+    } <= set(rules)
+    assert "RULE-SET,Telegram,社交通讯,no-resolve" in rules
+
+
+def test_leo_hong_kong_group_does_not_match_unrelated_names() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+    config = apply_template(
+        template,
+        [_node("香港 01"), _node("RUSSIA 01"), _node("新西兰 01"), _node("新加坡 01")],
+    )
+
+    assert _group(config, "香港自动")["proxies"] == ["香港 01"]
 
 
 def test_leo_prunes_empty_region_groups_and_their_parent_references() -> None:
     template = load_template(LEO_TEMPLATE_ID)
-    config = apply_template(template, [_node("香港 01"), _node("US01")])
+    config = apply_template(template, [_node("香港 01"), _node("其他 01")])
 
     group_names = {group["name"] for group in config["proxy-groups"]}
-    assert "韩国自动" not in group_names
-    assert "日本自动" not in group_names
+    assert "AI自动" not in group_names
     assert all(
-        "韩国自动" not in group.get("proxies", [])
-        and "日本自动" not in group.get("proxies", [])
+        "AI自动" not in group.get("proxies", [])
         for group in config["proxy-groups"]
     )
+
+
+def test_leo_prunes_stale_profile_members_after_policy_merge() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+    config = apply_template(
+        template,
+        [_node("其他 01")],
+        selected_policy=SelectedPolicy(
+            mode="merge",
+            proxy_groups=[
+                {
+                    "name": "开发服务",
+                    "type": "select",
+                    "proxies": ["香港自动", "日本自动", "默认代理"],
+                }
+            ],
+            rules=["DOMAIN-SUFFIX,legacy.example,香港自动"],
+        ),
+    )
+
+    assert "香港自动" not in {group["name"] for group in config["proxy-groups"]}
+    assert _group(config, "开发服务")["proxies"] == ["默认代理"]
+    assert config["rules"][0] == "DOMAIN-SUFFIX,legacy.example,默认代理"
+    findings = analyze_workspace(config_to_workspace(config, [_node("其他 01")]))
+    assert not any(
+        finding.code in {"missing_group_member", "missing_rule_target"}
+        for finding in findings
+    )
+
+
+def test_leo_closes_group_members_after_selected_policy_replace() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+    config = apply_template(
+        template,
+        [_node("其他 01")],
+        selected_policy=SelectedPolicy(
+            mode="replace",
+            proxy_groups=[
+                {
+                    "name": "CUSTOM",
+                    "type": "select",
+                    "proxies": ["日本自动", "其他 01", "DIRECT"],
+                }
+            ],
+            rules=[
+                "IP-CIDR,192.0.2.0/24,日本自动,no-resolve",
+                "DOMAIN-SUFFIX,node.example,已下线节点",
+                {
+                    "type": "DOMAIN-SUFFIX",
+                    "value": "legacy.example",
+                    "policy": "日本自动",
+                    "options": ["no-resolve"],
+                },
+                "MATCH,CUSTOM",
+            ],
+        ),
+    )
+
+    assert config["proxy-groups"] == [
+        {
+            "name": "CUSTOM",
+            "type": "select",
+            "proxies": ["其他 01", "DIRECT"],
+        }
+    ]
+    assert config["rules"] == [
+        "IP-CIDR,192.0.2.0/24,DIRECT,no-resolve",
+        "DOMAIN-SUFFIX,node.example,DIRECT",
+        {
+            "type": "DOMAIN-SUFFIX",
+            "value": "legacy.example",
+            "policy": "DIRECT",
+            "options": ["no-resolve"],
+        },
+        "MATCH,CUSTOM",
+    ]
+
+
+def test_leo_iteratively_prunes_empty_parent_groups_but_keeps_explicit_empty_group() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+    template["proxy-groups"].append(
+        {"name": "显式空组", "type": "select", "proxies": []}
+    )
+    nodes = [_node("其他 01")]
+    config = apply_template(
+        template,
+        nodes,
+        selected_policy=SelectedPolicy(
+            mode="merge",
+            proxy_groups=[
+                {
+                    "name": "旧地区叶子",
+                    "type": "url-test",
+                    "include-all": True,
+                    "filter": "(?i)日本",
+                },
+                {"name": "旧地区父组", "type": "select", "proxies": ["旧地区叶子"]},
+                {"name": "旧地区根组", "type": "select", "proxies": ["旧地区父组"]},
+            ],
+            rules=[
+                "DOMAIN-SUFFIX,legacy.example,旧地区根组",
+                {"type": "DOMAIN", "value": "legacy.example", "target": "旧地区父组"},
+            ],
+        ),
+    )
+
+    group_names = {group["name"] for group in config["proxy-groups"]}
+    assert {"旧地区叶子", "旧地区父组", "旧地区根组"}.isdisjoint(group_names)
+    assert _group(config, "显式空组")["proxies"] == []
+    assert config["rules"][:2] == [
+        "DOMAIN-SUFFIX,legacy.example,默认代理",
+        {"type": "DOMAIN", "value": "legacy.example", "target": "默认代理"},
+    ]
+
+    findings = analyze_workspace(config_to_workspace(config, nodes))
+    assert any(
+        finding.code == "empty_group" and finding.ref == "显式空组"
+        for finding in findings
+    )
+    assert not any(finding.code == "missing_rule_target" for finding in findings)
+
+
+def test_leo_missing_rule_target_uses_first_available_compatibility_fallback() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+    cases = [
+        (["Proxy", "PROXY"], "PROXY"),
+        (["Proxy"], "Proxy"),
+        ([], "DIRECT"),
+    ]
+
+    for group_names, expected in cases:
+        config = apply_template(
+            template,
+            [_node("其他 01")],
+            selected_policy=SelectedPolicy(
+                mode="replace",
+                proxy_groups=[
+                    {"name": name, "type": "select", "proxies": ["其他 01"]}
+                    for name in group_names
+                ],
+                rules=["MATCH,已删除出口"],
+            ),
+        )
+        assert config["rules"] == [f"MATCH,{expected}"]
 
 
 def test_leo_has_no_ip_layer_routing_for_shared_infrastructure_services() -> None:
@@ -70,67 +430,149 @@ def test_leo_has_no_ip_layer_routing_for_shared_infrastructure_services() -> Non
 
     assert "AIIP" not in providers
 
+    shared_targets = {"AI 服务", "Google", "流媒体"}
     ipcidr = {name for name, p in providers.items() if str(p.get("behavior")) == "ipcidr"}
     for rule in template["rules"]:
-        if not isinstance(rule, str) or not rule.startswith("RULE-SET,"):
+        if not isinstance(rule, str):
             continue
         parts = [part.strip() for part in rule.split(",")]
-        if parts[1] in ipcidr and parts[2] != "DIRECT":
-            assert "no-resolve" in parts, f"resolving service IP rule: {rule}"
+        if parts[0] == "RULE-SET" and parts[1] in ipcidr:
+            assert parts[2] not in shared_targets, f"shared-infra IP provider: {rule}"
+        if parts[0] in {"GEOIP", "IP-CIDR", "IP-CIDR6"}:
+            assert parts[2] not in shared_targets, f"shared-infra inline IP rule: {rule}"
+
+    assert not {
+        rule
+        for rule in template["rules"]
+        if isinstance(rule, str)
+        and rule.startswith("GEOIP,")
+        and not rule.startswith(("GEOIP,private,", "GEOIP,cn,"))
+    }
 
 
-def test_leo_ai_group_prefers_a_claude_reachability_aware_auto_test() -> None:
-    # Plain latency probes (e.g. gstatic 204) can't tell a Cloudflare-blocked
-    # exit apart from a clean one — both answer just as fast. AI 服务 must
-    # try a group that actually verifies claude.ai is reachable before
-    # falling back to a latency-only pool.
+def test_leo_ai_service_reuses_bounded_supported_region_groups() -> None:
     template = load_template(LEO_TEMPLATE_ID)
-    config = apply_template(template, [_node("US01"), _node("香港 01")])
+    config = apply_template(template, [_node("其他 01"), _node("香港 01")])
+
+    assert "AI自动" not in {group["name"] for group in config["proxy-groups"]}
+    ai_service = _group(config, "AI 服务")
+    assert ai_service["proxies"] == ["默认代理", "自动选择", "手动选择"]
+
+
+def test_leo_ai_auto_uses_direct_singapore_nodes_and_a_chatgpt_probe() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+    config = apply_template(
+        template,
+        [_node("新加坡 01"), _node("其他 01"), _node("香港 01")],
+    )
 
     ai_auto = _group(config, "AI自动")
     assert ai_auto["type"] == "url-test"
-    assert ai_auto["url"] == "https://claude.ai/"
+    assert ai_auto["proxies"] == ["新加坡 01"]
+    assert ai_auto["url"] == "https://chatgpt.com/cdn-cgi/trace"
     assert ai_auto["expected-status"] == 200
+    assert ai_auto["timeout"] == 5000
+    assert ai_auto["max-failed-times"] == 1
+    assert ai_auto["lazy"] is True
+    assert ai_auto["interval"] == 300
+    assert ai_auto["tolerance"] == 50
+    assert _group(config, "AI 服务")["proxies"][0] == "AI自动"
 
-    ai_service = _group(config, "AI 服务")
-    assert ai_service["proxies"][0] == "AI自动"
+
+def test_leo_latency_groups_use_a_bounded_lightweight_probe() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+    latency_groups = {"自动选择", "香港自动"}
+
+    for name in latency_groups:
+        group = _group(template, name)
+        assert group["url"] == "https://cp.cloudflare.com/generate_204"
+        assert group["expected-status"] == 204
+        assert group["timeout"] == 5000
+        assert group["max-failed-times"] == 2
+        assert group["lazy"] is True
+
+    assert {
+        group["name"]
+        for group in template["proxy-groups"]
+        if group.get("type") == "url-test"
+    } == {"自动选择", "香港自动", "AI自动"}
 
 
-# "cn"/"ChinaIPs"-style broad domestic/private catch-alls must never be
-# ordered ahead of a named service's own RULE-SET — first match wins, so a
-# domain merely miscategorized into one of these huge aggregated lists would
-# get force-DIRECTed before it ever reaches its intended proxy group (e.g.
-# Netflix/IQIYI/Bilibili going DIRECT and breaking instead of unlocking).
-_BROAD_CATCHALL_RULE_SETS = {
-    "china_ip_ipv6", "ChinaAPP", "ChinaIPs", "cn", "cn_v6", "cnip", "private-2",
-}
+def test_leo_defaults_to_nearby_routes_and_avoids_forced_us_egress() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+
+    assert _group(template, "默认代理")["proxies"][0] == "香港自动"
+    for name in ("开发服务", "Google", "Microsoft"):
+        assert _group(template, name)["proxies"][0] == "默认代理"
+    assert _group(template, "Apple")["proxies"][:2] == ["DIRECT", "默认代理"]
+
+
+def test_leo_direct_cloud_routes_precede_broad_vendor_providers() -> None:
+    rules = load_template(LEO_TEMPLATE_ID)["rules"]
+
+    microsoft_provider = rules.index("RULE-SET,Microsoft-6,Microsoft")
+    apple_provider = rules.index("RULE-SET,Apple-4,Apple")
+    assert rules.index("DOMAIN,formulae.brew.sh,DIRECT") < microsoft_provider
+    assert rules.index("GEOSITE,microsoft@cn,DIRECT") < microsoft_provider
+    assert rules.index("GEOSITE,apple@cn,DIRECT") < apple_provider
+    assert rules.index("GEOSITE,icloud,DIRECT") < apple_provider
+
+
+def test_leo_specific_services_precede_overlapping_vendor_sources() -> None:
+    rules = load_template(LEO_TEMPLATE_ID)["rules"]
+
+    claude = rules.index("RULE-SET,Claude,AI 服务")
+    generic_ai = rules.index("RULE-SET,ai-4,AI 服务")
+    youtube = rules.index("RULE-SET,YouTube-6,流媒体")
+    google = rules.index("RULE-SET,Google-2,Google")
+    apple = rules.index("RULE-SET,Apple-4,Apple")
+
+    assert claude < generic_ai
+    assert youtube < google
+    assert rules.index("GEOSITE,youtube,流媒体") > youtube
+    assert rules.index("DOMAIN-SUFFIX,crashlytics.com,Google") < apple
+    # Apple stays before the broader Google/Microsoft lists so Apple-specific
+    # Akamai CNAMEs keep the template's DIRECT-first Apple policy.
+    assert apple < google < rules.index("RULE-SET,Microsoft-6,Microsoft")
+
+
 _NAMED_SERVICE_TARGETS = {
-    "AI 服务", "开发服务", "Apple", "Google", "Microsoft",
-    "金融服务", "社交通讯", "游戏服务", "流媒体",
+    "AI 服务",
+    "开发服务",
+    "Apple",
+    "Google",
+    "Microsoft",
+    "金融服务",
+    "社交通讯",
+    "游戏服务",
+    "流媒体",
 }
 
 
-def test_leo_broad_china_catchall_rules_never_precede_named_service_rules() -> None:
+def test_leo_builtin_china_and_private_catchalls_follow_named_service_rules() -> None:
     template = load_template(LEO_TEMPLATE_ID)
     rules = [rule for rule in template["rules"] if isinstance(rule, str)]
+    catchalls = {
+        "GEOSITE,private,DIRECT",
+        "GEOIP,private,DIRECT,no-resolve",
+        "DOMAIN-SUFFIX,cn,DIRECT",
+        "GEOSITE,cn,DIRECT",
+        "GEOIP,cn,DIRECT,no-resolve",
+    }
 
-    catchall_indexes = [
-        index
-        for index, rule in enumerate(rules)
-        if rule.startswith("RULE-SET,") and rule.split(",")[1] in _BROAD_CATCHALL_RULE_SETS
-    ]
-    assert catchall_indexes, "expected to find the broad China/private catch-all RULE-SETs"
-    earliest_catchall = min(catchall_indexes)
+    assert catchalls <= set(rules)
+    earliest_catchall = min(rules.index(rule) for rule in catchalls)
 
     for index, rule in enumerate(rules):
-        if not rule.startswith("RULE-SET,"):
+        parts = [part.strip() for part in rule.split(",")]
+        if len(parts) < 2 or rule in catchalls:
             continue
-        parts = rule.split(",")
-        name, target = parts[1], parts[2]
-        if name in _BROAD_CATCHALL_RULE_SETS:
-            continue
-        if target in _NAMED_SERVICE_TARGETS:
+        target = parts[-2] if parts[-1].lower() == "no-resolve" else parts[-1]
+        # Tail PROCESS-NAME fallbacks intentionally run after CN/private
+        # domain matching so domestic app traffic can remain direct.  The
+        # provider and domain/IP service rules must still precede catchalls.
+        if parts[0] != "PROCESS-NAME" and target in _NAMED_SERVICE_TARGETS:
             assert index < earliest_catchall, (
                 f"named-service rule '{rule}' (index {index}) is shadowed by a broad "
-                f"catch-all RULE-SET at index {earliest_catchall}"
+                f"China/private catch-all at index {earliest_catchall}"
             )

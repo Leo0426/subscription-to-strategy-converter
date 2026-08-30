@@ -197,7 +197,11 @@ def test_graph_builder_outputs_stable_nodes_and_edges() -> None:
 def test_analyzer_warns_on_resolving_ip_rules_routed_to_service_groups() -> None:
     workspace = config_to_workspace(
         {
-            "proxy-groups": [{"name": "AI 服务", "type": "select", "proxies": ["HK-01"]}],
+            "proxy-groups": [
+                {"name": "AI 服务", "type": "select", "proxies": ["HK-01"]},
+                {"name": "Google", "type": "select", "proxies": ["HK-01"]},
+                {"name": "社交通讯", "type": "select", "proxies": ["HK-01"]},
+            ],
             "rule-providers": {
                 "AIIP": {"type": "http", "behavior": "ipcidr"},
                 "tg_ip": {"type": "http", "behavior": "ipcidr"},
@@ -205,7 +209,9 @@ def test_analyzer_warns_on_resolving_ip_rules_routed_to_service_groups() -> None
             },
             "rules": [
                 "RULE-SET,AIIP,AI 服务",
-                "RULE-SET,tg_ip,AI 服务,no-resolve",
+                "RULE-SET,AIIP,AI 服务,no-resolve",
+                "GEOIP,google,Google,no-resolve",
+                "RULE-SET,tg_ip,社交通讯,no-resolve",
                 "RULE-SET,china_ip,DIRECT",
                 "MATCH,AI 服务",
             ],
@@ -219,6 +225,39 @@ def test_analyzer_warns_on_resolving_ip_rules_routed_to_service_groups() -> None
         if finding.code == "ip_rule_resolves_shared_infra"
     ]
 
-    # Only the resolving service-group rule offends: no-resolve and DIRECT are fine.
+    # Both AI provider rules and Google GEOIP offend even with no-resolve;
+    # domainless Telegram-style traffic and DIRECT geo fallbacks remain allowed.
     assert len(findings) == 1
-    assert "1 ipcidr rules" in findings[0].message
+    assert "3 IP-layer rules" in findings[0].message
+
+
+def test_analyzer_warns_on_inline_ip_cidrs_for_shared_infrastructure() -> None:
+    workspace = config_to_workspace(
+        {
+            "proxy-groups": [
+                {"name": "AI 服务", "type": "select", "proxies": ["HK-01"]},
+                {"name": "流媒体", "type": "select", "proxies": ["HK-01"]},
+                {"name": "社交通讯", "type": "select", "proxies": ["HK-01"]},
+            ],
+            "rules": [
+                "IP-CIDR,1.1.1.1/32,AI 服务,no-resolve",
+                "IP-CIDR6,2606:4700::/32,流媒体,no-resolve",
+                "IP-CIDR,91.108.4.0/22,社交通讯,no-resolve",
+                "IP-CIDR6,2001:67c:4e8::/48,社交通讯",
+                "IP-CIDR,10.0.0.0/8,DIRECT",
+                "MATCH,AI 服务",
+            ],
+        },
+        [_node()],
+    )
+
+    findings = [
+        finding
+        for finding in analyze_workspace(workspace)
+        if finding.code == "ip_rule_resolves_shared_infra"
+    ]
+
+    # Shared-service IPv4/IPv6 rules are forbidden even with no-resolve;
+    # domainless service traffic still requires it, while DIRECT stays exempt.
+    assert len(findings) == 1
+    assert "3 IP-layer rules" in findings[0].message
