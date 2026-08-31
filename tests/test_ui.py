@@ -12,7 +12,7 @@ def test_root_and_legacy_advanced_route_serve_the_same_simple_page() -> None:
     assert root.status_code == 200
     assert advanced.status_code == 200
     assert root.text == advanced.text
-    assert "/static/flow.js?v=24" in root.text
+    assert "/static/flow.js?v=26" in root.text
     assert "/static/flow.css?v=18" in root.text
     assert "/static/assets/subflow-logo.png" in root.text
 
@@ -54,7 +54,8 @@ def test_page_loads_leo_groups_and_fine_grained_services() -> None:
     assert "data-service-choice" in script
     assert "具体节点" in script
     assert "function renderLeoReference()" in script
-    assert "Mihomo 的 AI 美国节点使用独立的 ChatGPT 可达性检查；Surge 使用全局探针" in script
+    assert 'const regionNames = ["香港自动", "美国节点"]' in script
+    assert "AI 服务改为美国节点手动选择；连通性测试只更新延迟，不会自动切换节点" in script
     assert "Surge 5.21+" in script
     assert "function renderDataLedger()" in script
     assert "data-reference-service" in script

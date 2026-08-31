@@ -22,7 +22,7 @@ def test_rule_pack_catalog_exposes_groups_dependencies_and_concrete_rules() -> N
     assert {"claude", "openai", "github", "netflix", "youtube"} <= set(packs)
     assert packs["claude"]["category"] == "ai"
     assert packs["claude"]["group"]["name"] == "Claude"
-    assert [group["name"] for group in packs["claude"]["dependencies"]] == ["AI Auto", "AI"]
+    assert [group["name"] for group in packs["claude"]["dependencies"]] == ["US Nodes", "AI"]
     assert "DOMAIN-SUFFIX,claude.ai,Claude" in packs["claude"]["rules"]
     assert packs["claude"]["rule_count"] == len(packs["claude"]["rules"])
     assert set(response.json()["preset_defaults"]["ai"]) >= {"claude", "openai", "gemini"}

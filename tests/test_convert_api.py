@@ -253,6 +253,12 @@ def test_template_detail_returns_proxy_groups(client: TestClient) -> None:
     first = body["proxy_groups"][0]
     assert "name" in first
     assert "type" in first
+    us_nodes = next(group for group in body["proxy_groups"] if group["name"] == "美国节点")
+    assert us_nodes["type"] == "select"
+    assert us_nodes["url"] == "https://cp.cloudflare.com/generate_204"
+    assert us_nodes["expected-status"] == 204
+    assert us_nodes["lazy"] is True
+    assert not any(group["name"] == "AI自动" for group in body["proxy_groups"])
 
 
 def test_local_template_detail_returns_source_path(client: TestClient) -> None:

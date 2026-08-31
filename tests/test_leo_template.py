@@ -24,7 +24,6 @@ _CORE_PROVIDER_NAMES = {
     "YouTube-6",
     "Telegram",
 }
-_HEALTH_GROUP_TYPES = {"url-test", "fallback", "load-balance"}
 
 
 def _node(name: str) -> ProxyNode:
@@ -81,12 +80,12 @@ def test_leo_lightweight_shape_and_generated_footprint() -> None:
     assert len(template["proxy-groups"]) == 14
     assert len(template["rules"]) <= 140
     assert len(groups) == 14
-    assert sum(group["type"] == "url-test" for group in groups) == 3
+    assert sum(group["type"] == "url-test" for group in groups) == 2
     assert sum(len(group.get("proxies", [])) for group in groups) <= 380
     assert sum(
         len(group.get("proxies", []))
         for group in groups
-        if group.get("type") in _HEALTH_GROUP_TYPES
+        if group.get("url")
     ) <= 200
     # Preserve the global automatic fallback: removing it would save roughly
     # 1.5 KiB, but would trade away useful cross-region recovery for a cosmetic
@@ -291,9 +290,9 @@ def test_leo_prunes_empty_region_groups_and_their_parent_references() -> None:
     config = apply_template(template, [_node("香港 01"), _node("其他 01")])
 
     group_names = {group["name"] for group in config["proxy-groups"]}
-    assert "AI自动" not in group_names
+    assert "美国节点" not in group_names
     assert all(
-        "AI自动" not in group.get("proxies", [])
+        "美国节点" not in group.get("proxies", [])
         for group in config["proxy-groups"]
     )
 
@@ -527,12 +526,12 @@ def test_leo_ai_service_reuses_bounded_supported_region_groups() -> None:
     template = load_template(LEO_TEMPLATE_ID)
     config = apply_template(template, [_node("其他 01"), _node("香港 01")])
 
-    assert "AI自动" not in {group["name"] for group in config["proxy-groups"]}
+    assert "美国节点" not in {group["name"] for group in config["proxy-groups"]}
     ai_service = _group(config, "AI 服务")
     assert ai_service["proxies"] == ["默认代理", "自动选择", "手动选择"]
 
 
-def test_leo_ai_auto_uses_direct_us_nodes_and_a_chatgpt_probe() -> None:
+def test_leo_ai_service_uses_a_manual_us_group_with_a_generic_connectivity_probe() -> None:
     template = load_template(LEO_TEMPLATE_ID)
     config = apply_template(
         template,
@@ -546,17 +545,18 @@ def test_leo_ai_auto_uses_direct_us_nodes_and_a_chatgpt_probe() -> None:
         ],
     )
 
-    ai_auto = _group(config, "AI自动")
-    assert ai_auto["type"] == "url-test"
-    assert ai_auto["proxies"] == ["美国 01", "US02", "LAX 01"]
-    assert ai_auto["url"] == "https://chatgpt.com/cdn-cgi/trace"
-    assert ai_auto["expected-status"] == 200
-    assert ai_auto["timeout"] == 5000
-    assert ai_auto["max-failed-times"] == 1
-    assert ai_auto["lazy"] is True
-    assert ai_auto["interval"] == 300
-    assert ai_auto["tolerance"] == 50
-    assert _group(config, "AI 服务")["proxies"][0] == "AI自动"
+    us_nodes = _group(config, "美国节点")
+    assert us_nodes["type"] == "select"
+    assert us_nodes["proxies"] == ["美国 01", "US02", "LAX 01"]
+    assert us_nodes["url"] == "https://cp.cloudflare.com/generate_204"
+    assert us_nodes["expected-status"] == 204
+    assert us_nodes["timeout"] == 5000
+    assert us_nodes["lazy"] is True
+    assert us_nodes["interval"] == 600
+    assert "max-failed-times" not in us_nodes
+    assert "tolerance" not in us_nodes
+    assert _group(config, "AI 服务")["proxies"][0] == "美国节点"
+    assert "AI自动" not in {group["name"] for group in config["proxy-groups"]}
 
 
 def test_leo_latency_groups_use_a_bounded_lightweight_probe() -> None:
@@ -575,7 +575,7 @@ def test_leo_latency_groups_use_a_bounded_lightweight_probe() -> None:
         group["name"]
         for group in template["proxy-groups"]
         if group.get("type") == "url-test"
-    } == {"自动选择", "香港自动", "AI自动"}
+    } == {"自动选择", "香港自动"}
 
 
 def test_leo_keeps_non_ai_services_on_nearby_default_routes() -> None:

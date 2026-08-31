@@ -111,23 +111,20 @@ proxy-groups:
 - name: AI 服务
   type: select
   proxies:
-  - AI自动
+  - 美国节点
   - 默认代理
   - 自动选择
   - 手动选择
-- name: AI自动
-  # ChatGPT TLS 探针与通用 204 延迟不是一回事。只测试通常支持 AI 服务的
-  # 美国节点，失败一次即重测；无美国节点时编译器会删除本组。
-  type: url-test
+- name: 美国节点
+  # 手动固定所选美国节点；健康检查只更新连通性和延迟，不参与选路。
+  type: select
   include-all: true
   filter: (?i)(美国|美國|🇺🇸|United States|(^|[^A-Za-z])(US|USA|LAX|SJC|SFO)([^A-Za-z]|$))
-  url: https://chatgpt.com/cdn-cgi/trace
-  expected-status: 200
+  url: https://cp.cloudflare.com/generate_204
+  expected-status: 204
   timeout: 5000
-  max-failed-times: 1
   lazy: true
-  interval: 300
-  tolerance: 50
+  interval: 600
 - name: 流媒体
   type: select
   proxies: &service_proxies

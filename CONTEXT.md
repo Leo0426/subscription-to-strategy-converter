@@ -172,6 +172,7 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - Every URL forwarded to an external fetcher (subscription source, Subconverter) must pass the same DNS-rebinding check as `fetch_subscription()`; a hostname that resolves to a private/loopback IP is rejected before the request is made
 - Shadowsocks transport options required for connectivity, including Surge `obfs` and `obfs-host`, must survive input normalization and map to the equivalent target-client syntax
 - Mihomo output from `/convert` and `/subscribe` must compile through `PolicyWorkspace` via `compile_mihomo_config()`
+- Mihomo health probes use HTTP `HEAD`; every probe URL and `expected-status` pair must be validated with `HEAD`. AI traffic uses a manual US-only Selector whose Cloudflare 204 health check updates connectivity and latency but never authorizes automatic node switching
 - Mihomo is the first quality-bar compiler; other compilers remain experimental until semantic parity is explicit
 - Experimental compilers should report unsupported protocols without breaking the workspace loop
 - `RULE-SET` in Surge uses a direct URL (not provider name); the compiler resolves the name via `rule_providers` dict

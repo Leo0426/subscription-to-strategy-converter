@@ -181,7 +181,7 @@ function renderLeoReference() {
 
   const groupByName = Object.fromEntries(state.leoGroups.map((group) => [group.name, group]));
   const coreNames = ["默认代理", "自动选择", "香港自动", "手动选择"];
-  const regionNames = ["香港自动"]
+  const regionNames = ["香港自动", "美国节点"]
     .filter((name) => groupByName[name]);
   const coreRows = coreNames.filter((name) => groupByName[name]).map((name) => {
     const group = groupByName[name];
@@ -205,8 +205,8 @@ function renderLeoReference() {
       <div class="reference-module-body"><p class="reference-note">默认代理优先香港低延迟池，再回退到全局自动和手动选择。</p><div class="reference-flow">${coreRows}</div></div>
     </details>
     <details class="reference-module" open>
-      <summary>地区自动选择</summary>
-      <div class="reference-module-body"><p class="reference-note">仅保留香港低延迟池；Mihomo 的 AI 美国节点使用独立的 ChatGPT 可达性检查；Surge 使用全局探针。</p><div class="reference-chips">${regionNames.map((name) => `<span class="reference-chip">${escapeHtml(name)}</span>`).join("")}</div></div>
+      <summary>地区节点选择</summary>
+      <div class="reference-module-body"><p class="reference-note">仅保留香港低延迟池；AI 服务改为美国节点手动选择；连通性测试只更新延迟，不会自动切换节点。</p><div class="reference-chips">${regionNames.map((name) => `<span class="reference-chip">${escapeHtml(name)}</span>`).join("")}</div></div>
     </details>
     <details class="reference-module">
       <summary>服务默认出口</summary>

@@ -817,7 +817,24 @@ def test_leo_surge_keeps_core_services_when_mihomo_only_rules_are_skipped() -> N
     assert "category-ai-!cn.list" in skipped_sets["examples"][0]
 
 
-def test_leo_surge_prunes_ai_auto_when_all_us_nodes_are_unsupported() -> None:
+def test_leo_surge_keeps_the_us_node_pool_manual() -> None:
+    nodes = [_ss("美国 SS"), _ss("香港 SS")]
+    config = apply_template(load_template(LEO_TEMPLATE_ID), nodes)
+
+    conf, _ = build_surge_config(
+        nodes,
+        config["proxy-groups"],
+        config["rules"],
+        config["rule-providers"],
+    )
+
+    assert "美国节点 = select, 美国 SS" in conf
+    assert "美国节点 = url-test" not in conf
+    assert "AI 服务 = select, 美国节点, 默认代理, 自动选择, 手动选择" in conf
+    assert "proxy-test-url = http://www.apple.com/library/test/success.html" in conf
+
+
+def test_leo_surge_prunes_manual_us_group_when_all_us_nodes_are_unsupported() -> None:
     nodes = [
         _ss("香港 SS"),
         ProxyNode(
@@ -844,7 +861,7 @@ def test_leo_surge_prunes_ai_auto_when_all_us_nodes_are_unsupported() -> None:
         config["rule-providers"],
     )
 
-    assert "AI自动 =" not in conf
+    assert "美国节点 =" not in conf
     assert "AI 服务 = select, 默认代理, 自动选择, 手动选择" in conf
     assert [warning["value"] for warning in warnings if warning["code"] == "unsupported_protocol"] == [
         "hysteria2",

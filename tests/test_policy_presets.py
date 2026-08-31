@@ -82,8 +82,17 @@ def test_workspace_builds_ai_preset_on_the_canonical_base(monkeypatch) -> None:
     workspace = response.json()["workspace"]
     assert any(group["name"] == "Claude" for group in workspace["proxy_groups"])
     assert any(rule["raw"] == "DOMAIN-SUFFIX,claude.ai,Claude" for rule in workspace["rules"])
-    ai_auto = next(group for group in workspace["proxy_groups"] if group["name"] == "AI Auto")
-    assert ai_auto["members"] == ["US02", "LAX 01"]
+    us_nodes = next(group for group in workspace["proxy_groups"] if group["name"] == "US Nodes")
+    assert us_nodes["type"] == "select"
+    assert us_nodes["members"] == ["US02", "LAX 01"]
+    assert us_nodes["raw"]["url"] == "https://cp.cloudflare.com/generate_204"
+    assert us_nodes["raw"]["expected-status"] == 204
+    assert us_nodes["raw"]["timeout"] == 5000
+    assert us_nodes["raw"]["lazy"] is True
+    assert us_nodes["raw"]["interval"] == 600
+    assert "max-failed-times" not in us_nodes["raw"]
+    assert "tolerance" not in us_nodes["raw"]
+    assert not any(group["name"] == "AI Auto" for group in workspace["proxy_groups"])
 
 
 def test_custom_policy_takes_ownership_after_preset_selection(monkeypatch) -> None:
