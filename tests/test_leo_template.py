@@ -582,9 +582,12 @@ def test_leo_keeps_non_ai_services_on_nearby_default_routes() -> None:
     template = load_template(LEO_TEMPLATE_ID)
 
     assert _group(template, "默认代理")["proxies"][0] == "香港自动"
-    for name in ("开发服务", "Google", "Microsoft"):
+    for name in ("开发服务", "Google"):
         assert _group(template, name)["proxies"][0] == "默认代理"
-    assert _group(template, "Apple")["proxies"][:2] == ["DIRECT", "默认代理"]
+    # Apple and Microsoft both default to DIRECT: they run China datacenters
+    # (GCBD / 21Vianet) whose endpoints an overseas node serves slowly or refuses.
+    for name in ("Apple", "Microsoft"):
+        assert _group(template, name)["proxies"][:2] == ["DIRECT", "默认代理"]
 
 
 def test_leo_direct_cloud_routes_precede_broad_vendor_providers() -> None:

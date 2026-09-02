@@ -159,9 +159,11 @@ proxy-groups:
   - 手动选择
 - name: Microsoft
   type: select
+  # DIRECT 优先，与 Apple 一致：世纪互联 .cn 端点经海外节点会被慢速或拒绝，
+  # Copilot 等已单独分流到 AI 服务。
   proxies:
-  - 默认代理
   - DIRECT
+  - 默认代理
   - 自动选择
   - 手动选择
 - name: Apple
