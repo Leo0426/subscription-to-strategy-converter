@@ -592,7 +592,11 @@ def test_leo_direct_cloud_routes_precede_broad_vendor_providers() -> None:
 
     microsoft_provider = rules.index("RULE-SET,Microsoft-6,Microsoft")
     apple_provider = rules.index("RULE-SET,Apple-4,Apple")
-    assert rules.index("DOMAIN,formulae.brew.sh,DIRECT") < microsoft_provider
+    github_provider = rules.index("RULE-SET,GitHub-5,开发服务")
+    # formulae.brew.sh is GitHub Pages infrastructure the GFW resets on a direct
+    # TLS handshake, so it is pinned to 开发服务; it must still be matched before
+    # the broad vendor providers (including its own GitHub-5 list).
+    assert rules.index("DOMAIN,formulae.brew.sh,开发服务") < github_provider
     assert rules.index("GEOSITE,microsoft@cn,DIRECT") < microsoft_provider
     assert rules.index("GEOSITE,apple@cn,DIRECT") < apple_provider
     assert rules.index("GEOSITE,icloud,DIRECT") < apple_provider

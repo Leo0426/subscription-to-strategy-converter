@@ -14,7 +14,7 @@
 - Mihomo/OpenClash 保留两套自动健康检查（全局自动、香港自动）和一套美国节点手动组检查。三组都使用 `https://cp.cloudflare.com/generate_204`，要求 HTTP 204，单节点等待上限为 5000 ms；`美国节点` 是 `select`，健康检查只更新可用性和延迟，绝不会按延迟自动切换。检查周期为 600 秒并保持 lazy：启动时会填充一次结果，之后仅在该组近期使用时继续检查。没有美国节点时则回退到默认、全局自动和手动策略。
 - OpenClash 的“URL-Test 地址修改”无需再为 AI 设置特殊地址；建议关闭覆写并直接使用模板的 Cloudflare 204 通用探针。若必须覆写，应保持地址与 HTTP 204 期望状态一致。
 - Surge 兼容基线为 5.21+：当前版本使用 `[General] proxy-test-url` 而不是策略组中的旧 `url=`，Subflow 统一使用 Apple 轻量探针并设置 `test-timeout = 3`；Apple Provider 使用上游完整的 `Apple_All_No_Resolve.list`，避免基础列表漏掉域名规则。
-- `默认代理` 首选低延迟的香港池；Apple 与 Homebrew Formula API 保持直连优先。当前 8 个 RuleProvider 全部固定到 40 位提交，Mihomo 下载地址会改写到 canonical jsDelivr CDN 并明确固定为 `DIRECT`；Surge 产物也使用同一 CDN 上的原生 `.list`。冷启动不依赖尚未就绪的代理节点，也不再需要隐藏的规则更新组。`interval` 控制结果有效期，`tolerance` 控制切换阻尼，都不会缩短一次手动测速。轻量版删除了旧地区组和兼容别名；客户端若保存过这些组的选择，需要删除旧配置后重新导入。
+- `默认代理` 首选低延迟的香港池；Apple 保持直连优先，Homebrew Formula API（`formulae.brew.sh`，托管在被 GFW 按 SNI 阻断的 GitHub Pages 段）固定走 `开发服务` 组。当前 8 个 RuleProvider 全部固定到 40 位提交，Mihomo 下载地址会改写到 canonical jsDelivr CDN 并明确固定为 `DIRECT`；Surge 产物也使用同一 CDN 上的原生 `.list`。冷启动不依赖尚未就绪的代理节点，也不再需要隐藏的规则更新组。`interval` 控制结果有效期，`tolerance` 控制切换阻尼，都不会缩短一次手动测速。轻量版删除了旧地区组和兼容别名；客户端若保存过这些组的选择，需要删除旧配置后重新导入。
 
 ## 合并原则
 

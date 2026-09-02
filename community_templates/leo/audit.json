@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-31T07:08:24.880613+00:00",
+  "generated_at": "2026-09-02T08:55:36.370594+00:00",
   "summary": {
     "total": 8,
     "valid": 8,
@@ -1383,7 +1383,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Apple/Apple_Classical_No_Resolve.yaml",
-      "elapsed_ms": 1283
+      "elapsed_ms": 1396
     },
     {
       "name": "Claude",
@@ -1418,7 +1418,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Claude/Claude_No_Resolve.yaml",
-      "elapsed_ms": 1107
+      "elapsed_ms": 1507
     },
     {
       "name": "GitHub-5",
@@ -1453,7 +1453,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/GitHub/GitHub_No_Resolve.yaml",
-      "elapsed_ms": 1269
+      "elapsed_ms": 1508
     },
     {
       "name": "Google-2",
@@ -1492,7 +1492,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Google/Google_No_Resolve.yaml",
-      "elapsed_ms": 1203
+      "elapsed_ms": 1477
     },
     {
       "name": "Microsoft-6",
@@ -1529,7 +1529,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Microsoft/Microsoft_No_Resolve.yaml",
-      "elapsed_ms": 1241
+      "elapsed_ms": 1354
     },
     {
       "name": "Telegram",
@@ -1569,7 +1569,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Telegram/Telegram_No_Resolve.yaml",
-      "elapsed_ms": 1112
+      "elapsed_ms": 1343
     },
     {
       "name": "YouTube-6",
@@ -1606,7 +1606,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/YouTube/YouTube_No_Resolve.yaml",
-      "elapsed_ms": 1274
+      "elapsed_ms": 1469
     },
     {
       "name": "ai-4",
@@ -1641,7 +1641,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-ai-!cn.list",
-      "elapsed_ms": 1272
+      "elapsed_ms": 1504
     }
   ],
   "quality_score": {
@@ -1674,7 +1674,7 @@
   "template": {
     "id": "local:community_templates/leo/leo.yaml",
     "source_path": "community_templates/leo/leo.yaml",
-    "sha256": "63f8251acc88cc08ce6d04dcb4b148edffaf347512a2f9f00cd53d9ea20264c1",
+    "sha256": "868ae7cf224469c33904ae9ddef2539c6b0393ce7bc8b5c292d591a18cd92b4c",
     "provider_count": 8,
     "rule_count": 134
   }

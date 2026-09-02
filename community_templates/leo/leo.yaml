@@ -269,9 +269,12 @@ rules:
 - DST-PORT,5349,DIRECT
 - DST-PORT,10000,DIRECT
 - DST-PORT,5350,DIRECT
-# 先让已知可直连的更新与云服务数据面命中，避免后面的广义厂商
-# RuleProvider 抢先将 Homebrew、iCloud 和中国区服务绕到远端节点。
-- DOMAIN,formulae.brew.sh,DIRECT
+# formulae.brew.sh 托管在 GitHub Pages(185.199.108-111.153)，该段被 GFW 按 SNI
+# 阻断，直连必然在 TLS 握手阶段被 RST；固定走开发服务组，且需先于广义厂商
+# RuleProvider 命中。
+- DOMAIN,formulae.brew.sh,开发服务
+# iCloud 与中国区服务数据面已知可直连，先命中避免后面的广义厂商 RuleProvider
+# 将其绕到远端节点。
 - GEOSITE,apple@cn,DIRECT
 - GEOSITE,icloud,DIRECT
 - GEOSITE,microsoft@cn,DIRECT
