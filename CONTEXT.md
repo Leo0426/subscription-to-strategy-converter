@@ -2,13 +2,13 @@
 
 ## Mission
 
-A self-hosted Clash/Mihomo and Surge policy release control plane built around one consolidated `leo.yaml` template.
+A self-hosted Clash/Mihomo, Surge and Shadowrocket policy release control plane built around one consolidated `leo.yaml` template.
 
 ## Product Boundary
 
 - Subflow owns policy intent, structural transformation, semantic validation, target-specific releases, and subscription lifecycle.
 - Protocol parsing and broad format conversion are compatibility inputs, not the product's differentiating capability.
-- Clash/Mihomo is the semantic quality target; Surge is a public compatibility target with explicit warnings for skipped protocols and rule sets.
+- Clash/Mihomo is the semantic quality target; Surge and Shadowrocket are public compatibility targets with explicit warnings for skipped protocols and rule sets.
 - Business policy is assembled from visible RulePacks; RouteIntent and reusable NodePools optionally override the selected packs' egress behavior.
 - The initial operator is one advanced user running a private local or self-hosted deployment; public conversion SaaS and multi-tenancy are outside the current scope.
 
@@ -68,7 +68,7 @@ PolicySnapshot
     ↓ optional RouteIntent egress overrides
 PolicyWorkspace
     ↓ analyze + simulate + target validation
-Clash/Mihomo artifact + Surge compatibility artifact
+Clash/Mihomo artifact + Surge artifact + Shadowrocket nodes and policy
     ↓ persisted as the Profile's last-successful artifact (ADR 0002)
 Token-protected Subscription URLs
 ```
@@ -101,6 +101,8 @@ Token-protected Subscription URLs
 | `app/core/rule_source_audit.py` | RuleSource availability/content/supply-chain audit, structural-v2 quality score, and the published `audit.json` snapshot |
 | `app/core/renderer.py` | `render_yaml()` — serializes a dict to YAML string |
 | `app/core/platforms/surge.py` | Public Surge compatibility compiler; reports skipped protocols and unsupported MRS rule sets |
+| `app/core/platforms/shadowrocket.py` | Public Shadowrocket node subscription and companion native policy compiler |
+| `app/core/platforms/ini.py` | Shared INI artifact assembly, compatibility warnings and target-group closure |
 | `app/core/platforms/singbox.py` | Experimental sing-box compiler |
 | `app/core/sessions.py` | In-memory session store for large policy payloads (avoids huge query strings in `/subscribe`) |
 | `app/core/config_tree.py` | Preview tree builder for raw Clash config |
@@ -148,11 +150,11 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 | POST | `/simulate` | Simulate a destination through workspace rules |
 | POST | `/compile/mihomo` | Compile workspace dict → Mihomo YAML |
 | POST | `/session` | Store large policy payload, return session ID |
-| POST | `/profiles` | Persist one Leo-based Profile and return token-protected Clash and Surge Subscription URLs |
+| POST | `/profiles` | Persist one Leo-based Profile and return token-protected Clash, Surge and Shadowrocket Subscription URLs plus the Shadowrocket policy URL |
 | GET | `/profiles` | List redacted local Profile summaries without token or source subscription URL |
 | GET | `/profiles/{profile_id}/draft` | Read an editable Profile conversion intent with token authorization |
 | PUT | `/profiles/{profile_id}` | Replace a Profile conversion intent with token authorization and invalidate old artifacts |
-| GET | `/subscribe/{profile_id}` | Compile a persisted Profile for `target=clash|mihomo|surge` or return its target-specific stale artifact |
+| GET | `/subscribe/{profile_id}` | Compile a persisted Profile for `target=clash|mihomo|surge|shadowrocket|shadowrocket-config` or return its target-specific stale artifact |
 | GET | `/subscribe` | Stable URL for proxy clients — returns config directly |
 
 ## Platform Support
@@ -161,6 +163,7 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 |----------|----------|---------|
 | Mihomo / Clash | Product semantic quality bar | `app/core/policy_workspace.py` → `workspace_to_mihomo_config()` + `app/core/renderer.py` |
 | Surge 5.21+ | Public compatibility target; unsupported protocols and MRS sources are skipped with warnings | `app/core/platforms/surge.py` |
+| Shadowrocket | Public compatibility target: node YAML plus native policy config | `app/core/platforms/shadowrocket.py` |
 | sing-box | Internal experimental compiler; rejected by Leo-backed product interfaces | `app/core/platforms/singbox.py` |
 
 ## Key Invariants
@@ -169,6 +172,7 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - Clash fields not yet modeled by `ProxyNode` must survive Mihomo round trips through the private `_clash_passthrough` payload; policy code must not depend on that payload
 - A non-empty Clash source `dns.proxy-server-nameserver` is a node-connectivity hint and must survive into the Mihomo artifact; Leo continues to own all other traffic-domain DNS policy
 - Subconverter is an opt-in input compatibility Adapter used only after direct Clash/Surge parsing fails; it never owns templates, rules, target rendering, or the Profile lifecycle
+- Universal subscription URLs negotiate Mihomo/Clash.Meta content through the fetcher's default User-Agent, overridable with `SUBFLOW_SUBSCRIPTION_USER_AGENT`; URL parameters remain intact and redirect destinations retain the same validation. Forced Base64/URI inputs still require the opt-in compatibility Adapter.
 - Every URL forwarded to an external fetcher (subscription source, Subconverter) must pass the same DNS-rebinding check as `fetch_subscription()`; a hostname that resolves to a private/loopback IP is rejected before the request is made
 - Shadowsocks transport options required for connectivity, including Surge `obfs` and `obfs-host`, must survive input normalization and map to the equivalent target-client syntax
 - Mihomo output from `/convert` and `/subscribe` must compile through `PolicyWorkspace` via `compile_mihomo_config()`
@@ -183,7 +187,8 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - All template IDs from the community are prefixed `local:` (e.g. `local:community_templates/leo/leo.yaml`)
 - Sessions in `app/core/sessions.py` are in-memory only; they do not persist across restarts
 - Profiles persist in SQLite; access requires both the profile ID and an independent token whose hash is stored in the database
-- A Profile has one source subscription, a PolicySnapshot, and target-specific Clash/Mihomo and Surge publications
+- A Profile has one source subscription, a PolicySnapshot, and target-specific Clash/Mihomo, Surge and paired Shadowrocket publications
+- Shadowrocket node subscriptions and companion policy configs have distinct artifact keys. Both share the same Profile/token; users update both resources to keep node names and policy-group references synchronized (ADR 0013).
 - A Profile may serve its last successful artifact only for an external source dependency failure and must mark it with `X-Subflow-Stale: true`
 - Updating a Profile invalidates all previously compiled artifacts before the new intent can be served
 - A TemplatePolicyTransform must preserve provider URLs, rule order, DNS/TUN settings, and every non-Claude policy edge
@@ -200,6 +205,7 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - A stored PolicySnapshot does not automatically merge later PolicyPreset changes; updating from a preset is an explicit reset operation
 - `NodeSelector` references are expanded against the latest upstream `ProxyNode` inventory on every preview/render/Profile subscription request; unknown selectors fail closed and selectors producing an empty group are publish-blocking errors
 - Rules after the first `MATCH` or `FINAL` are unreachable and must be reported by the analyzer
+- Leo's named service GEOSITEs and domestic game exceptions precede broad `gfw` / `geolocation-!cn` routes; generic default-proxy port or inbound-name rules must not preempt China/private direct catchalls. Unclassified traffic uses the final `MATCH`.
 - A structurally valid artifact is not necessarily a runnable one; the analyzer reports target-client runtime feasibility (RuleProvider reachability, cold-start provider budget, core version requirements) as warnings that never block publication
 - New RuleSources must pass the admission checklist in `community_templates/leo/README.md` (trusted upstream, no third-party proxy fronts, pin when possible, cost-proportional, no high overlap, no target conflicts); the structural-v2 score and the analyzer share one provider-count budget
 - Leo is intentionally a lightweight runtime policy: its regression budget is at most 8 RuleProviders, 140 rules, 12 KiB of source YAML, 14 ProxyGroups, 3 health-check groups, 380 total group-member edges, 200 potential probe memberships, and 34 KiB of rendered YAML for the fixed 144-node SS fixture; exceeding one budget requires an explicit architecture decision and cold-start evidence
@@ -221,6 +227,7 @@ Current (accepted, authoritative for their area):
 - [ADR 0010: Single-page policy workbench](docs/adr/0010-single-page-policy-workbench.md)
 - [ADR 0011: Service-level rule source consolidation](docs/adr/0011-service-level-rule-source-consolidation.md)
 - [ADR 0012: No Release/ProfileRevision rollback history](docs/adr/0012-no-release-rollback-history.md)
+- [ADR 0013: Shadowrocket paired policy publication](docs/adr/0013-shadowrocket-paired-policy-publication.md)
 
 Superseded (kept only as decision history; do not treat as current guidance):
 

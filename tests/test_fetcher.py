@@ -1,3 +1,5 @@
+import socket
+
 import pytest
 import httpx
 
@@ -41,3 +43,34 @@ async def test_redirect_to_private_ip_is_rejected(monkeypatch: pytest.MonkeyPatc
 
     with pytest.raises(FetchError, match="private or local IP"):
         await fetch_subscription("https://example.com/sub")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("configured_ua", ["ProviderClient/2.0", "", "  "])
+async def test_subscription_user_agent_can_be_overridden_for_provider_compatibility(
+    monkeypatch: pytest.MonkeyPatch, configured_ua: str,
+) -> None:
+    seen_agents: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen_agents.append(request.headers["User-Agent"])
+        return httpx.Response(200, text="subscription")
+
+    original_client = httpx.AsyncClient
+
+    def client_with_mock_transport(**kwargs: object) -> httpx.AsyncClient:
+        return original_client(**kwargs, transport=httpx.MockTransport(handler))
+
+    monkeypatch.setenv("SUBFLOW_SUBSCRIPTION_USER_AGENT", configured_ua)
+    monkeypatch.setattr("app.core.fetcher.httpx.AsyncClient", client_with_mock_transport)
+    monkeypatch.setattr("socket.getaddrinfo", lambda *args, **kwargs: [
+        (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("93.184.216.34", 0)),
+    ])
+
+    assert await fetch_subscription("https://example.com/sub") == "subscription"
+    if configured_ua.strip():
+        assert seen_agents == [configured_ua]
+    else:
+        assert len(seen_agents) == 1
+        assert "clash.meta/" in seen_agents[0]
+        assert "mihomo/" in seen_agents[0]

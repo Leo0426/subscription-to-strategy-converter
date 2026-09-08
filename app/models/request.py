@@ -15,7 +15,7 @@ class ConvertRequest(BaseModel):
     preset: str | None = Field(default=None, max_length=40)
     rule_packs: list[str] | None = None
     route_intent: RouteIntent | None = None
-    target: Literal["mihomo", "clash", "surge"] = "mihomo"
+    target: Literal["mihomo", "clash", "surge", "shadowrocket", "shadowrocket-config"] = "mihomo"
     custom_strategy: CustomStrategy | None = None
     selected_policy: SelectedPolicy | None = None
     claude_policy: ClaudePolicy | None = None
@@ -30,9 +30,9 @@ class ConvertRequest(BaseModel):
 
     @field_validator("target", mode="before")
     @classmethod
-    def require_mihomo_target(cls, value: str) -> str:
-        if value not in {"mihomo", "clash", "surge"}:
-            raise ValueError("leo.yaml only supports Clash/Mihomo and Surge targets")
+    def require_supported_target(cls, value: str) -> str:
+        if value not in {"mihomo", "clash", "surge", "shadowrocket", "shadowrocket-config"}:
+            raise ValueError("leo.yaml only supports Clash/Mihomo, Surge and Shadowrocket targets")
         return value
 
     @model_validator(mode="after")

@@ -32,7 +32,7 @@ def test_render_rejects_singbox_for_leo() -> None:
     )
 
     assert response.status_code == 422
-    assert "leo.yaml only supports Clash/Mihomo and Surge" in response.text
+    assert "leo.yaml only supports Clash/Mihomo, Surge and Shadowrocket" in response.text
 
 
 CLASH_SUBSCRIPTION = """

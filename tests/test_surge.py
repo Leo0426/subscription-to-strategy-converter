@@ -815,6 +815,9 @@ def test_leo_surge_keeps_core_services_when_mihomo_only_rules_are_skipped() -> N
     )
     assert skipped_sets["count"] == 1
     assert "category-ai-!cn.list" in skipped_sets["examples"][0]
+    assert "DOMAIN-SUFFIX,cn,DIRECT" in conf
+    assert "DEST-PORT,10000-65535,默认代理" not in conf
+    assert "FINAL,默认代理" in conf
 
 
 def test_leo_surge_keeps_the_us_node_pool_manual() -> None:

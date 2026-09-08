@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ipaddress
 import asyncio
+import os
 import socket
 from urllib.parse import urlparse
 
@@ -27,6 +28,10 @@ BLOCKED_NETWORKS = tuple(
 FAKE_IP_NETWORKS = (
     ipaddress.ip_network("198.18.0.0/15"),
 )
+# Universal subscription endpoints negotiate their output from this header.
+# Include both names: older panels recognize "meta", newer ones "mihomo".
+# This is the input format capability, independent of the requested output target.
+DEFAULT_SUBSCRIPTION_USER_AGENT = "clash.meta/1.19.30 mihomo/1.19.30 subflow/0.1"
 
 
 def _validate_url(url: str) -> None:
@@ -159,7 +164,11 @@ async def _ensure_resolved_host_is_public(hostname: str) -> None:
 async def fetch_subscription(url: str) -> str:
     current_url = url
 
-    headers = {"User-Agent": "subflow/0.1 (+https://github.com/local/subflow)"}
+    user_agent = (
+        os.environ.get("SUBFLOW_SUBSCRIPTION_USER_AGENT", "").strip()
+        or DEFAULT_SUBSCRIPTION_USER_AGENT
+    )
+    headers = {"User-Agent": user_agent}
     try:
         async with httpx.AsyncClient(timeout=15.0, follow_redirects=False, headers=headers) as client:
             for _ in range(6):

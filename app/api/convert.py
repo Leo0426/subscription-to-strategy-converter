@@ -13,6 +13,8 @@ from app.core.config_tree import build_config_tree
 from app.core.parsers.clash import ir_to_clash_dict
 from app.core.platforms.singbox import build_singbox_config
 from app.core.platforms.surge import build_surge_config
+from app.core.platforms.shadowrocket import build_shadowrocket_config, build_shadowrocket_subscription
+from app.core.platforms.ini import NoSupportedNodesError
 from app.core.policy_analyzer import analyze_workspace
 from app.core.policy_graph import build_policy_graph
 from app.core.policy_presets import list_policy_presets
@@ -213,9 +215,9 @@ async def template_detail(
     }
 
 
-_SUPPORTED_TARGETS = {"mihomo", "clash", "singbox", "surge"}
+_SUPPORTED_TARGETS = {"mihomo", "clash", "singbox", "surge", "shadowrocket", "shadowrocket-config"}
 _TARGET_ALIASES = {"clash": "mihomo"}
-_LEO_TARGETS = {"mihomo", "clash", "surge"}
+_LEO_TARGETS = {"mihomo", "clash", "surge", "shadowrocket", "shadowrocket-config"}
 
 
 def _require_leo_template(template_name: str) -> None:
@@ -225,7 +227,7 @@ def _require_leo_template(template_name: str) -> None:
 
 def _require_supported_target(target: str) -> None:
     if target not in _LEO_TARGETS:
-        raise HTTPException(status_code=400, detail="leo.yaml only supports Clash/Mihomo and Surge targets")
+        raise HTTPException(status_code=400, detail="leo.yaml only supports Clash/Mihomo, Surge and Shadowrocket targets")
 
 
 @dataclass(frozen=True, slots=True)
@@ -318,6 +320,16 @@ def _render_output(target: str, nodes: list[ProxyNode], config: dict) -> tuple[s
             config.get("rules", []),
             config.get("rule-providers", {}),
         )
+    if render_target in {"shadowrocket", "shadowrocket-config"}:
+        try:
+            if render_target == "shadowrocket":
+                return build_shadowrocket_subscription(nodes)
+            return build_shadowrocket_config(
+                nodes, config.get("proxy-groups", []),
+                config.get("rules", []), config.get("rule-providers", {}),
+            )
+        except NoSupportedNodesError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
     return render_yaml(compile_mihomo_config(config, nodes)), []
 
 
@@ -416,10 +428,11 @@ async def compile_workspace(body: dict) -> Response:
     if target not in _SUPPORTED_TARGETS:
         raise HTTPException(status_code=400, detail=f"unsupported target: {target}")
     config = workspace_to_mihomo_config(workspace)
-    output, _ = _render_output(target, workspace.proxies, config)
+    output, warnings = _render_output(target, workspace.proxies, config)
     if target == "singbox":
         return JSONResponse(json.loads(output))
-    return PlainTextResponse(output, media_type="text/yaml; charset=utf-8")
+    headers = {"X-Compile-Warnings": json.dumps(warnings, ensure_ascii=True)} if warnings else {}
+    return PlainTextResponse(output, media_type=_target_media_type(target), headers=headers)
 
 
 @router.post("/session")
@@ -450,7 +463,9 @@ def _profile_urls(profile_id: str, token: str) -> dict[str, object]:
         "subscribe_urls": {
             "clash": f"{base_url}&target=clash",
             "surge": f"{base_url}&target=surge",
+            "shadowrocket": f"{base_url}&target=shadowrocket",
         },
+        "config_urls": {"shadowrocket": f"{base_url}&target=shadowrocket-config"},
     }
 
 
@@ -601,6 +616,10 @@ def _parse_json_query(adapter: TypeAdapter, raw: str | None, label: str) -> Any:
 
 
 def _target_filename(target: str) -> str:
+    if target == "shadowrocket-config":
+        return "shadowrocket.conf"
+    if target == "shadowrocket":
+        return "shadowrocket.yaml"
     if target == "surge":
         return "surge.conf"
     if target == "clash":
@@ -609,7 +628,7 @@ def _target_filename(target: str) -> str:
 
 
 def _target_media_type(target: str) -> str:
-    return "text/plain; charset=utf-8" if target == "surge" else "text/yaml; charset=utf-8"
+    return "text/plain; charset=utf-8" if target in {"surge", "shadowrocket-config"} else "text/yaml; charset=utf-8"
 
 
 @router.get("/subscribe", response_class=PlainTextResponse)

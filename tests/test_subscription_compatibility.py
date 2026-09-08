@@ -1,9 +1,109 @@
 from __future__ import annotations
 
+import socket
+
 import pytest
+import httpx
 
 from app.core.parsers.clash import clash_to_ir, ir_to_clash_dict
+from app.core.parser import parse_clash_yaml_full
 from app.core.subscription import SubscriptionError, load_subscription
+from app.main import app
+
+
+@pytest.mark.asyncio
+async def test_universal_subscription_negotiates_mihomo_without_an_adapter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source_url = "https://example.com/api/v1/client/subscribe?token=test%2Btoken&types=all"
+    seen_urls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen_urls.append(str(request.url))
+        if request.url.path == "/api/v1/client/subscribe":
+            return httpx.Response(302, headers={"location": "/subscription?token=test%2Btoken&types=all"})
+        # Subscription panels choose a format from the client User-Agent.
+        if "clash.meta" not in request.headers.get("User-Agent", "").lower():
+            return httpx.Response(200, text="c3M6Ly9leGFtcGxl")
+        return httpx.Response(200, text="""
+dns:
+  proxy-server-nameserver: [223.5.5.5]
+proxies:
+  - {name: US-VLESS, type: vless, server: vless.example.com, port: 443, uuid: test-id, tls: true, flow: xtls-rprx-vision, reality-opts: {public-key: test-key, short-id: abcd}, client-fingerprint: chrome}
+  - {name: HK-HY2, type: hysteria2, server: hy.example.com, port: 443, password: test-password, obfs: salamander, obfs-password: test-obfs, ports: 20000-30000}
+  - {name: HK-TUIC, type: tuic, server: tuic.example.com, port: 443, uuid: test-id, password: test-password, congestion-controller: bbr, udp-relay-mode: native}
+  - {name: US-AnyTLS, type: anytls, server: anytls.example.com, port: 443, password: test-password, sni: edge.example.com, idle-session-check-interval: 30}
+""")
+
+    original_client = httpx.AsyncClient
+
+    def client_with_mock_transport(**kwargs: object) -> httpx.AsyncClient:
+        return original_client(**kwargs, transport=httpx.MockTransport(handler))
+
+    def resolve_public_host(hostname: str, *args: object, **kwargs: object) -> list:
+        assert hostname == "example.com"
+        return [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("93.184.216.34", 0))]
+
+    monkeypatch.delenv("SUBFLOW_SUBCONVERTER_URL", raising=False)
+    monkeypatch.delenv("SUBFLOW_SUBSCRIPTION_USER_AGENT", raising=False)
+    monkeypatch.setattr("app.core.fetcher.httpx.AsyncClient", client_with_mock_transport)
+    monkeypatch.setattr("socket.getaddrinfo", resolve_public_host)
+
+    nodes, raw_config = await load_subscription(source_url)
+
+    assert seen_urls == [source_url, "https://example.com/subscription?token=test%2Btoken&types=all"]
+    assert [node.protocol for node in nodes] == ["vless", "hysteria2", "tuic", "anytls"]
+    assert [ir_to_clash_dict(node) for node in nodes] == raw_config["proxies"]
+    assert raw_config["dns"]["proxy-server-nameserver"] == ["223.5.5.5"]
+
+    async with original_client(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/subscribe", params={"subscription_url": source_url, "target": "mihomo"})
+
+    assert response.status_code == 200
+    proxies, rendered = parse_clash_yaml_full(response.text)
+    assert proxies == raw_config["proxies"]
+    assert rendered["rules"][-1] == "MATCH,默认代理"
+    assert "RULE-SET,Claude,AI 服务" in rendered["rules"]
+    assert rendered["dns"]["proxy-server-nameserver"] == ["223.5.5.5"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("content", [
+    "ss://YWVzLTEyOC1nY206dGVzdA@hk.example.com:443#HK",
+    "c3M6Ly9ZV1Z6TFRFeU9DMW5ZMjA2ZEdWemRBQGhrLmV4YW1wbGUuY29tOjQ0MyNISw==",
+])
+async def test_forced_universal_format_reaches_the_configured_adapter(
+    monkeypatch: pytest.MonkeyPatch, content: str,
+) -> None:
+    source_url = "https://example.com/sub?token=test%2Btoken&flag=general&types=all"
+    adapter_requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "example.com":
+            assert str(request.url) == source_url
+            return httpx.Response(200, text=content)
+        assert request.url.host == "subconverter"
+        assert request.url.path == "/sub"
+        adapter_requests.append(request)
+        return httpx.Response(200, text="proxies:\n  - {name: HK, type: ss, server: hk.example.com, port: 443, cipher: aes-128-gcm, password: test}\n")
+
+    original_client = httpx.AsyncClient
+
+    def client_with_mock_transport(**kwargs: object) -> httpx.AsyncClient:
+        return original_client(**kwargs, transport=httpx.MockTransport(handler))
+
+    monkeypatch.setenv("SUBFLOW_SUBCONVERTER_URL", "http://subconverter:25500")
+    monkeypatch.setattr("httpx.AsyncClient", client_with_mock_transport)
+    monkeypatch.setattr("socket.getaddrinfo", lambda *args, **kwargs: [
+        (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("93.184.216.34", 0)),
+    ])
+
+    nodes, raw_config = await load_subscription(source_url)
+
+    assert [(node.name, node.protocol) for node in nodes] == [("HK", "ss")]
+    assert raw_config["source-format"] == "subconverter"
+    assert len(adapter_requests) == 1
+    assert dict(adapter_requests[0].url.params) == {"target": "clash", "url": source_url, "list": "true"}
 
 
 @pytest.mark.asyncio

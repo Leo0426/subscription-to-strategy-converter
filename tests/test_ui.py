@@ -12,7 +12,7 @@ def test_root_and_legacy_advanced_route_serve_the_same_simple_page() -> None:
     assert root.status_code == 200
     assert advanced.status_code == 200
     assert root.text == advanced.text
-    assert "/static/flow.js?v=26" in root.text
+    assert "/static/flow.js?v=27" in root.text
     assert "/static/flow.css?v=18" in root.text
     assert "/static/assets/subflow-logo.png" in root.text
 
@@ -76,7 +76,7 @@ def test_selected_service_outlets_are_sent_as_fine_grained_merge_rules() -> None
     assert "route_intent" not in script
 
 
-def test_page_generates_clash_mihomo_and_surge_profile_links() -> None:
+def test_page_generates_all_three_client_links_and_shadowrocket_policy() -> None:
     client = TestClient(app)
     response = client.get("/")
     script = client.get("/static/flow.js")
@@ -88,3 +88,9 @@ def test_page_generates_clash_mihomo_and_surge_profile_links() -> None:
     assert 'postJson("/workspace/preview"' in script.text
     assert 'postJson("/profiles"' in script.text
     assert "created.subscribe_urls.surge" in script.text
+    assert 'id="published-shadowrocket-url"' in response.text
+    assert 'id="published-shadowrocket-config-url"' in response.text
+    assert 'data-copy-output="shadowrocket-config"' in response.text
+    assert "created.subscribe_urls.shadowrocket" in script.text
+    assert "created.config_urls.shadowrocket" in script.text
+    assert "配置 → 添加配置" in response.text

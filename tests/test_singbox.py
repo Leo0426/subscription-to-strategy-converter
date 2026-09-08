@@ -253,7 +253,7 @@ def test_workspace_preview_rejects_singbox_for_leo(client: TestClient, monkeypat
     )
 
     assert preview.status_code == 422
-    assert "leo.yaml only supports Clash/Mihomo and Surge" in preview.text
+    assert "leo.yaml only supports Clash/Mihomo, Surge and Shadowrocket" in preview.text
 
 
 def test_subscribe_rejects_singbox_for_leo(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -276,7 +276,7 @@ def test_subscribe_rejects_singbox_for_leo(client: TestClient, monkeypatch: pyte
     )
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "leo.yaml only supports Clash/Mihomo and Surge targets"
+    assert response.json()["detail"] == "leo.yaml only supports Clash/Mihomo, Surge and Shadowrocket targets"
 
 
 def test_unsupported_target_returns_400(client: TestClient) -> None:

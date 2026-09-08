@@ -18,7 +18,7 @@ class SubscriptionError(ValueError):
 
 
 async def load_subscription(url: str) -> tuple[list[ProxyNode], dict]:
-    """Fetch a subscription URL, then parse Clash YAML or Surge config.
+    """Negotiate Mihomo for universal URLs, then parse Clash YAML or Surge config.
 
     Returns (normalized_nodes, raw_config_dict) where raw_config_dict is the
     full parsed YAML (used by the preview tree).
@@ -38,8 +38,9 @@ async def load_subscription(url: str) -> tuple[list[ProxyNode], dict]:
             if not is_subconverter_configured():
                 raise SubscriptionError(
                     "subscription returned unexpected content: expected Clash YAML or Surge "
-                    "config; configure SUBFLOW_SUBCONVERTER_URL for Base64 and URI "
-                    "subscription compatibility"
+                    "config. For universal subscriptions that force Base64 or URI output, "
+                    "use the provider's Clash/Mihomo link or configure "
+                    "SUBFLOW_SUBCONVERTER_URL for subscription compatibility"
                 ) from clash_exc
             try:
                 converted = await convert_subscription_to_clash(url)

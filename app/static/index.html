@@ -61,6 +61,9 @@
             <div><b>生成成功</b><span>按客户端复制对应的订阅链接。</span></div>
             <label class="result-line"><span>Clash / Mihomo</span><input id="published-clash-url" readonly /><button data-copy-output="clash" type="button">复制</button></label>
             <label class="result-line"><span>Surge 5.21+</span><input id="published-surge-url" readonly /><button data-copy-output="surge" type="button">复制</button></label>
+            <label class="result-line"><span>Shadowrocket 节点</span><input id="published-shadowrocket-url" readonly /><button data-copy-output="shadowrocket" type="button">复制</button></label>
+            <label class="result-line"><span>Shadowrocket 配置</span><input id="published-shadowrocket-config-url" readonly /><button data-copy-output="shadowrocket-config" type="button">复制</button></label>
+            <p class="inline-status">Shadowrocket：先在首页添加节点订阅，再到「配置 → 添加配置」导入配套配置并启用。更新时同步更新这两项，才能使用最新节点和 Leo 分流策略。</p>
             <p id="publish-reach-warning" class="inline-status is-error" hidden></p>
           </section>
         </div>
@@ -68,6 +71,6 @@
     </main>
 
     <div class="toast" id="toast" hidden role="status"></div>
-    <script src="/static/flow.js?v=26"></script>
+    <script src="/static/flow.js?v=27"></script>
   </body>
 </html>

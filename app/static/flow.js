@@ -219,6 +219,7 @@ function renderLeoReference() {
         <div class="reference-capability"><b>TUN</b><span>${state.leoSummary.has_tun ? "模板可用" : "未配置"}</span></div>
         <div class="reference-capability"><b>Mihomo</b><span>完整输出</span></div>
         <div class="reference-capability"><b>Surge 5.21+</b><span>兼容输出，跳过项会告警</span></div>
+        <div class="reference-capability"><b>Shadowrocket</b><span>节点订阅 + Leo 配置，跳过项会告警</span></div>
       </div>
     </details>`;
 }
@@ -396,6 +397,8 @@ async function generateSubscription() {
     const clashUrl = new URL(created.subscribe_urls.clash, location.origin);
     $("#published-clash-url").value = clashUrl.toString();
     $("#published-surge-url").value = new URL(created.subscribe_urls.surge, location.origin).toString();
+    $("#published-shadowrocket-url").value = new URL(created.subscribe_urls.shadowrocket, location.origin).toString();
+    $("#published-shadowrocket-config-url").value = new URL(created.config_urls.shadowrocket, location.origin).toString();
     showReachWarning(clashUrl.hostname);
     $("#publish-result").hidden = false;
     $("#generate-hint").textContent = "订阅已生成。";

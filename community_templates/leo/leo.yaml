@@ -345,8 +345,6 @@ rules:
 - GEOSITE,facebook,社交通讯
 - GEOSITE,bahamut,流媒体
 - GEOSITE,bilibili,流媒体
-- GEOSITE,gfw,默认代理
-- GEOSITE,geolocation-!cn,默认代理
 - DOMAIN-SUFFIX,edclub.com,默认代理
 - DOMAIN-KEYWORD,typingclub,默认代理
 - GEOSITE,category-games@cn,DIRECT
@@ -354,14 +352,15 @@ rules:
 - GEOSITE,twitter,社交通讯
 - GEOSITE,category-speedtest,默认代理
 - AND,((DST-PORT,53),(NOT,((IN-TYPE,Inner)))),默认代理
-- IN-NAME,in_mixed,默认代理
-- DST-PORT,10000-65535,默认代理
 - GEOSITE,category-scholar-!cn,默认代理
 - GEOSITE,pixiv,默认代理
 - AND,((NOT,((OR,((PROCESS-NAME,mihomo),(PROCESS-NAME,ClashMeta))))),(DST-PORT,853)),默认代理
 - GEOSITE,category-httpdns-cn,默认代理
 - GEOSITE,connectivity-check,默认代理
 - GEOSITE,googlefcm,Google
+# 专用服务先于广谱代理。
+- GEOSITE,gfw,默认代理
+- GEOSITE,geolocation-!cn,默认代理
 - GEOSITE,private,DIRECT
 - GEOSITE,category-public-tracker,DIRECT
 - GEOIP,private,DIRECT,no-resolve
@@ -381,4 +380,5 @@ rules:
 - PROCESS-NAME,tv.danmaku.bili,流媒体
 - DOMAIN-KEYWORD,bittorrent,默认代理
 - DOMAIN-KEYWORD,tracker,默认代理
+# 兜底不抢国内/私网直连。
 - MATCH,默认代理

@@ -723,3 +723,44 @@ def test_leo_builtin_china_and_private_catchalls_follow_named_service_rules() ->
                 f"named-service rule '{rule}' (index {index}) is shadowed by a broad "
                 f"China/private catch-all at index {earliest_catchall}"
             )
+
+
+def test_leo_service_categories_precede_broad_proxy_geosites() -> None:
+    # A destination can belong to both a named service and geolocation-!cn.
+    # Check the compiled order because that is what the client actually reads.
+    nodes = [_node("香港 01"), _node("美国 01")]
+    config = apply_template(load_template(LEO_TEMPLATE_ID), nodes)
+    rules = compile_mihomo_config(config, nodes)["rules"]
+    broad_proxy = min(
+        rules.index(rule)
+        for rule in ("GEOSITE,gfw,默认代理", "GEOSITE,geolocation-!cn,默认代理")
+    )
+    for index, rule in enumerate(rules):
+        parts = rule.split(",")
+        if parts[0] == "GEOSITE" and (
+            parts[2] in _NAMED_SERVICE_TARGETS or parts[1] == "category-games@cn"
+        ):
+            assert index < broad_proxy, f"service category shadowed: {rule}"
+
+
+def test_leo_generic_port_and_inbound_routes_do_not_bypass_direct_catchalls() -> None:
+    nodes = [_node("香港 01")]
+    config = apply_template(load_template(LEO_TEMPLATE_ID), nodes)
+    rules = compile_mihomo_config(config, nodes)["rules"]
+    # A NAS on :50001, a .cn site on :10443, or a named mixed listener must
+    # reach private/China matching before any generic proxy fallback.
+    last_direct_catchall = max(
+        rules.index(rule)
+        for rule in (
+            "GEOSITE,private,DIRECT",
+            "GEOIP,private,DIRECT,no-resolve",
+            "DOMAIN-SUFFIX,cn,DIRECT",
+            "GEOSITE,cn,DIRECT",
+            "GEOIP,cn,DIRECT,no-resolve",
+        )
+    )
+    for index, rule in enumerate(rules):
+        parts = rule.split(",")
+        if parts[0] in {"DST-PORT", "IN-NAME"} and parts[2] == "默认代理":
+            assert index > last_direct_catchall, f"direct catchall bypassed: {rule}"
+    assert rules[-1] == "MATCH,默认代理"
