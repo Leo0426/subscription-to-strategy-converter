@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.core.service_catalog import category_rules
+
 from copy import deepcopy
 from functools import lru_cache
 import json
@@ -152,44 +154,10 @@ def _streaming_groups() -> list[dict]:
     ]
 
 
-AI_RULES = [
-    "DOMAIN-SUFFIX,anthropic.com,Claude",
-    "DOMAIN-SUFFIX,claude.ai,Claude",
-    "DOMAIN-SUFFIX,openai.com,OpenAI",
-    "DOMAIN-SUFFIX,chatgpt.com,OpenAI",
-    "DOMAIN-SUFFIX,oaistatic.com,OpenAI",
-    "DOMAIN-SUFFIX,oaiusercontent.com,OpenAI",
-    "DOMAIN-SUFFIX,generativeai.google,Gemini",
-    "DOMAIN-SUFFIX,generativelanguage.googleapis.com,Gemini",
-    "DOMAIN-SUFFIX,perplexity.ai,Perplexity",
-    "DOMAIN-SUFFIX,cursor.com,Cursor",
-    "DOMAIN-SUFFIX,cursor.sh,Cursor",
-    "DOMAIN-SUFFIX,githubcopilot.com,GitHub Copilot",
-]
+AI_RULES = category_rules("ai")
+DEV_RULES = category_rules("developer")
+STREAMING_RULES = category_rules("streaming")
 
-DEV_RULES = [
-    "DOMAIN-SUFFIX,github.com,GitHub",
-    "DOMAIN-SUFFIX,githubusercontent.com,GitHub",
-    "DOMAIN-SUFFIX,npmjs.com,Developer",
-    "DOMAIN-SUFFIX,docker.com,Developer",
-    "DOMAIN-SUFFIX,docker.io,Developer",
-    "DOMAIN-SUFFIX,jetbrains.com,Developer",
-    "DOMAIN-SUFFIX,sdkman.io,Developer",
-    "DOMAIN-SUFFIX,visualstudio.com,Microsoft",
-    "DOMAIN-SUFFIX,microsoft.com,Microsoft",
-    "DOMAIN-SUFFIX,apple.com,Apple",
-]
-
-STREAMING_RULES = [
-    "DOMAIN-SUFFIX,netflix.com,Netflix",
-    "DOMAIN-SUFFIX,nflxvideo.net,Netflix",
-    "DOMAIN-SUFFIX,youtube.com,YouTube",
-    "DOMAIN-SUFFIX,googlevideo.com,YouTube",
-    "DOMAIN-SUFFIX,disneyplus.com,Disney",
-    "DOMAIN-SUFFIX,spotify.com,Spotify",
-    "DOMAIN-SUFFIX,t.me,Telegram",
-    "DOMAIN-SUFFIX,telegram.org,Telegram",
-]
 
 COMMON_RULES = [
     "DOMAIN-SUFFIX,local,DIRECT",

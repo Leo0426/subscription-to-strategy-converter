@@ -13,8 +13,8 @@ BASE_DIR = Path(__file__).resolve().parent
 
 app = FastAPI(
     title="Subflow Strategy Builder",
-    version="0.1.0",
-    description="Build, analyze, simulate, and compile proxy policy workspaces into Mihomo configs.",
+    version="5.0.0",
+    description="Manage service routing preferences and validate Mihomo, Surge and Shadowrocket subscriptions.",
 )
 
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
@@ -32,3 +32,11 @@ async def index() -> FileResponse:
 @app.get("/advanced", include_in_schema=False)
 async def advanced() -> FileResponse:
     return FileResponse(BASE_DIR / "static" / "index.html")
+
+
+@app.middleware("http")
+async def private_response_cache_control(request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith(("/profiles", "/subscribe")) or request.url.path in {"/preview", "/check", "/diagnose", "/render", "/convert"}:
+        response.headers["Cache-Control"] = "no-store"
+    return response

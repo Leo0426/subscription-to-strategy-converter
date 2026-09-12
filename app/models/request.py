@@ -20,6 +20,9 @@ class ConvertRequest(BaseModel):
     selected_policy: SelectedPolicy | None = None
     claude_policy: ClaudePolicy | None = None
     service_routes: list[ServiceRoute] = Field(default_factory=list)
+    publication_targets: list[Literal["mihomo", "surge", "shadowrocket"]] | None = Field(default=None, min_length=1, max_length=3)
+    profile_name: str = Field(default="", max_length=80)
+    policy_revision: str | None = Field(default=None, max_length=64)
 
     @field_validator("template", mode="before")
     @classmethod
@@ -38,6 +41,13 @@ class ConvertRequest(BaseModel):
     @model_validator(mode="after")
     def normalize_service_routes(self) -> "ConvertRequest":
         self.template = LEO_TEMPLATE_ID
+        if self.publication_targets is not None:
+            self.publication_targets = list(dict.fromkeys(self.publication_targets))
+        modern = any(route.mode != "legacy" for route in self.service_routes)
+        if modern and any(value is not None for value in (
+            self.selected_policy, self.route_intent, self.preset, self.rule_packs, self.custom_strategy,
+        )):
+            raise ValueError("service preferences cannot be combined with a legacy policy snapshot; upgrade explicitly")
         if self.rule_packs is not None:
             self.rule_packs = list(
                 dict.fromkeys(pack.strip().lower() for pack in self.rule_packs if pack.strip())

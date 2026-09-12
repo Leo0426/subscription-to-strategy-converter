@@ -533,7 +533,7 @@ def test_general_section_fields() -> None:
     assert "loglevel" in result
     assert "dns-server = 223.5.5.5, 119.29.29.29" in result
     assert "skip-proxy" in result
-    assert "bypass-system" in result
+    assert "bypass-system" not in result
     assert "proxy-test-url = http://www.apple.com/library/test/success.html" in result
     assert "test-timeout = 3" in result
 

@@ -91,10 +91,24 @@ class ClaudePolicy(BaseModel):
 
 
 class ServiceRoute(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     service: str = Field(min_length=1, max_length=80)
     enabled: bool = True
+    mode: Literal["legacy", "fixed", "manual", "fallback"] = "legacy"
     egress: str | None = Field(default=None, max_length=160)
     fallback: str | None = Field(default=None, max_length=160)
+
+    @model_validator(mode="after")
+    def require_explicit_targets(self) -> "ServiceRoute":
+        if self.enabled and self.mode != "legacy":
+            if not self.egress:
+                raise ValueError("service egress is required")
+            if self.mode == "fallback" and (not self.fallback or self.fallback == self.egress):
+                raise ValueError("failover needs a different explicit backup node")
+            if self.mode != "fallback" and self.fallback:
+                raise ValueError("only failover mode accepts a backup")
+        return self
 
     @field_validator("service")
     @classmethod

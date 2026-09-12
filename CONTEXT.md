@@ -171,6 +171,7 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - `ProxyNode` is the only internal representation of a proxy — never pass raw dicts across module boundaries
 - Clash fields not yet modeled by `ProxyNode` must survive Mihomo round trips through the private `_clash_passthrough` payload; policy code must not depend on that payload
 - A non-empty Clash source `dns.proxy-server-nameserver` is a node-connectivity hint and must survive into the Mihomo artifact; Leo continues to own all other traffic-domain DNS policy
+- Surge compilation reports `unsupported_node_dns` when emitted domain-backed nodes need node-only resolver settings that it cannot preserve; diagnostics must never expose resolver URLs or subscriber tokens, and must not silently widen these settings to all traffic-domain DNS
 - Subconverter is an opt-in input compatibility Adapter used only after direct Clash/Surge parsing fails; it never owns templates, rules, target rendering, or the Profile lifecycle
 - Universal subscription URLs negotiate Mihomo/Clash.Meta content through the fetcher's default User-Agent, overridable with `SUBFLOW_SUBSCRIPTION_USER_AGENT`; URL parameters remain intact and redirect destinations retain the same validation. Forced Base64/URI inputs still require the opt-in compatibility Adapter.
 - Every URL forwarded to an external fetcher (subscription source, Subconverter) must pass the same DNS-rebinding check as `fetch_subscription()`; a hostname that resolves to a private/loopback IP is rejected before the request is made
@@ -187,21 +188,21 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - All template IDs from the community are prefixed `local:` (e.g. `local:community_templates/leo/leo.yaml`)
 - Sessions in `app/core/sessions.py` are in-memory only; they do not persist across restarts
 - Profiles persist in SQLite; access requires both the profile ID and an independent token whose hash is stored in the database
-- A Profile has one source subscription, a PolicySnapshot, and target-specific Clash/Mihomo, Surge and paired Shadowrocket publications
+- A Profile has one source subscription, service preferences (or a legacy PolicySnapshot), and target-specific Clash/Mihomo, Surge and paired Shadowrocket publications
 - Shadowrocket node subscriptions and companion policy configs have distinct artifact keys. Both share the same Profile/token; users update both resources to keep node names and policy-group references synchronized (ADR 0013).
 - A Profile may serve its last successful artifact only for an external source dependency failure and must mark it with `X-Subflow-Stale: true`
 - Updating a Profile invalidates all previously compiled artifacts before the new intent can be served
-- A TemplatePolicyTransform must preserve provider URLs, rule order, DNS/TUN settings, and every non-Claude policy edge
-- Claude customization requires a recognizable Claude rule/provider in the selected template; it never injects an application-owned domain list
+- Legacy Claude transforms preserve provider URLs, rule order, DNS/TUN settings, and every non-Claude policy edge. Modern service transforms prepend catalog rules and retarget only that service's owned provider/GEOSITE references while preserving DNS/TUN and unrelated routes (ADR 0014).
+- Legacy Claude customization requires a recognizable Claude rule/provider in the selected template. Modern ServiceRoute modes use the shared service catalog (ADR 0014).
 - Surge direct service transforms fail closed when they require incompatible template semantics; normal Profile compilation is best-effort and reports skipped protocols and MRS rule sets through warnings
 - Protocol and client breadth must not bypass `PolicyWorkspace` or duplicate a mature conversion engine without a demonstrated semantic requirement
 - New service-specific routing capabilities extend `ServiceRoute`; they must not introduce a parallel Profile or publishing lifecycle
 - `SelectedPolicy.mode=merge` is additive for legacy callers; the structured composer uses `replace` to own proxy groups, rule providers, and ordered rules as one validated policy graph
 - New product Profiles and public conversion interfaces use exactly `local:community_templates/leo/leo.yaml`; other template IDs fail validation
-- RulePackSelection is the default product customization boundary; PolicyPreset only supplies a default selection and never prevents individual card changes
+- Modern workbench Profiles save ServiceRoute preferences, not copied rule graphs. RulePackSelection and PolicyPreset remain legacy API composition boundaries (ADR 0014).
 - RouteIntent is an optional egress override for selected RulePacks; its NodePools compile into NodeSelectors and its ServiceRoutes replace the corresponding target-group members
 - Expert composition replaces the complete PolicySnapshot and does not combine implicitly with RouteIntent changes
-- PolicyWorkbench keeps the common creation path on one page and exposes only fine-grained ServiceRoute overrides; template structure and RuleSource evidence remain queryable through the public ledger
+- PolicyWorkbench keeps creation, stable-link editing, client validation, explicit legacy upgrades and optional service diagnosis on one page and exposes only fine-grained ServiceRoute overrides; template structure and RuleSource evidence remain queryable through the public ledger
 - A stored PolicySnapshot does not automatically merge later PolicyPreset changes; updating from a preset is an explicit reset operation
 - `NodeSelector` references are expanded against the latest upstream `ProxyNode` inventory on every preview/render/Profile subscription request; unknown selectors fail closed and selectors producing an empty group are publish-blocking errors
 - Rules after the first `MATCH` or `FINAL` are unreachable and must be reported by the analyzer
@@ -214,6 +215,15 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - RuleProviders hosted where the client has no direct route must declare `proxy: <group>`; `provider_egress.py` owns that decision for both the compiler and the analyzer
 - The published Subscription URL host is unknowable from the request; the page guesses `location.origin` and `SUBFLOW_PUBLIC_BASE_URL` overrides it for clients running on another host
 - There is no Release/ProfileRevision history or rollback; a Profile keeps only its current intent and last-successful artifact per target (ADR 0012)
+
+## Subflow 5 workbench boundaries
+
+- `community_templates/leo/services.json` owns service labels, domain rules, dedicated provider/GEOSITE references and allowed probe URLs; `app/core/service_catalog.py` serves it and `scripts/sync-service-rules.py --check` detects standalone Leo drift.
+- `ServiceRoute.mode` is `fixed`, `manual`, `fallback`, or legacy. No route means follow Leo. Fixed means exactly one node; fallback requires two explicit nodes and generic connectivity health checks, which cannot establish service acceptance.
+- `publication_targets` opts new workbench writes into compile checks for every selected client. Hard failures block creation/update. Legacy API writes keep their previous validation behavior.
+- `/services`, `/check`, `/diagnose`, `/runtime/capabilities`, and token-protected `/profiles/{id}/upgrade-preview` support the single page. Upgrade preview makes no database mutation; PUT keeps ID/token/URLs stable.
+- Modern preferences consume current Leo/catalog on each compilation; `policy_revision` identifies the base/catalog at last save, not a full historical revision. Legacy snapshots need explicit upgrade to adopt current service rules.
+- Runtime adapters in `app/core/runtime_diagnostics.py` only use operator-configured controller/CLI locations, never browser-provided endpoints or credentials. Mihomo reads group selection (not observed domain matching); Surge reads a live rule explanation. Both probe an observed node without changing client selections. No success claim extends to full browser login/chat.
 
 ## ADRs
 
@@ -228,6 +238,7 @@ Current (accepted, authoritative for their area):
 - [ADR 0011: Service-level rule source consolidation](docs/adr/0011-service-level-rule-source-consolidation.md)
 - [ADR 0012: No Release/ProfileRevision rollback history](docs/adr/0012-no-release-rollback-history.md)
 - [ADR 0013: Shadowrocket paired policy publication](docs/adr/0013-shadowrocket-paired-policy-publication.md)
+- [ADR 0014: Service intent workbench and explicit client validation](docs/adr/0014-intent-workbench-and-client-validation.md) — supersedes ADR 0009's default snapshot assembly; legacy boundaries remain
 
 Superseded (kept only as decision history; do not treat as current guidance):
 

@@ -234,9 +234,22 @@ rule-providers:
     path: ./rule_provider/leo/515.yaml
     interval: 86400
 rules:
+# Managed service rules: services.json
+- DOMAIN-SUFFIX,openai.com,AI 服务
+- DOMAIN-SUFFIX,chatgpt.com,AI 服务
+- DOMAIN-SUFFIX,oaistatic.com,AI 服务
+- DOMAIN-SUFFIX,oaiusercontent.com,AI 服务
+- DOMAIN-SUFFIX,oaistatsig.com,AI 服务
+- DOMAIN,cdn.openaimerge.com,AI 服务
+- DOMAIN,cdn.workos.com,AI 服务
+- DOMAIN,forwarder.workos.com,AI 服务
+- DOMAIN,images.workoscdn.com,AI 服务
+- DOMAIN,setup.workos.com,AI 服务
+- DOMAIN,workos.imgix.net,AI 服务
+- DOMAIN-SUFFIX,challenges.cloudflare.com,AI 服务
+# End managed service rules
 - DOMAIN-SUFFIX,tokfinity.com,DIRECT
 - DOMAIN-SUFFIX,hcaptcha.com,AI 服务
-- DOMAIN-SUFFIX,challenges.cloudflare.com,AI 服务
 - DOMAIN-SUFFIX,recaptcha.net,AI 服务
 - DOMAIN-SUFFIX,gvt1.com,Google
 # WebRTC (STUN/TURN) — inlined from GitMetaio/Surfing WebRTC.list; kept native
@@ -271,25 +284,15 @@ rules:
 - DST-PORT,5349,DIRECT
 - DST-PORT,10000,DIRECT
 - DST-PORT,5350,DIRECT
-# formulae.brew.sh 托管在 GitHub Pages(185.199.108-111.153)，该段被 GFW 按 SNI
-# 阻断，直连必然在 TLS 握手阶段被 RST；固定走开发服务组，且需先于广义厂商
-# RuleProvider 命中。
+# Homebrew Formula API 先于广义厂商源走开发服务。
 - DOMAIN,formulae.brew.sh,开发服务
-# iCloud 与中国区服务数据面已知可直连，先命中避免后面的广义厂商 RuleProvider
-# 将其绕到远端节点。
+# 中国区服务与 iCloud 先于广义厂商源直连。
 - GEOSITE,apple@cn,DIRECT
 - GEOSITE,icloud,DIRECT
 - GEOSITE,microsoft@cn,DIRECT
 - DOMAIN-SUFFIX,ls.apple.com,DIRECT
-# 精确例外必须先于广义厂商 Provider，否则会被 msedge.net 等后缀
-# 提前吞掉，模板声明的拒绝或 AI 出口不会生效。
+# 精确例外先于广义厂商源。
 - DOMAIN,t-ring-fdv2.msedge.net,REJECT,no-resolve
-# 这些核心域名同时是 Surge 的保底契约；Surge 无法读取 ai-4 的 domain
-# 裸列表，也不支持后面的 GEOSITE。
-- DOMAIN-SUFFIX,openai.com,AI 服务
-- DOMAIN-SUFFIX,chatgpt.com,AI 服务
-- DOMAIN-SUFFIX,oaistatic.com,AI 服务
-- DOMAIN-SUFFIX,oaiusercontent.com,AI 服务
 - DOMAIN-SUFFIX,api.microsoftapp.net,AI 服务
 - DOMAIN-SUFFIX,copilot.azure.com,AI 服务
 - DOMAIN-SUFFIX,openai.azure.com,AI 服务

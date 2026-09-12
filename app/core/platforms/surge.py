@@ -456,6 +456,9 @@ def _rule_to_surge_line(
 # ── [General] section ──────────────────────────────────────────────────────
 
 
+_GENERAL_DNS_SERVERS = ("223.5.5.5", "119.29.29.29")
+
+
 def _proxy_hostnames(nodes: list[ProxyNode]) -> list[str]:
     proxy_hostnames: list[str] = []
     for node in nodes:
@@ -474,14 +477,13 @@ def _general_section() -> str:
     lines = [
         "[General]",
         "loglevel = notify",
-        "dns-server = 223.5.5.5, 119.29.29.29",
+        f"dns-server = {', '.join(_GENERAL_DNS_SERVERS)}",
         "proxy-test-url = http://www.apple.com/library/test/success.html",
         "test-timeout = 3",
         (
             "skip-proxy = 127.0.0.1, 192.168.0.0/16, 10.0.0.0/8, "
             "172.16.0.0/12, 100.64.0.0/10, localhost, *.local"
         ),
-        "bypass-system = true",
     ]
     return "\n".join(lines)
 
@@ -498,6 +500,44 @@ def _host_section(nodes: list[ProxyNode]) -> str | None:
     return "\n".join(lines)
 
 
+def _node_dns_warning(dns_config: dict[str, Any] | None) -> dict | None:
+    """Report node-only resolver semantics without widening their DNS scope.
+
+    Surge's documented proxy-server lookup bypasses [Host] entries, so copying
+    resolver URLs there cannot promise node DNS preservation. Putting them in
+    [General] would instead change resolution for all traffic domains.
+    https://manual.nssurge.com/dns/local-dns-mapping.html
+    """
+    if not isinstance(dns_config, dict):
+        return None
+    fields: list[str] = []
+    nameservers = dns_config.get("proxy-server-nameserver")
+    if isinstance(nameservers, str):
+        nameservers = [nameservers]
+    if nameservers:
+        matches_general = (
+            isinstance(nameservers, list)
+            and all(isinstance(value, str) for value in nameservers)
+            and {value.strip() for value in nameservers} == set(_GENERAL_DNS_SERVERS)
+        )
+        if not matches_general:
+            fields.append("proxy-server-nameserver")
+    if dns_config.get("proxy-server-nameserver-policy"):
+        fields.append("proxy-server-nameserver-policy")
+    if not fields:
+        return None
+    # Resolver URLs may carry subscriber tokens; never include their values or
+    # policy domains in diagnostics, which are also sent in response headers.
+    return {
+        "code": "unsupported_node_dns",
+        "fields": fields,
+        "suggestion": (
+            "Surge 无法等价保留这些节点专用 DNS 设置；代理服务器域名不使用 "
+            "[Host] 的 server: 映射。已保留当前通用 DNS，请在客户端核实节点解析"
+        ),
+    }
+
+
 # ── Main compiler ──────────────────────────────────────────────────────────
 
 
@@ -506,13 +546,16 @@ def build_surge_config(
     proxy_groups: list[Any],
     rules: list[Any],
     rule_providers: dict[str, Any],
+    *,
+    dns_config: dict[str, Any] | None = None,
 ) -> tuple[str, list[dict]]:
     """Compile a complete Surge .conf string.
 
     Returns ``(conf, warnings)``. Unsupported node protocols and rule-set URLs
-    are reported and skipped while compilation continues.
+    are reported and skipped while compilation continues. Node-only DNS
+    settings that cannot be preserved are reported without changing their scope.
     """
-    return build_ini_config(
+    conf, warnings = build_ini_config(
         nodes, proxy_groups, rules, rule_providers,
         dialect=IniDialect(
             name="Surge",
@@ -524,3 +567,14 @@ def build_surge_config(
             host=_host_section,
         ),
     )
+    unsupported_protocols = {
+        warning["value"]
+        for warning in warnings
+        if warning.get("code") == "unsupported_protocol"
+    }
+    emitted_nodes = [node for node in nodes if node.protocol not in unsupported_protocols]
+    if _proxy_hostnames(emitted_nodes):
+        dns_warning = _node_dns_warning(dns_config)
+        if dns_warning is not None:
+            warnings.append(dns_warning)
+    return conf, warnings

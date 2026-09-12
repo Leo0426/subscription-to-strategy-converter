@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 
 from app.ir import ProxyNode
 from app.models.strategy import ClaudePolicy, ServiceRoute
+from app.core.service_catalog import service_catalog, service_rules
 
 
 class TemplatePolicyTransformError(ValueError):
@@ -35,6 +36,9 @@ def transform_service_routes(
     for route in routes:
         if not route.enabled:
             continue
+        if route.mode != "legacy":
+            result = _transform_current_service(result, nodes, route)
+            continue
         if route.service != "claude":
             raise TemplatePolicyTransformError(
                 f"unsupported service route: {route.service}"
@@ -49,6 +53,45 @@ def transform_service_routes(
             ),
             target=target,
         )
+    return result
+
+
+def _transform_current_service(config: dict, nodes: list[ProxyNode], route: ServiceRoute) -> dict:
+    service = next((item for item in service_catalog() if item["id"] == route.service), None)
+    if service is None:
+        raise TemplatePolicyTransformError(f"unknown service: {route.service}")
+    node_names = {node.name for node in nodes}
+    groups = {group["name"] for group in config.get("proxy-groups", [])}
+    allowed = node_names | {"DIRECT", "REJECT"}
+    if route.mode == "manual":
+        allowed |= groups - {service["group"]}
+    if route.egress not in allowed:
+        raise TemplatePolicyTransformError(f"{service['label']} 的出口不存在或不符合模式：{route.egress}")
+    if route.mode == "fallback" and (route.egress not in node_names or route.fallback not in node_names):
+        raise TemplatePolicyTransformError("故障切换的主备必须都是当前订阅中的节点")
+    result = deepcopy(config)
+    group = {"name": service["group"], "type": "select", "proxies": [route.egress]}
+    if route.mode == "fallback":
+        group.update(type="fallback", proxies=[route.egress, route.fallback],
+                     url="https://cp.cloudflare.com/generate_204", interval=600,
+                     timeout=5000, **{"expected-status": 204})
+    result["proxy-groups"] = [g for g in result["proxy-groups"] if g["name"] != group["name"]] + [group]
+    overrides = service_rules(service)
+    # Providers for a single service (not broad shared providers) follow its override.
+    original = []
+    matches = {rule.rsplit(",", 1)[0] for rule in overrides}
+    for rule in result.get("rules", []):
+        parts = str(rule).split(",")
+        owned_reference = len(parts) >= 3 and (
+            (parts[0] == "RULE-SET" and parts[1] in service.get("rule_providers", []))
+            or (parts[0] == "GEOSITE" and parts[1] in service.get("geosite_tags", []))
+        )
+        if owned_reference:
+            parts[2] = group["name"]
+            overrides.append(",".join(parts))
+        elif str(rule).rsplit(",", 1)[0] not in matches:
+            original.append(rule)
+    result["rules"] = list(dict.fromkeys(overrides + original))
     return result
 
 

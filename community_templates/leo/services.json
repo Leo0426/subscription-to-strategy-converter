@@ -1,0 +1,444 @@
+{
+  "version": 1,
+  "services": [
+    {
+      "id": "claude",
+      "group": "Claude",
+      "label": "Claude",
+      "category": "ai",
+      "default_target": "AI 服务",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,anthropic.com",
+          "template_inline": false
+        },
+        {
+          "match": "DOMAIN-SUFFIX,claude.ai",
+          "template_inline": false
+        }
+      ],
+      "probe_urls": [
+        "https://claude.ai"
+      ],
+      "destinations": [
+        "anthropic.com",
+        "claude.ai"
+      ],
+      "rule_providers": [
+        "Claude"
+      ],
+      "geosite_tags": []
+    },
+    {
+      "id": "openai",
+      "group": "OpenAI",
+      "label": "ChatGPT / OpenAI",
+      "category": "ai",
+      "default_target": "AI 服务",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,openai.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN-SUFFIX,chatgpt.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN-SUFFIX,oaistatic.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN-SUFFIX,oaiusercontent.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN-SUFFIX,oaistatsig.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN,cdn.openaimerge.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN,cdn.workos.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN,forwarder.workos.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN,images.workoscdn.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN,setup.workos.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN,workos.imgix.net",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN-SUFFIX,challenges.cloudflare.com",
+          "template_inline": true
+        }
+      ],
+      "probe_urls": [
+        "https://chatgpt.com",
+        "https://cdn.openaimerge.com/initialize.js"
+      ],
+      "destinations": [
+        "openai.com",
+        "chatgpt.com",
+        "oaistatic.com",
+        "oaiusercontent.com",
+        "oaistatsig.com",
+        "cdn.openaimerge.com",
+        "cdn.workos.com",
+        "forwarder.workos.com",
+        "images.workoscdn.com",
+        "setup.workos.com",
+        "workos.imgix.net",
+        "challenges.cloudflare.com"
+      ],
+      "rule_providers": [],
+      "geosite_tags": [
+        "openai"
+      ]
+    },
+    {
+      "id": "gemini",
+      "group": "Gemini",
+      "label": "Gemini",
+      "category": "ai",
+      "default_target": "AI 服务",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,generativeai.google",
+          "template_inline": false
+        },
+        {
+          "match": "DOMAIN-SUFFIX,generativelanguage.googleapis.com",
+          "template_inline": false
+        }
+      ],
+      "probe_urls": [
+        "https://gemini.google.com"
+      ],
+      "destinations": [
+        "generativeai.google",
+        "generativelanguage.googleapis.com"
+      ],
+      "rule_providers": [],
+      "geosite_tags": []
+    },
+    {
+      "id": "perplexity",
+      "group": "Perplexity",
+      "label": "Perplexity",
+      "category": "ai",
+      "default_target": "AI 服务",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,perplexity.ai",
+          "template_inline": false
+        }
+      ],
+      "probe_urls": [],
+      "destinations": [
+        "perplexity.ai"
+      ],
+      "rule_providers": [],
+      "geosite_tags": []
+    },
+    {
+      "id": "cursor",
+      "group": "Cursor",
+      "label": "Cursor",
+      "category": "ai",
+      "default_target": "AI 服务",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,cursor.com",
+          "template_inline": false
+        },
+        {
+          "match": "DOMAIN-SUFFIX,cursor.sh",
+          "template_inline": false
+        }
+      ],
+      "probe_urls": [],
+      "destinations": [
+        "cursor.com",
+        "cursor.sh"
+      ],
+      "rule_providers": [],
+      "geosite_tags": []
+    },
+    {
+      "id": "github-copilot",
+      "group": "GitHub Copilot",
+      "label": "GitHub Copilot",
+      "category": "ai",
+      "default_target": "AI 服务",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,githubcopilot.com",
+          "template_inline": false
+        }
+      ],
+      "probe_urls": [],
+      "destinations": [
+        "githubcopilot.com"
+      ],
+      "rule_providers": [],
+      "geosite_tags": []
+    },
+    {
+      "id": "github",
+      "group": "GitHub",
+      "label": "GitHub",
+      "category": "developer",
+      "default_target": "开发服务",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,github.com",
+          "template_inline": false
+        },
+        {
+          "match": "DOMAIN-SUFFIX,githubusercontent.com",
+          "template_inline": false
+        }
+      ],
+      "probe_urls": [
+        "https://github.com"
+      ],
+      "destinations": [
+        "github.com",
+        "githubusercontent.com"
+      ],
+      "rule_providers": [
+        "GitHub-5"
+      ],
+      "geosite_tags": [
+        "github"
+      ]
+    },
+    {
+      "id": "developer",
+      "group": "Developer",
+      "label": "Developer",
+      "category": "developer",
+      "default_target": "开发服务",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,npmjs.com",
+          "template_inline": false
+        },
+        {
+          "match": "DOMAIN-SUFFIX,docker.com",
+          "template_inline": false
+        },
+        {
+          "match": "DOMAIN-SUFFIX,docker.io",
+          "template_inline": false
+        },
+        {
+          "match": "DOMAIN-SUFFIX,jetbrains.com",
+          "template_inline": false
+        },
+        {
+          "match": "DOMAIN-SUFFIX,sdkman.io",
+          "template_inline": false
+        }
+      ],
+      "probe_urls": [],
+      "destinations": [
+        "npmjs.com",
+        "docker.com",
+        "docker.io",
+        "jetbrains.com",
+        "sdkman.io"
+      ],
+      "rule_providers": [],
+      "geosite_tags": []
+    },
+    {
+      "id": "microsoft",
+      "group": "Microsoft",
+      "label": "Microsoft",
+      "category": "developer",
+      "default_target": "Microsoft",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,visualstudio.com",
+          "template_inline": false
+        },
+        {
+          "match": "DOMAIN-SUFFIX,microsoft.com",
+          "template_inline": false
+        }
+      ],
+      "probe_urls": [],
+      "destinations": [
+        "visualstudio.com",
+        "microsoft.com"
+      ],
+      "rule_providers": [
+        "Microsoft-6"
+      ],
+      "geosite_tags": [
+        "microsoft"
+      ]
+    },
+    {
+      "id": "apple",
+      "group": "Apple",
+      "label": "Apple",
+      "category": "developer",
+      "default_target": "Apple",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,apple.com",
+          "template_inline": false
+        }
+      ],
+      "probe_urls": [],
+      "destinations": [
+        "apple.com"
+      ],
+      "rule_providers": [
+        "Apple-4"
+      ],
+      "geosite_tags": [
+        "apple",
+        "apple-tvplus",
+        "apple-cn"
+      ]
+    },
+    {
+      "id": "netflix",
+      "group": "Netflix",
+      "label": "Netflix",
+      "category": "streaming",
+      "default_target": "流媒体",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,netflix.com",
+          "template_inline": false
+        },
+        {
+          "match": "DOMAIN-SUFFIX,nflxvideo.net",
+          "template_inline": false
+        }
+      ],
+      "probe_urls": [],
+      "destinations": [
+        "netflix.com",
+        "nflxvideo.net"
+      ],
+      "rule_providers": [],
+      "geosite_tags": [
+        "netflix"
+      ]
+    },
+    {
+      "id": "youtube",
+      "group": "YouTube",
+      "label": "YouTube",
+      "category": "streaming",
+      "default_target": "流媒体",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,youtube.com",
+          "template_inline": false
+        },
+        {
+          "match": "DOMAIN-SUFFIX,googlevideo.com",
+          "template_inline": false
+        }
+      ],
+      "probe_urls": [],
+      "destinations": [
+        "youtube.com",
+        "googlevideo.com"
+      ],
+      "rule_providers": [
+        "YouTube-6"
+      ],
+      "geosite_tags": [
+        "youtube"
+      ]
+    },
+    {
+      "id": "disney",
+      "group": "Disney",
+      "label": "Disney",
+      "category": "streaming",
+      "default_target": "流媒体",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,disneyplus.com",
+          "template_inline": false
+        }
+      ],
+      "probe_urls": [],
+      "destinations": [
+        "disneyplus.com"
+      ],
+      "rule_providers": [],
+      "geosite_tags": [
+        "disney"
+      ]
+    },
+    {
+      "id": "spotify",
+      "group": "Spotify",
+      "label": "Spotify",
+      "category": "streaming",
+      "default_target": "流媒体",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,spotify.com",
+          "template_inline": false
+        }
+      ],
+      "probe_urls": [],
+      "destinations": [
+        "spotify.com"
+      ],
+      "rule_providers": [],
+      "geosite_tags": [
+        "spotify"
+      ]
+    },
+    {
+      "id": "telegram",
+      "group": "Telegram",
+      "label": "Telegram",
+      "category": "streaming",
+      "default_target": "社交通讯",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,t.me",
+          "template_inline": false
+        },
+        {
+          "match": "DOMAIN-SUFFIX,telegram.org",
+          "template_inline": false
+        }
+      ],
+      "probe_urls": [],
+      "destinations": [
+        "t.me",
+        "telegram.org"
+      ],
+      "rule_providers": [
+        "Telegram"
+      ],
+      "geosite_tags": []
+    }
+  ]
+}

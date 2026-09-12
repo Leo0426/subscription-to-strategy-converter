@@ -6,6 +6,7 @@ from typing import Any
 
 from app.core.template_engine import AI_RULES, COMMON_RULES, DEV_RULES, PRESET_TEMPLATES, STREAMING_RULES
 from app.models.strategy import SelectedPolicy
+from app.core.service_catalog import category_rules, service_catalog
 
 
 _CATEGORY_META = {
@@ -70,13 +71,14 @@ def list_rule_packs() -> dict[str, Any]:
         for group in config["proxy-groups"]
         if isinstance(group, dict) and group.get("name")
     }
-    business_rules = AI_RULES + DEV_RULES + STREAMING_RULES
+    business_rules = category_rules("ai") + category_rules("developer") + category_rules("streaming")
+    service_categories = {service["group"]: service["category"] for service in service_catalog()}
     rules_by_target: dict[str, list[str]] = {}
     categories: dict[str, str] = {}
     for rule in business_rules:
         target = _rule_target(rule)
         rules_by_target.setdefault(target, []).append(rule)
-        categories.setdefault(target, _category_for_rule(rule))
+        categories.setdefault(target, service_categories[target])
 
     packs: list[dict[str, Any]] = []
     for target, rules in rules_by_target.items():

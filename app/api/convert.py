@@ -10,6 +10,10 @@ from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from pydantic import AnyHttpUrl, TypeAdapter, ValidationError
 
 from app.core.config_tree import build_config_tree
+from app.core.service_catalog import catalog_revision, service_catalog
+from app.core.workbench import service_report, profile_mode
+from app.core.runtime_diagnostics import diagnose_runtime, runtime_capabilities
+from app.models.workbench import DiagnoseRequest
 from app.core.parsers.clash import ir_to_clash_dict
 from app.core.platforms.singbox import build_singbox_config
 from app.core.platforms.surge import build_surge_config
@@ -319,6 +323,7 @@ def _render_output(target: str, nodes: list[ProxyNode], config: dict) -> tuple[s
             config.get("proxy-groups", []),
             config.get("rules", []),
             config.get("rule-providers", {}),
+            dns_config=config.get("dns"),
         )
     if render_target in {"shadowrocket", "shadowrocket-config"}:
         try:
@@ -348,7 +353,7 @@ async def _render_config(inputs: RenderInputs) -> tuple[int, str, list[dict]]:
         if inputs.claude_policy is not None
         else []
     )
-    has_claude_route = any(route.enabled and route.service == "claude" for route in routes)
+    has_claude_route = any(route.enabled and route.service == "claude" and route.mode == "legacy" for route in routes)
     if inputs.target == "surge" and has_claude_route and warnings:
         protocols = sorted(
             {str(warning.get("value")) for warning in warnings if warning.get("code") == "unsupported_protocol"}
@@ -435,6 +440,82 @@ async def compile_workspace(body: dict) -> Response:
     return PlainTextResponse(output, media_type=_target_media_type(target), headers=headers)
 
 
+@router.get("/services")
+async def services() -> dict:
+    return {"revision": catalog_revision(), "services": service_catalog()}
+
+
+async def _check_request(request: ConvertRequest) -> dict:
+    request = _resolve_product_request(request)
+    nodes, config, _ = await _build_config(RenderInputs.from_request(request))
+    findings = workspace_to_dict(analyze_workspace(config_to_workspace(config, nodes)))
+    clients = []
+    for target in request.publication_targets or [request.target]:
+        warnings = []
+        errors = []
+        try:
+            output, warnings = _render_output(target, nodes, config)
+            if target == "shadowrocket":
+                _, policy_warnings = _render_output("shadowrocket-config", nodes, config)
+                warnings += policy_warnings
+            unsupported = {item.get("value") for item in warnings if item.get("code") == "unsupported_protocol"}
+            supported = {node.name for node in nodes if node.protocol not in unsupported}
+            if not supported:
+                errors.append("该客户端没有可用的节点协议")
+            for route in request.service_routes:
+                if not route.enabled or route.mode == "legacy":
+                    continue
+                for chosen in (route.egress, route.fallback):
+                    if chosen and chosen in {n.name for n in nodes} and chosen not in supported:
+                        errors.append(f"{route.service} 指定节点 {chosen} 无法导出到该客户端")
+            groups_lost = {group for w in warnings if w.get("code") == "unavailable_proxy_groups" for group in w.get("groups", [])}
+            for route in request.service_routes:
+                if route.enabled and route.egress in groups_lost:
+                    errors.append(f"{route.service} 指定策略组在该客户端没有可用节点")
+        except (HTTPException, ValueError) as exc:
+            errors.append(str(exc.detail if isinstance(exc, HTTPException) else exc))
+        clients.append({"target": target, "status": "error" if errors else ("warning" if warnings else "passed"),
+                        "warnings": warnings, "errors": errors})
+    return {"can_publish": not any(f["severity"] == "error" for f in findings) and not any(c["errors"] for c in clients),
+            "node_count": len(nodes), "findings": findings, "clients": clients,
+            "services": service_report(config, nodes), "revision": catalog_revision(),
+            "runtime": {"status": "not_tested", "actual_node": None,
+                        "message": "尚未连接客户端；配置检查不代表实际访问、登录或对话已通过。"}}
+
+
+@router.get("/runtime/capabilities")
+async def runtime_connections() -> dict:
+    return runtime_capabilities()
+
+
+@router.post("/diagnose")
+async def diagnose(request: DiagnoseRequest) -> dict:
+    service = next((s for s in service_catalog() if s["id"] == request.service), None)
+    if service is None:
+        raise HTTPException(status_code=400, detail="unknown service")
+    nodes, config, _ = await _build_config(RenderInputs.from_request(_resolve_product_request(request.request)))
+    report = service_report(config, nodes, request.service)[0]
+    runtime = {"status":"not_tested", "actual_node":None, "message":"尚未请求客户端实测。"}
+    if request.runtime:
+        expected = report["domains"][0]["target"]
+        runtime = await diagnose_runtime(request.client, service, expected)
+    return {"service":report,"runtime":runtime}
+
+
+@router.post("/check")
+async def check_request(request: ConvertRequest) -> dict:
+    return await _check_request(request)
+
+
+async def _validate_publication(request: ConvertRequest) -> ConvertRequest:
+    if request.publication_targets is not None:
+        report = await _check_request(request)
+        if not report["can_publish"]:
+            raise HTTPException(status_code=400, detail={"message": "目标客户端检查未通过", "checks": report})
+        request = request.model_copy(update={"policy_revision": catalog_revision()})
+    return request
+
+
 @router.post("/session")
 async def create_policy_session(body: dict) -> dict[str, str]:
     """Store a large policy payload server-side and return a short session ID."""
@@ -473,7 +554,7 @@ def _profile_urls(profile_id: str, token: str) -> dict[str, object]:
 async def create_profile(request: ConvertRequest) -> dict[str, object]:
     request = _resolve_product_request(request)
     _validate_profile_service_routes(request)
-    stored_request = request
+    stored_request = await _validate_publication(request)
     created = _profile_store().create(stored_request.model_dump(mode="json"))
     return {**_profile_urls(created.id, created.token), "token": created.token}
 
@@ -499,7 +580,46 @@ async def get_profile_draft(profile_id: str, token: str = Query(...)) -> dict[st
     profile = _profile_store().get(profile_id, token)
     if profile is None:
         raise HTTPException(status_code=404, detail="profile not found")
-    return {"id": profile.id, "request": profile.request}
+    return {"id": profile.id, "request": profile.request, "mode": profile_mode(profile.request),
+            "current_revision": catalog_revision(),
+            "update_available": profile.request.get("policy_revision") != catalog_revision()}
+
+
+@router.post("/profiles/{profile_id}/upgrade-preview")
+async def upgrade_profile_preview(profile_id: str, token: str = Query(...)) -> dict:
+    profile = _profile_store().get(profile_id, token)
+    if profile is None:
+        raise HTTPException(status_code=404, detail="profile not found")
+    original = ConvertRequest.model_validate(profile.request)
+    old_nodes, old_config, _ = await _build_config(RenderInputs.from_request(original))
+    old_groups = {g["name"]: g for g in (original.selected_policy.proxy_groups if original.selected_policy else [])}
+    routes = [route.model_dump() for route in original.service_routes if route.mode != "legacy"]
+    preserved = []
+    if not routes:
+        for service in service_catalog():
+            group = old_groups.get(service["group"], {})
+            members = group.get("proxies", [])
+            if members and isinstance(members[0], str) and not members[0].startswith("selector:"):
+                routes.append({"service":service["id"],"mode":"manual","egress":members[0]})
+                preserved.append(service["label"])
+        for route in original.service_routes:
+            if route.enabled and route.egress and not any(r["service"] == route.service for r in routes):
+                routes.append({"service":route.service,"mode":"manual","egress":route.egress})
+    template = load_template(LEO_TEMPLATE_ID)
+    fresh = apply_template(template, old_nodes)
+    available = {n.name for n in old_nodes} | {g['name'] for g in fresh.get('proxy-groups', [])} | {'DIRECT', 'REJECT'}
+    discarded = [f"{r['service']}: {r['egress']}" for r in routes if r['egress'] not in available]
+    routes = [r for r in routes if r['egress'] in available]
+    candidate = ConvertRequest(subscription_url=original.subscription_url, target=original.target,
+                               profile_name=original.profile_name, service_routes=routes,
+                               publication_targets=original.publication_targets or ["mihomo", "surge"])
+    fresh = transform_service_routes(fresh, old_nodes, candidate.service_routes)
+    old_rules = set(map(str, old_config.get("rules", [])))
+    new_rules = set(map(str, fresh.get("rules", [])))
+    return {"request":candidate.model_dump(mode="json"), "changes": {
+        "added_rules":sorted(new_rules-old_rules), "removed_rules":sorted(old_rules-new_rules),
+        "preserved_services":[s["label"] for s in service_catalog() if any(r["service"] == s["id"] for r in routes)], "discarded_preferences":discarded, "removed_groups":sorted(set(old_groups)-{s["group"] for s in service_catalog() if any(r["service"] == s["id"] for r in routes)}),
+        "message":"仅保留可识别的首选出口；其他自定义规则与候选将由当前 Leo 替换。尚未保存，应用前请检查。"}}
 
 
 @router.put("/profiles/{profile_id}")
@@ -508,9 +628,11 @@ async def update_profile(
     request: ConvertRequest,
     token: str = Query(...),
 ) -> dict[str, object]:
+    if _profile_store().get(profile_id, token) is None:
+        raise HTTPException(status_code=404, detail="profile not found")
     request = _resolve_product_request(request)
     _validate_profile_service_routes(request)
-    stored_request = request
+    stored_request = await _validate_publication(request)
     if not _profile_store().update(
         profile_id,
         token,
@@ -580,13 +702,15 @@ def _validate_profile_claude_templates(request: ConvertRequest) -> None:
 
 def _validate_profile_service_routes(request: ConvertRequest) -> None:
     enabled = [route for route in request.service_routes if route.enabled]
-    unsupported = sorted({route.service for route in enabled if route.service != "claude"})
+    known = {service["id"] for service in service_catalog()}
+    unsupported = sorted({route.service for route in enabled
+                          if route.service not in known or (route.mode == "legacy" and route.service != "claude")})
     if unsupported:
         raise HTTPException(
             status_code=400,
             detail="unsupported service route: " + ", ".join(unsupported),
         )
-    if any(route.service == "claude" for route in enabled):
+    if any(route.service == "claude" and route.mode == "legacy" for route in enabled):
         if request.selected_policy is not None:
             group_names = {
                 str(group.get("name", "")).casefold()
