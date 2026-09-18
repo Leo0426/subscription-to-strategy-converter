@@ -11,6 +11,30 @@ from app.core.subscription import SubscriptionError, load_subscription
 from app.main import app
 
 
+@pytest.mark.parametrize(("plugin", "mode", "expected_host"), [
+    ("obfs", "http", "cdn.example.com"),
+    ("obfs", "tls", "cdn.example.com:"),
+    ("v2ray-plugin", "websocket", "cdn.example.com:"),
+])
+def test_obfs_host_compatibility_does_not_mutate_shared_node(
+    plugin: str, mode: str, expected_host: str,
+) -> None:
+    source = {
+        "name": "HK", "type": "ss", "server": "hk.example.com", "port": 8101,
+        "cipher": "chacha20-ietf", "password": "test-password",
+        "plugin": plugin,
+        "plugin-opts": {"mode": mode, "host": "cdn.example.com:", "custom-option": True},
+    }
+    node = clash_to_ir(source)
+    rendered = ir_to_clash_dict(node)
+    assert rendered["plugin-opts"] == {
+        "mode": mode, "host": expected_host, "custom-option": True,
+    }
+    assert node.extra["plugin_opts"]["host"] == "cdn.example.com:"
+    assert source["plugin-opts"]["host"] == "cdn.example.com:"
+    assert ir_to_clash_dict(node) == rendered
+
+
 @pytest.mark.asyncio
 async def test_universal_subscription_negotiates_mihomo_without_an_adapter(
     monkeypatch: pytest.MonkeyPatch,

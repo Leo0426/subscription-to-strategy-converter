@@ -291,6 +291,21 @@ def ir_to_clash_dict(node: ProxyNode) -> dict[str, Any]:
             if node.extra.get("obfs_host"):
                 plugin_opts["host"] = node.extra["obfs_host"]
             d["plugin-opts"] = plugin_opts
+        plugin_opts = d.get("plugin-opts")
+        if (
+            d.get("plugin") == "obfs"
+            and isinstance(plugin_opts, dict)
+            and plugin_opts.get("mode") == "http"
+        ):
+            host = plugin_opts.get("host")
+            if (
+                isinstance(host, str) and len(host) > 1
+                and host.endswith(":") and host.count(":") == 1
+            ):
+                # Surge accepts an empty Host port; Mihomo appends the node port
+                # and would send "host::port", causing the peer to close early.
+                # Copy so compiling Mihomo never changes the shared node IR.
+                d["plugin-opts"] = {**plugin_opts, "host": host[:-1]}
         if node.extra.get("udp"):
             d["udp"] = True
 

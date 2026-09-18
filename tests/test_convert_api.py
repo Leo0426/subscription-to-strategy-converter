@@ -564,3 +564,44 @@ proxies:
     assert "TW01 = ss, tw.example.com, 8801" in response.text
     assert "obfs=http" in response.text
     assert "obfs-host=download.microsoft.com" in response.text
+
+
+@pytest.mark.parametrize("source_format", ["surge", "clash"])
+@pytest.mark.parametrize(
+    ("host", "expected"),
+    [("cdn.example.com:", "cdn.example.com"),
+     ("cdn.example.com", "cdn.example.com"),
+     ("cdn.example.com:8080", "cdn.example.com:8080"),
+     ("[2001:db8::1]", "[2001:db8::1]")],
+)
+def test_mihomo_subscription_removes_empty_http_obfs_host_port(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    source_format: str,
+    host: str,
+    expected: str,
+) -> None:
+    if source_format == "surge":
+        source = (
+            "[Proxy]\nTW01 = ss, tw.example.com, 8801, "
+            "encrypt-method=chacha20-ietf, password=secret, "
+            f"obfs=http, obfs-host={host}\n"
+        )
+    else:
+        source = json.dumps({"proxies": [{
+            "name": "TW01", "type": "ss", "server": "tw.example.com",
+            "port": 8801, "cipher": "chacha20-ietf", "password": "secret",
+            "plugin": "obfs", "plugin-opts": {"mode": "http", "host": host},
+        }]})
+
+    async def fake_fetch_subscription(url: str) -> str:
+        return source
+
+    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
+    response = client.get("/subscribe", params={
+        "subscription_url": "https://example.com/subscription",
+        "template": _LOCAL_TEMPLATE, "target": "mihomo",
+    })
+    assert response.status_code == 200
+    node = next(p for p in YAML(typ="safe").load(response.text)["proxies"] if p["name"] == "TW01")
+    assert node["plugin-opts"] == {"mode": "http", "host": expected}

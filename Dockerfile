@@ -17,7 +17,7 @@ ENV PATH=/app/.venv/bin:$PATH \
     SUBFLOW_DB_PATH=/app/data/subflow.db
 
 LABEL org.opencontainers.image.title="Subflow" \
-      org.opencontainers.image.version="5.0.0"
+      org.opencontainers.image.version="5.1.0"
 
 WORKDIR /app
 
