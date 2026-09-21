@@ -9,3 +9,4 @@ class DiagnoseRequest(BaseModel):
     service: str = Field(default='openai', max_length=80)
     runtime: bool = False
     client: Literal['mihomo','surge'] = 'mihomo'
+    samples: int = Field(default=1, ge=1, le=3, strict=True)

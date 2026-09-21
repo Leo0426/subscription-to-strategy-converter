@@ -1,8 +1,4 @@
-"""Paired Shadowrocket node subscription and native Leo policy configuration.
-
-Use the client's Clash-compatible node import, as Sub-Store does, so modern
-transport fields need not be guessed into the unrelated native [Proxy] syntax.
-"""
+"""Preserve the airport's native Shadowrocket source and replace only routing."""
 from __future__ import annotations
 
 from typing import Any
@@ -10,6 +6,7 @@ from typing import Any
 from app.core.parsers.clash import ir_to_clash_dict
 from app.core.platforms.ini import IniDialect, NoSupportedNodesError, build_ini_config
 from app.core.platforms.surge import _rule_to_surge_line
+from app.core.platforms.surge_profile import replace_surge_routing
 from app.core.renderer import render_yaml
 from app.ir import ProxyNode
 
@@ -40,7 +37,16 @@ def _compatible_nodes(nodes: list[ProxyNode]) -> tuple[list[ProxyNode], list[dic
     return accepted, warnings
 
 
-def build_shadowrocket_subscription(nodes: list[ProxyNode]) -> tuple[str, list[dict]]:
+def build_shadowrocket_subscription(
+    nodes: list[ProxyNode], *, source_config: dict | None = None,
+) -> tuple[str, list[dict]]:
+    native = (source_config or {}).get("_shadowrocket_source")
+    if isinstance(native, str):
+        # Native output is opaque, including unknown transport/security fields.
+        # Only the separately compiled routing artifact is owned by Subflow.
+        return native, []
+    if source_config is not None:
+        raise NoSupportedNodesError("Shadowrocket 需要原生来源上下文；请通过 /render 或订阅接口生成")
     accepted, warnings = _compatible_nodes(nodes)
     proxies = []
     for node in accepted:
@@ -87,7 +93,22 @@ def _rule_line(rule: str, providers: dict[str, Any]) -> str | None:
 def build_shadowrocket_config(
     nodes: list[ProxyNode], proxy_groups: list[Any], rules: list[Any],
     rule_providers: dict[str, Any],
+    *, source_config: dict | None = None,
 ) -> tuple[str, list[dict]]:
+    native = (source_config or {}).get("_shadowrocket_source")
+    if isinstance(native, str):
+        config, warnings = build_ini_config(
+            nodes, proxy_groups, rules, rule_providers,
+            dialect=IniDialect(
+                name="Shadowrocket", node=None, group=_group_line,
+                rule=_rule_line, rule_types=_RULE_TYPES,
+                general="", host=lambda _: None, require_nodes=True,
+            ),
+        )
+        profile = source_config.get("_shadowrocket_profile") or ""
+        return replace_surge_routing(profile, config, source_names=source_config["_shadowrocket_names"]), warnings
+    if source_config is not None:
+        raise NoSupportedNodesError("Shadowrocket 需要原生来源上下文；请通过 /render 或订阅接口生成")
     accepted, warnings = _compatible_nodes(nodes)
     config, policy_warnings = build_ini_config(
         accepted, proxy_groups, rules, rule_providers,
@@ -95,11 +116,7 @@ def build_shadowrocket_config(
         dialect=IniDialect(
             name="Shadowrocket", node=None, group=_group_line,
             rule=_rule_line, rule_types=_RULE_TYPES,
-            general="\n".join([
-                "[General]", "bypass-system = true", "ipv6 = false",
-                "dns-server = 223.5.5.5, 119.29.29.29",
-                "skip-proxy = 127.0.0.1, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12, localhost, *.local",
-            ]),
+            general="",
             host=lambda _: None, require_nodes=True,
         ),
     )

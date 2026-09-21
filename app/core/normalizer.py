@@ -57,7 +57,12 @@ def _connection_key(node: ProxyNode) -> tuple[Any, ...]:
 
 def normalize_nodes(nodes: list[ProxyNode]) -> list[ProxyNode]:
     """Deduplicate identical connections and resolve display-name conflicts."""
-    normalized: list[ProxyNode] = []
+    return [node for node, _ in normalize_nodes_with_source_names(nodes)]
+
+
+def normalize_nodes_with_source_names(nodes: list[ProxyNode]) -> list[tuple[ProxyNode, str]]:
+    """Also retain the original identifiers for native-client policy references."""
+    normalized: list[tuple[ProxyNode, str]] = []
     seen_keys: set[tuple[Any, ...]] = set()
     used_names: dict[str, int] = {}
 
@@ -72,6 +77,6 @@ def normalize_nodes(nodes: list[ProxyNode]) -> list[ProxyNode]:
         used_names[base_name] = count
 
         named = replace(node, name=base_name if count == 1 else f"{base_name}-{count}")
-        normalized.append(named)
+        normalized.append((named, node.name))
 
     return normalized

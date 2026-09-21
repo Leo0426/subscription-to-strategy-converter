@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import asyncio
 from functools import lru_cache
 import json
 import os
@@ -14,11 +15,13 @@ from app.core.service_catalog import catalog_revision, service_catalog
 from app.core.workbench import service_report, profile_mode
 from app.core.runtime_diagnostics import diagnose_runtime, runtime_capabilities
 from app.models.workbench import DiagnoseRequest
-from app.core.parsers.clash import ir_to_clash_dict
+from app.core.parsers.clash import AnyTLSOptionError, ir_to_clash_dict
 from app.core.platforms.singbox import build_singbox_config
 from app.core.platforms.surge import build_surge_config
+from app.core.platforms.surge_profile import NativeSurgeProfileError
+from app.core.platforms.mihomo import build_mihomo_config, NativeMihomoProfileError
 from app.core.platforms.shadowrocket import build_shadowrocket_config, build_shadowrocket_subscription
-from app.core.platforms.ini import NoSupportedNodesError
+from app.core.platforms.ini import NoSupportedNodesError, incompatible_node_names
 from app.core.policy_analyzer import analyze_workspace
 from app.core.policy_graph import build_policy_graph
 from app.core.policy_presets import list_policy_presets
@@ -27,9 +30,12 @@ from app.core.rule_packs import list_rule_packs
 from app.core.rule_source_audit import template_content_sha256
 from app.core.intent_compiler import intent_catalog
 from app.core.profiles import ProfileStore
+from app.core.inflight import SingleFlight, BusyError
+from app.core import publication
+from app.core.network import fetch_timeout
 from app.core.policy_simulator import simulate_destination
 from app.core.policy_workspace import (
-    compile_mihomo_config,
+    POLICY_SECTIONS,
     config_to_workspace,
     workspace_from_dict,
     workspace_to_dict,
@@ -44,7 +50,7 @@ from app.core.template_policy_transform import (
     transform_claude_policy,
     transform_service_routes,
 )
-from app.core.subscription import SubscriptionError, load_subscription
+from app.core.subscription import SubscriptionError, SubscriptionUnavailableError, load_subscription
 from app.core.template_engine import (
     LEO_TEMPLATE_ID,
     TemplateError,
@@ -53,12 +59,13 @@ from app.core.template_engine import (
     load_any_template,
     load_template,
 )
-from app.ir import ProxyNode
+from app.ir import PolicyWorkspace, ProxyNode
 from app.models.powerfullz import PowerfullzOptions
 from app.models.request import ConvertRequest
 from app.models.strategy import ClaudePolicy, CustomStrategy, SelectedPolicy, ServiceRoute
 
 router = APIRouter()
+_publications = SingleFlight()
 _PROJECT_DIR = Path(__file__).resolve().parents[2]
 _LEO_SOURCE_PATH = _PROJECT_DIR / "community_templates" / "leo" / "leo.yaml"
 _LEO_AUDIT_PATH = _LEO_SOURCE_PATH.with_name("audit.json")
@@ -280,7 +287,7 @@ async def _build_config(inputs: RenderInputs) -> tuple[list[ProxyNode], dict, di
         raise HTTPException(status_code=422, detail=exc.errors()) from exc
 
     try:
-        nodes, raw_config = await load_subscription(validated_url)
+        nodes, raw_config = await load_subscription(validated_url, target=inputs.target)
     except SubscriptionError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -307,7 +314,9 @@ def _serialize_nodes(nodes: list[ProxyNode]) -> list[dict]:
     return [ir_to_clash_dict(node) for node in nodes]
 
 
-def _render_output(target: str, nodes: list[ProxyNode], config: dict) -> tuple[str, list[dict]]:
+def _render_output(
+    target: str, nodes: list[ProxyNode], config: dict, *, source_config: dict | None = None,
+) -> tuple[str, list[dict]]:
     render_target = _TARGET_ALIASES.get(target, target)
     if render_target == "singbox":
         sb_config = build_singbox_config(
@@ -318,29 +327,53 @@ def _render_output(target: str, nodes: list[ProxyNode], config: dict) -> tuple[s
         )
         return json.dumps(sb_config, ensure_ascii=False, indent=2), []
     if render_target == "surge":
-        return build_surge_config(
-            nodes,
-            config.get("proxy-groups", []),
-            config.get("rules", []),
-            config.get("rule-providers", {}),
-            dns_config=config.get("dns"),
-        )
+        try:
+            return build_surge_config(
+                nodes,
+                config.get("proxy-groups", []),
+                config.get("rules", []),
+                config.get("rule-providers", {}),
+                dns_config=config.get("dns"),
+                source_profile=(source_config or {}).get("_surge_source"),
+            )
+        except NativeSurgeProfileError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
     if render_target in {"shadowrocket", "shadowrocket-config"}:
         try:
             if render_target == "shadowrocket":
-                return build_shadowrocket_subscription(nodes)
+                return build_shadowrocket_subscription(nodes, source_config=source_config)
             return build_shadowrocket_config(
                 nodes, config.get("proxy-groups", []),
                 config.get("rules", []), config.get("rule-providers", {}),
+                source_config=source_config,
             )
-        except NoSupportedNodesError as exc:
+        except (NoSupportedNodesError, NativeSurgeProfileError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return render_yaml(compile_mihomo_config(config, nodes)), []
+    try:
+        compiled, warnings = build_mihomo_config(nodes, config, source_config=source_config)
+    except NativeMihomoProfileError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return render_yaml(compiled), warnings
+
+
+def _service_output_errors(nodes: list[ProxyNode], routes: list[ServiceRoute], warnings: list[dict]) -> list[str]:
+    unavailable = incompatible_node_names(nodes, warnings)
+    groups_lost = {group for warning in warnings if warning.get("code") == "unavailable_proxy_groups" for group in warning.get("groups", [])}
+    errors = []
+    for route in routes:
+        if not route.enabled or route.mode == "legacy":
+            continue
+        for chosen in (route.egress, route.fallback):
+            if chosen and chosen in unavailable:
+                errors.append(f"{route.service} 指定节点 {chosen} 无法导出到该客户端")
+        if route.egress in groups_lost:
+            errors.append(f"{route.service} 指定策略组在该客户端没有可用节点")
+    return errors
 
 
 async def _render_config(inputs: RenderInputs) -> tuple[int, str, list[dict]]:
-    nodes, config, _ = await _build_config(inputs)
-    output, warnings = _render_output(inputs.target, nodes, config)
+    nodes, config, source_config = await _build_config(inputs)
+    output, warnings = _render_output(inputs.target, nodes, config, source_config=source_config)
     routes = inputs.service_routes or (
         [
             ServiceRoute(
@@ -353,6 +386,9 @@ async def _render_config(inputs: RenderInputs) -> tuple[int, str, list[dict]]:
         if inputs.claude_policy is not None
         else []
     )
+    errors = _service_output_errors(nodes, routes, warnings)
+    if errors:
+        raise HTTPException(status_code=400, detail="; ".join(errors))
     has_claude_route = any(route.enabled and route.service == "claude" and route.mode == "legacy" for route in routes)
     if inputs.target == "surge" and has_claude_route and warnings:
         protocols = sorted(
@@ -364,17 +400,19 @@ async def _render_config(inputs: RenderInputs) -> tuple[int, str, list[dict]]:
                 detail="Surge Claude generation has unsupported node protocols: "
                 + ", ".join(protocols),
             )
+        if any(warning.get("code") == "unsupported_node_options" for warning in warnings):
+            raise HTTPException(status_code=400, detail="Surge Claude generation has unsupported node options")
     return len(nodes), output, warnings
 
 
 @router.post("/preview")
 async def preview_subscription(request: ConvertRequest) -> dict:
     try:
-        nodes, raw_config = await load_subscription(str(request.subscription_url))
+        nodes, raw_config = await load_subscription(str(request.subscription_url), target=request.target)
     except SubscriptionError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    preview_config = dict(raw_config)
+    preview_config = {key: value for key, value in raw_config.items() if not key.startswith("_")}
     preview_config["proxies"] = _serialize_nodes(nodes)
     return {
         "node_count": len(nodes),
@@ -386,8 +424,40 @@ async def preview_subscription(request: ConvertRequest) -> dict:
 @router.post("/workspace/preview")
 async def workspace_preview(request: ConvertRequest) -> dict:
     request = _resolve_product_request(request)
-    nodes, config, _ = await _build_config(RenderInputs.from_request(request))
-    workspace = config_to_workspace(config, nodes, request.target)
+    nodes, config, source_config = await _build_config(RenderInputs.from_request(request))
+    materialized_mihomo = request.target in {"mihomo", "clash"} and "_surge_source" not in source_config
+    compile_warnings = []
+    if materialized_mihomo:
+        try:
+            config, compile_warnings = build_mihomo_config(nodes, config, source_config=source_config)
+        except NativeMihomoProfileError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    else:
+        # This remains a policy preview. Show only source-owned common settings;
+        # native INI envelopes cannot be represented by these YAML settings.
+        config = {key: value for key, value in config.items() if key in POLICY_SECTIONS}
+        config.update({key: value for key, value in source_config.items()
+                       if key not in POLICY_SECTIONS | {"source-format"} and not key.startswith("_")})
+    workspace = config_to_workspace(config, None if materialized_mihomo else nodes, request.target)
+    serialized_workspace = workspace_to_dict(workspace)
+    source_requires_context = (
+        bool(source_config.keys() - {"proxies", "source-format"})
+        or source_config.get("proxies", []) != _serialize_nodes(nodes)
+    )
+    if compile_warnings:
+        serialized_workspace["compile_warnings"] = compile_warnings
+    if "_surge_source" in source_config:
+        # PolicyWorkspace contains policy IR, not a lossless native profile.
+        serialized_workspace["native_source_format"] = "surge"
+    elif materialized_mihomo:
+        serialized_workspace["native_source_format"] = "mihomo"
+        serialized_workspace["native_requires_source"] = (
+            config.get("proxies", []) != [ir_to_clash_dict(node) for node in workspace.proxies]
+        )
+    if not materialized_mihomo and "_surge_source" not in source_config and source_requires_context:
+        serialized_workspace["requires_source_render"] = True
+    if request.target in {"shadowrocket", "shadowrocket-config"} and source_requires_context:
+        serialized_workspace["requires_source_render"] = True
     return {
         "node_count": len(nodes),
         "resolved_policy": (
@@ -395,7 +465,7 @@ async def workspace_preview(request: ConvertRequest) -> dict:
             if request.selected_policy is not None
             else None
         ),
-        "workspace": workspace_to_dict(workspace),
+        "workspace": serialized_workspace,
         "graph": workspace_to_dict(build_policy_graph(workspace)),
         "findings": workspace_to_dict(analyze_workspace(workspace)),
     }
@@ -416,24 +486,50 @@ async def render_request(request: ConvertRequest) -> PlainTextResponse:
     )
 
 
+def _request_workspace(body: dict) -> PolicyWorkspace:
+    try:
+        return workspace_from_dict(body.get("workspace", body))
+    except AnyTLSOptionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @router.post("/simulate")
 async def simulate(body: dict) -> dict:
     destination = str(body.get("destination") or "").strip()
     if not destination:
         raise HTTPException(status_code=422, detail="destination is required")
-    workspace = workspace_from_dict(body.get("workspace", body))
+    workspace = _request_workspace(body)
     return {"trace": workspace_to_dict(simulate_destination(workspace, destination))}
 
 
 @router.post("/compile")
 async def compile_workspace(body: dict) -> Response:
-    workspace = workspace_from_dict(body.get("workspace", body))
+    workspace = _request_workspace(body)
+    if any(node.extra.get("_shadowrocket_inventory_only") for node in workspace.proxies):
+        raise HTTPException(status_code=400, detail="Shadowrocket 节点清单不含可重建的连接参数；请通过 /render 或订阅接口保留原生来源")
     target = str(body.get("target", "mihomo"))
     target = _TARGET_ALIASES.get(target, target)
     if target not in _SUPPORTED_TARGETS:
         raise HTTPException(status_code=400, detail=f"unsupported target: {target}")
+    if body.get("workspace", body).get("requires_source_render"):
+        raise HTTPException(status_code=400, detail="跨格式策略工作区未携带完整机场连接配置；请通过 /render 或订阅接口生成")
+    if target == "surge" and body.get("workspace", body).get("native_source_format") == "surge":
+        raise HTTPException(status_code=400, detail="原生 Surge 配置请通过 /render 或订阅接口生成，以保留机场连接设置")
+    native_mihomo = body.get("workspace", body).get("native_source_format") == "mihomo"
+    if native_mihomo and target in {"shadowrocket", "shadowrocket-config"}:
+        raise HTTPException(status_code=400, detail="Shadowrocket 请通过 /render 或订阅接口读取其原生来源，不能用 Mihomo 工作区重建机场配置")
+    if native_mihomo and body.get("workspace", body).get("native_requires_source"):
+        raise HTTPException(status_code=400, detail="策略工作区不能无损保留这些原生节点字段；请通过 /render 或订阅接口生成，以保留机场连接设置")
     config = workspace_to_mihomo_config(workspace)
-    output, warnings = _render_output(target, workspace.proxies, config)
+    if native_mihomo and target == "mihomo":
+        # Preview already compiled generated routing and preserved native
+        # provider egress. Recompilation would rewrite that source-owned data.
+        saved_warnings = body.get("workspace", body).get("compile_warnings", [])
+        warnings = [warning for warning in saved_warnings if isinstance(warning, dict)] if isinstance(saved_warnings, list) else []
+        output = render_yaml(config)
+    else:
+        output, warnings = _render_output(target, workspace.proxies, config,
+                                          source_config=config if native_mihomo else None)
     if target == "singbox":
         return JSONResponse(json.loads(output))
     headers = {"X-Compile-Warnings": json.dumps(warnings, ensure_ascii=True)} if warnings else {}
@@ -447,31 +543,26 @@ async def services() -> dict:
 
 async def _check_request(request: ConvertRequest) -> dict:
     request = _resolve_product_request(request)
-    nodes, config, _ = await _build_config(RenderInputs.from_request(request))
+    targets = request.publication_targets or [request.target]
+    base_target = request.target if _TARGET_ALIASES.get(request.target, request.target) in targets else targets[0]
+    nodes, config, source_config = await _build_config(RenderInputs.from_request(request, target=base_target))
     findings = workspace_to_dict(analyze_workspace(config_to_workspace(config, nodes)))
     clients = []
-    for target in request.publication_targets or [request.target]:
+    for target in targets:
         warnings = []
         errors = []
         try:
-            output, warnings = _render_output(target, nodes, config)
+            target_nodes, target_config, target_source = nodes, config, source_config
+            if (target in {"shadowrocket", "shadowrocket-config"}) != (base_target in {"shadowrocket", "shadowrocket-config"}):
+                target_nodes, target_config, target_source = await _build_config(RenderInputs.from_request(request, target=target))
+            output, warnings = _render_output(target, target_nodes, target_config, source_config=target_source)
             if target == "shadowrocket":
-                _, policy_warnings = _render_output("shadowrocket-config", nodes, config)
+                _, policy_warnings = _render_output("shadowrocket-config", target_nodes, target_config, source_config=target_source)
                 warnings += policy_warnings
-            unsupported = {item.get("value") for item in warnings if item.get("code") == "unsupported_protocol"}
-            supported = {node.name for node in nodes if node.protocol not in unsupported}
+            supported = {node.name for node in target_nodes} - incompatible_node_names(target_nodes, warnings)
             if not supported:
-                errors.append("该客户端没有可用的节点协议")
-            for route in request.service_routes:
-                if not route.enabled or route.mode == "legacy":
-                    continue
-                for chosen in (route.egress, route.fallback):
-                    if chosen and chosen in {n.name for n in nodes} and chosen not in supported:
-                        errors.append(f"{route.service} 指定节点 {chosen} 无法导出到该客户端")
-            groups_lost = {group for w in warnings if w.get("code") == "unavailable_proxy_groups" for group in w.get("groups", [])}
-            for route in request.service_routes:
-                if route.enabled and route.egress in groups_lost:
-                    errors.append(f"{route.service} 指定策略组在该客户端没有可用节点")
+                errors.append("该客户端没有可用节点（协议或参数不兼容）")
+            errors.extend(_service_output_errors(target_nodes, request.service_routes, warnings))
         except (HTTPException, ValueError) as exc:
             errors.append(str(exc.detail if isinstance(exc, HTTPException) else exc))
         clients.append({"target": target, "status": "error" if errors else ("warning" if warnings else "passed"),
@@ -498,7 +589,7 @@ async def diagnose(request: DiagnoseRequest) -> dict:
     runtime = {"status":"not_tested", "actual_node":None, "message":"尚未请求客户端实测。"}
     if request.runtime:
         expected = report["domains"][0]["target"]
-        runtime = await diagnose_runtime(request.client, service, expected)
+        runtime = await diagnose_runtime(request.client, service, expected, samples=request.samples)
     return {"service":report,"runtime":runtime}
 
 
@@ -582,6 +673,9 @@ async def get_profile_draft(profile_id: str, token: str = Query(...)) -> dict[st
         raise HTTPException(status_code=404, detail="profile not found")
     return {"id": profile.id, "request": profile.request, "mode": profile_mode(profile.request),
             "current_revision": catalog_revision(),
+            "generation": profile.generation, "publications": profile.artifact_metadata,
+            "current_publication_revision": publication.publication_revision(),
+            "cache_ttl_seconds": publication.cache_ttl(),
             "update_available": profile.request.get("policy_revision") != catalog_revision()}
 
 
@@ -642,43 +736,80 @@ async def update_profile(
     return _profile_urls(profile_id, token)
 
 
+def _published_response(config: str, target: str, metadata: dict, state: str) -> PlainTextResponse:
+    headers = publication.headers(metadata, state)
+    headers["Content-Disposition"] = f'inline; filename="{_target_filename(target)}"'
+    if metadata.get("warnings"):
+        headers["X-Compile-Warnings"] = json.dumps(metadata["warnings"], ensure_ascii=True)
+    return PlainTextResponse(config, media_type=_target_media_type(target), headers=headers)
+
+
+async def _publication_before(deadline: float, key: tuple, factory):
+    try:
+        async with asyncio.timeout_at(deadline):
+            return await _publications.run(key, factory)
+    except TimeoutError:
+        cause = SubscriptionUnavailableError('subscription refresh deadline exceeded')
+        raise HTTPException(status_code=400, detail=str(cause)) from cause
+
+
 @router.get("/subscribe/{profile_id}", response_class=PlainTextResponse)
 async def subscribe_profile(
     profile_id: str,
     token: str = Query(...),
     target: str | None = Query(default=None),
+    force_refresh: bool = Query(default=False),
 ) -> PlainTextResponse:
     store = _profile_store()
-    profile = store.get(profile_id, token)
-    if profile is None:
-        raise HTTPException(status_code=404, detail="profile not found")
+    deadline = asyncio.get_running_loop().time() + fetch_timeout()
+    for _ in range(3):
+        profile = store.get(profile_id, token)
+        if profile is None:
+            raise HTTPException(status_code=404, detail="profile not found")
+        request = ConvertRequest.model_validate(profile.request)
+        render_target = _TARGET_ALIASES.get(target or request.target, target or request.target)
+        _require_supported_target(render_target)
+        revision = publication.publication_revision()
+        metadata = profile.artifact_metadata.get(render_target, {})
+        if not force_refresh and render_target in profile.artifacts and publication.is_fresh(metadata, profile.generation, revision):
+            return _published_response(profile.artifacts[render_target], render_target, metadata, "hit")
+        inputs = RenderInputs.from_request(request, template_name=_profile_template(request, render_target), target=render_target)
 
-    request = ConvertRequest.model_validate(profile.request)
-    render_target = target or request.target
-    _require_supported_target(render_target)
-    template_name = _profile_template(request, render_target)
-    inputs = RenderInputs.from_request(request, template_name=template_name, target=render_target)
-    try:
-        _, config, warnings = await _render_config(inputs)
-    except HTTPException as exc:
-        external_failures = (SubscriptionError, TemplateError)
-        artifact_target = _TARGET_ALIASES.get(render_target, render_target)
-        artifact = profile.artifacts.get(artifact_target)
-        if artifact is None or not isinstance(exc.__cause__, external_failures):
-            raise
-        return PlainTextResponse(
-            artifact,
-            media_type=_target_media_type(render_target),
-            headers={
-                "Content-Disposition": f'inline; filename="{_target_filename(render_target)}"',
-                "X-Subflow-Stale": "true",
-            },
-        )
-    store.save_artifact(profile.id, render_target, config)
-    headers = {"Content-Disposition": f'inline; filename="{_target_filename(render_target)}"'}
-    if warnings:
-        headers["X-Compile-Warnings"] = json.dumps(warnings, ensure_ascii=True)
-    return PlainTextResponse(config, media_type=_target_media_type(render_target), headers=headers)
+        async def compile_publication(inputs=inputs, generation=profile.generation, revision=revision):
+            _, config, warnings = await _render_config(inputs)
+            return publication.stamp(config, generation, revision, warnings, annotate=render_target != "shadowrocket")
+
+        try:
+            config, metadata = await _publication_before(deadline,
+                (str(store.database.resolve()), profile.id, profile.generation, render_target, revision), compile_publication)
+        except BusyError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        except HTTPException as exc:
+            current = store.get(profile_id, token)
+            if current is None:
+                raise HTTPException(status_code=404, detail="profile not found")
+            if current.generation != profile.generation or publication.publication_revision() != revision:
+                continue
+            artifact = current.artifacts.get(render_target)
+            if not isinstance(exc.__cause__, SubscriptionUnavailableError):
+                if not store.discard_artifact(profile.id, render_target, expected_generation=profile.generation):
+                    continue
+                raise
+            if artifact is None:
+                raise
+            metadata = current.artifact_metadata.get(render_target, {})
+            if metadata:
+                metadata = {**metadata, "last_status": "stale"}
+                if not store.save_artifact(profile.id, render_target, artifact, expected_generation=profile.generation, metadata=metadata):
+                    continue
+            return _published_response(artifact, render_target, metadata, "stale")
+        if publication.publication_revision() != revision:
+            continue
+        if not store.save_artifact(profile.id, render_target, config, expected_generation=profile.generation, metadata=metadata):
+            continue
+        return _published_response(config, render_target, metadata, "fresh")
+    raise HTTPException(status_code=409, detail="配置正在被修改，请重试刷新")
+
 
 
 def _profile_template(request: ConvertRequest, target: str) -> str:
@@ -743,7 +874,7 @@ def _target_filename(target: str) -> str:
     if target == "shadowrocket-config":
         return "shadowrocket.conf"
     if target == "shadowrocket":
-        return "shadowrocket.yaml"
+        return "shadowrocket.txt"
     if target == "surge":
         return "surge.conf"
     if target == "clash":
@@ -752,7 +883,7 @@ def _target_filename(target: str) -> str:
 
 
 def _target_media_type(target: str) -> str:
-    return "text/plain; charset=utf-8" if target in {"surge", "shadowrocket-config"} else "text/yaml; charset=utf-8"
+    return "text/plain; charset=utf-8" if target in {"surge", "shadowrocket", "shadowrocket-config"} else "text/yaml; charset=utf-8"
 
 
 @router.get("/subscribe", response_class=PlainTextResponse)

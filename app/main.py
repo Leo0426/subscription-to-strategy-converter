@@ -8,12 +8,14 @@ from app.api.community import router as community_router
 from app.api.convert import router as convert_router
 from app.api.health import router as health_router
 from app.api.system import router as system_router
+from app.core.network import network_lifespan
 
 BASE_DIR = Path(__file__).resolve().parent
 
 app = FastAPI(
+    lifespan=network_lifespan,
     title="Subflow Strategy Builder",
-    version="5.1.0",
+    version="6.1.0",
     description="Manage service routing preferences and validate Mihomo, Surge and Shadowrocket subscriptions.",
 )
 

@@ -51,7 +51,7 @@ def test_profile_publishes_three_clients_with_shadowrocket_native_policy(shadowr
 
     nodes = client.get(urls["shadowrocket"])
     assert nodes.status_code == 200
-    assert nodes.headers["content-type"].startswith("text/yaml")
+    assert nodes.headers["content-type"].startswith("text/plain")
     parsed_nodes = YAML(typ="safe").load(nodes.text)
     assert set(parsed_nodes) == {"proxies"}
     assert parsed_nodes["proxies"][0]["password"] == "test-password"
@@ -59,8 +59,9 @@ def test_profile_publishes_three_clients_with_shadowrocket_native_policy(shadowr
     assert response.status_code == 200, response.text
     assert response.headers["content-type"].startswith("text/plain")
     assert response.headers["content-disposition"] == 'inline; filename="shadowrocket.conf"'
-    for section in ("[General]", "[Proxy Group]", "[Rule]"):
+    for section in ("[Proxy Group]", "[Rule]"):
         assert section in response.text
+    assert "[General]" not in response.text
     assert "[Proxy]" not in response.text
     assert "美国节点 = select, 美国 01" in response.text
     assert "AI 服务 = select, 美国节点" in response.text
@@ -111,7 +112,7 @@ def test_shadowrocket_nodes_keep_modern_protocol_fields_and_policy_members(shado
     assert config.status_code == 200, config.text
     assert "美国节点 = select, 美国 01" in config.text
     assert "AI 服务 = select, 美国节点" in config.text
-    assert "DST-PORT,19302,DIRECT" in config.text
+    assert "DST-PORT,123,DIRECT" in config.text
     assert "DEST-PORT," not in config.text
 
 
@@ -123,7 +124,7 @@ def test_shadowrocket_profile_keeps_each_artifact_cache_separate(shadowrocket_cl
     assert all(response.status_code == 200 for response in artifacts.values())
     state["status"] = 503
     for url, previous in artifacts.items():
-        fallback = client.get(url)
+        fallback = client.get(url + "&force_refresh=true")
         assert fallback.status_code == 200
         assert fallback.text == previous.text
         assert fallback.headers["X-Subflow-Stale"] == "true"
@@ -131,13 +132,15 @@ def test_shadowrocket_profile_keeps_each_artifact_cache_separate(shadowrocket_cl
     assert client.get(created["config_urls"]["shadowrocket"].replace(created["token"], "wrong")).status_code == 404
 
 
-def test_shadowrocket_rejects_a_subscription_with_no_compatible_nodes(shadowrocket_client):
+def test_shadowrocket_native_protocols_are_not_filtered_by_our_legacy_serializer(shadowrocket_client):
     client, state = shadowrocket_client
     state["content"] = "proxies:\n  - {name: WG, type: wireguard, server: wg.example.com, port: 443}\n"
     for target in ("shadowrocket", "shadowrocket-config"):
         response = client.get("/subscribe", params={"subscription_url": "https://example.com/sub", "target": target})
-        assert response.status_code == 400
-        assert "no supported proxy nodes" in response.json()["detail"]
+        assert response.status_code == 200
+        assert "WG" in response.text
+        if target == "shadowrocket":
+            assert response.text == state["content"]
 
 
 def test_shadowrocket_pair_refreshes_nodes_and_service_members_without_new_urls(shadowrocket_client):
@@ -148,7 +151,7 @@ def test_shadowrocket_pair_refreshes_nodes_and_service_members_without_new_urls(
         assert "美国 01" in client.get(url).text
     state["content"] = state["content"].replace("美国 01", "美国 02")
     for url in urls:
-        refreshed = client.get(url)
+        refreshed = client.get(url + "&force_refresh=true")
         assert refreshed.status_code == 200
         assert "美国 02" in refreshed.text
         assert "美国 01" not in refreshed.text

@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from app.core.subscription import SubscriptionError
+from app.core.fetcher import FetchError
 from app.main import app
 
 
@@ -60,7 +60,7 @@ def test_profile_stale_fallback_is_isolated_by_target(tmp_path, monkeypatch) -> 
 
     async def fake_fetch_subscription(url: str) -> str:
         if not upstream["available"]:
-            raise SubscriptionError("upstream unavailable")
+            raise FetchError("upstream unavailable")
         return SUBSCRIPTION
 
     monkeypatch.setenv("SUBFLOW_DB_PATH", str(tmp_path / "subflow.db"))
@@ -78,7 +78,7 @@ def test_profile_stale_fallback_is_isolated_by_target(tmp_path, monkeypatch) -> 
 
     fresh_clash = client.get(created["subscribe_urls"]["clash"])
     upstream["available"] = False
-    stale_clash = client.get(created["subscribe_urls"]["clash"])
+    stale_clash = client.get(created["subscribe_urls"]["clash"] + "&force_refresh=true")
 
     assert stale_clash.headers["X-Subflow-Stale"] == "true"
     assert stale_clash.text == fresh_clash.text

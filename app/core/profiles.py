@@ -6,7 +6,7 @@ import json
 import secrets
 import sqlite3
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -22,6 +22,8 @@ class StoredProfile:
     id: str
     request: dict[str, Any]
     artifacts: dict[str, str]
+    generation: int = 1
+    artifact_metadata: dict[str, dict] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -52,7 +54,7 @@ class ProfileStore:
     def get(self, profile_id: str, token: str) -> StoredProfile | None:
         with self._connect() as connection:
             row = connection.execute(
-                "SELECT token_hash, request_json, artifact, artifacts_json FROM profiles WHERE id = ?",
+                "SELECT token_hash, request_json, artifact, artifacts_json, generation, artifact_metadata FROM profiles WHERE id = ?",
                 (profile_id,),
             ).fetchone()
         if row is None or not hmac.compare_digest(row[0], _token_hash(token)):
@@ -62,20 +64,27 @@ class ProfileStore:
         if row[2] is not None and not artifacts:
             legacy_target = _artifact_target(str(request.get("target", "mihomo")))
             artifacts[legacy_target] = row[2]
-        return StoredProfile(id=profile_id, request=request, artifacts=artifacts)
+        return StoredProfile(id=profile_id, request=request, artifacts=artifacts, generation=row[4],
+                             artifact_metadata=json.loads(row[5]))
 
-    def save_artifact(self, profile_id: str, target: str, artifact: str) -> None:
+    def save_artifact(self, profile_id: str, target: str, artifact: str, *, expected_generation: int,
+                      metadata: dict | None = None) -> bool:
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
-                "SELECT artifacts_json FROM profiles WHERE id = ?", (profile_id,)
+                "SELECT artifacts_json, generation, artifact_metadata FROM profiles WHERE id = ?", (profile_id,)
             ).fetchone()
+            if row is None or row[1] != expected_generation:
+                return False
             artifacts = _artifacts_from_row(row[0] if row else None)
             artifacts[_artifact_target(target)] = artifact
+            all_metadata = json.loads(row[2])
+            all_metadata[_artifact_target(target)] = metadata or {}
             connection.execute(
-                "UPDATE profiles SET artifacts_json = ? WHERE id = ?",
-                (json.dumps(artifacts, ensure_ascii=False), profile_id),
+                "UPDATE profiles SET artifacts_json = ?, artifact_metadata = ? WHERE id = ?",
+                (json.dumps(artifacts, ensure_ascii=False), json.dumps(all_metadata), profile_id),
             )
+            return True
 
     def update(self, profile_id: str, token: str, request: dict[str, Any]) -> bool:
         with self._connect() as connection:
@@ -87,12 +96,27 @@ class ProfileStore:
             connection.execute(
                 """
                 UPDATE profiles
-                SET request_json = ?, artifact = NULL, artifacts_json = '{}'
+                SET request_json = ?, artifact = NULL, artifacts_json = '{}', artifact_metadata = '{}', generation = generation + 1
                 WHERE id = ?
                 """,
                 (json.dumps(request, ensure_ascii=False), profile_id),
             )
         return True
+
+    def discard_artifact(self, profile_id: str, target: str, *, expected_generation: int) -> bool:
+        with self._connect() as connection:
+            connection.execute('BEGIN IMMEDIATE')
+            row = connection.execute('SELECT generation, artifacts_json, artifact_metadata FROM profiles WHERE id = ?',
+                                     (profile_id,)).fetchone()
+            if row is None or row[0] != expected_generation:
+                return False
+            artifacts = _artifacts_from_row(row[1])
+            metadata = json.loads(row[2])
+            artifacts.pop(_artifact_target(target), None)
+            metadata.pop(_artifact_target(target), None)
+            connection.execute('UPDATE profiles SET artifact = NULL, artifacts_json = ?, artifact_metadata = ? WHERE id = ?',
+                               (json.dumps(artifacts), json.dumps(metadata), profile_id))
+            return True
 
     def list(self) -> list[ProfileSummary]:
         with self._connect() as connection:
@@ -142,10 +166,16 @@ class ProfileStore:
                 columns = {
                     str(row[1]) for row in connection.execute("PRAGMA table_info(profiles)").fetchall()
                 }
-                if "artifacts_json" not in columns:
-                    connection.execute(
-                        "ALTER TABLE profiles ADD COLUMN artifacts_json TEXT NOT NULL DEFAULT '{}'"
-                    )
+                migrations = {'artifacts_json': "TEXT NOT NULL DEFAULT '{}'",
+                              'generation': 'INTEGER NOT NULL DEFAULT 1',
+                              'artifact_metadata': "TEXT NOT NULL DEFAULT '{}'"}
+                if not migrations.keys() <= columns:
+                    connection.execute('BEGIN IMMEDIATE')
+                    columns = {row[1] for row in connection.execute('PRAGMA table_info(profiles)')}
+                    for name, definition in migrations.items():
+                        if name not in columns:
+                            connection.execute(f'ALTER TABLE profiles ADD COLUMN {name} {definition}')
+                    connection.commit()
                 yield connection
         finally:
             connection.close()

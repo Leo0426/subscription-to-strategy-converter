@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-12T09:33:34.158947+00:00",
+  "generated_at": "2026-09-21T03:07:15.747166+00:00",
   "summary": {
     "total": 8,
     "valid": 8,
@@ -114,12 +114,12 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "recaptcha.net",
             "target": "AI 服务",
-            "rule_index": 14
+            "rule_index": 26
           },
           "shadowed": {
             "provider": "Google-2",
             "target": "Google",
-            "rule_index": 64
+            "rule_index": 71
           }
         }
       ],
@@ -129,7 +129,7 @@
           "winner": {
             "provider": "Apple-4",
             "target": "Apple",
-            "rule_index": 62
+            "rule_index": 69
           },
           "shadowed": {
             "provider": "<inline-rule>",
@@ -138,7 +138,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         },
         {
@@ -146,7 +146,7 @@
           "winner": {
             "provider": "Apple-4",
             "target": "Apple",
-            "rule_index": 62
+            "rule_index": 69
           },
           "shadowed": {
             "provider": "<inline-rule>",
@@ -155,7 +155,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         },
         {
@@ -163,7 +163,7 @@
           "winner": {
             "provider": "Apple-4",
             "target": "Apple",
-            "rule_index": 62
+            "rule_index": 69
           },
           "shadowed": {
             "provider": "<inline-rule>",
@@ -172,7 +172,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         }
       ],
@@ -182,12 +182,12 @@
           "winner": {
             "provider": "Apple-4",
             "target": "Apple",
-            "rule_index": 62
+            "rule_index": 69
           },
           "shadowed": {
             "provider": "Microsoft-6",
             "target": "Microsoft",
-            "rule_index": 67
+            "rule_index": 74
           }
         }
       ],
@@ -201,12 +201,12 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "crashlytics.com",
             "target": "Google",
-            "rule_index": 61
+            "rule_index": 68
           },
           "shadowed": {
             "provider": "Apple-4",
             "target": "Apple",
-            "rule_index": 62
+            "rule_index": 69
           }
         }
       ],
@@ -216,7 +216,7 @@
           "winner": {
             "provider": "Google-2",
             "target": "Google",
-            "rule_index": 64
+            "rule_index": 71
           },
           "shadowed": {
             "provider": "<inline-rule>",
@@ -225,7 +225,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         },
         {
@@ -233,7 +233,7 @@
           "winner": {
             "provider": "Google-2",
             "target": "Google",
-            "rule_index": 64
+            "rule_index": 71
           },
           "shadowed": {
             "provider": "<inline-rule>",
@@ -242,7 +242,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         },
         {
@@ -250,7 +250,7 @@
           "winner": {
             "provider": "Google-2",
             "target": "Google",
-            "rule_index": 64
+            "rule_index": 71
           },
           "shadowed": {
             "provider": "<inline-rule>",
@@ -259,7 +259,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         }
       ],
@@ -273,12 +273,12 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "gvt1.com",
             "target": "Google",
-            "rule_index": 15
+            "rule_index": 27
           },
           "shadowed": {
             "provider": "YouTube-6",
             "target": "流媒体",
-            "rule_index": 63
+            "rule_index": 70
           }
         }
       ],
@@ -288,7 +288,7 @@
           "winner": {
             "provider": "Microsoft-6",
             "target": "Microsoft",
-            "rule_index": 67
+            "rule_index": 74
           },
           "shadowed": {
             "provider": "<inline-rule>",
@@ -297,7 +297,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         },
         {
@@ -305,7 +305,7 @@
           "winner": {
             "provider": "Microsoft-6",
             "target": "Microsoft",
-            "rule_index": 67
+            "rule_index": 74
           },
           "shadowed": {
             "provider": "<inline-rule>",
@@ -314,7 +314,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         },
         {
@@ -322,7 +322,7 @@
           "winner": {
             "provider": "Microsoft-6",
             "target": "Microsoft",
-            "rule_index": 67
+            "rule_index": 74
           },
           "shadowed": {
             "provider": "<inline-rule>",
@@ -331,7 +331,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         }
       ],
@@ -341,7 +341,7 @@
           "winner": {
             "provider": "YouTube-6",
             "target": "流媒体",
-            "rule_index": 63
+            "rule_index": 70
           },
           "shadowed": {
             "provider": "<inline-rule>",
@@ -350,7 +350,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         }
       ],
@@ -360,12 +360,12 @@
           "winner": {
             "provider": "YouTube-6",
             "target": "流媒体",
-            "rule_index": 63
+            "rule_index": 70
           },
           "shadowed": {
             "provider": "Google-2",
             "target": "Google",
-            "rule_index": 64
+            "rule_index": 71
           }
         },
         {
@@ -373,12 +373,12 @@
           "winner": {
             "provider": "YouTube-6",
             "target": "流媒体",
-            "rule_index": 63
+            "rule_index": 70
           },
           "shadowed": {
             "provider": "Google-2",
             "target": "Google",
-            "rule_index": 64
+            "rule_index": 71
           }
         },
         {
@@ -386,12 +386,12 @@
           "winner": {
             "provider": "YouTube-6",
             "target": "流媒体",
-            "rule_index": 63
+            "rule_index": 70
           },
           "shadowed": {
             "provider": "Google-2",
             "target": "Google",
-            "rule_index": 64
+            "rule_index": 71
           }
         }
       ]
@@ -402,7 +402,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -412,7 +412,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -421,13 +421,13 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
             "provider": "Microsoft-6",
             "target": "Microsoft",
-            "rule_index": 67
+            "rule_index": 74
           }
         ]
       },
@@ -436,7 +436,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -446,7 +446,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -455,7 +455,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -465,7 +465,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -474,7 +474,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -484,7 +484,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -493,7 +493,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -503,7 +503,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -512,7 +512,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -522,7 +522,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -531,7 +531,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -541,7 +541,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -550,7 +550,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -560,7 +560,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -569,7 +569,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -579,7 +579,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -588,7 +588,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -598,7 +598,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -607,7 +607,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -617,7 +617,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -626,7 +626,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -636,7 +636,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -645,7 +645,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -655,7 +655,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -664,7 +664,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -674,7 +674,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -683,7 +683,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -693,7 +693,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -702,7 +702,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -712,7 +712,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -721,7 +721,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -731,7 +731,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -740,7 +740,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -750,7 +750,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -759,7 +759,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -769,7 +769,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -778,7 +778,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -788,7 +788,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -797,7 +797,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -807,7 +807,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -816,7 +816,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -826,7 +826,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -835,7 +835,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -845,7 +845,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -854,7 +854,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -864,7 +864,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -873,7 +873,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -883,7 +883,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -892,7 +892,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -902,7 +902,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -911,7 +911,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -921,7 +921,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -930,7 +930,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -940,7 +940,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -949,7 +949,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -959,7 +959,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -968,7 +968,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -978,7 +978,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -987,7 +987,7 @@
         "winner": {
           "provider": "Apple-4",
           "target": "Apple",
-          "rule_index": 62
+          "rule_index": 69
         },
         "shadowed": [
           {
@@ -997,7 +997,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -1006,7 +1006,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -1016,7 +1016,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -1025,7 +1025,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -1035,7 +1035,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -1044,7 +1044,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -1054,7 +1054,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -1063,7 +1063,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -1073,7 +1073,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -1082,7 +1082,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -1092,7 +1092,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -1101,7 +1101,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -1111,7 +1111,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -1120,7 +1120,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -1130,7 +1130,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -1139,7 +1139,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -1149,7 +1149,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -1158,7 +1158,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -1168,7 +1168,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -1177,7 +1177,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -1187,7 +1187,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -1196,7 +1196,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -1206,7 +1206,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -1215,7 +1215,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -1225,7 +1225,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -1234,7 +1234,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -1244,7 +1244,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -1253,7 +1253,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -1263,7 +1263,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -1272,7 +1272,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -1282,7 +1282,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -1291,7 +1291,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -1301,7 +1301,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -1310,7 +1310,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -1320,7 +1320,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       },
@@ -1329,7 +1329,7 @@
         "winner": {
           "provider": "Microsoft-6",
           "target": "Microsoft",
-          "rule_index": 67
+          "rule_index": 74
         },
         "shadowed": [
           {
@@ -1339,7 +1339,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 124
+            "rule_index": 131
           }
         ]
       }
@@ -1356,7 +1356,7 @@
       ],
       "routes": [
         {
-          "index": 62,
+          "index": 69,
           "target": "Apple"
         }
       ],
@@ -1383,7 +1383,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Apple/Apple_Classical_No_Resolve.yaml",
-      "elapsed_ms": 1243
+      "elapsed_ms": 11050
     },
     {
       "name": "Claude",
@@ -1395,7 +1395,7 @@
       ],
       "routes": [
         {
-          "index": 58,
+          "index": 65,
           "target": "AI 服务"
         }
       ],
@@ -1418,7 +1418,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Claude/Claude_No_Resolve.yaml",
-      "elapsed_ms": 1319
+      "elapsed_ms": 11019
     },
     {
       "name": "GitHub-5",
@@ -1430,7 +1430,7 @@
       ],
       "routes": [
         {
-          "index": 60,
+          "index": 67,
           "target": "开发服务"
         }
       ],
@@ -1453,7 +1453,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/GitHub/GitHub_No_Resolve.yaml",
-      "elapsed_ms": 1320
+      "elapsed_ms": 11044
     },
     {
       "name": "Google-2",
@@ -1465,7 +1465,7 @@
       ],
       "routes": [
         {
-          "index": 64,
+          "index": 71,
           "target": "Google"
         }
       ],
@@ -1492,7 +1492,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Google/Google_No_Resolve.yaml",
-      "elapsed_ms": 1188
+      "elapsed_ms": 11167
     },
     {
       "name": "Microsoft-6",
@@ -1504,7 +1504,7 @@
       ],
       "routes": [
         {
-          "index": 67,
+          "index": 74,
           "target": "Microsoft"
         }
       ],
@@ -1529,7 +1529,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Microsoft/Microsoft_No_Resolve.yaml",
-      "elapsed_ms": 1216
+      "elapsed_ms": 11133
     },
     {
       "name": "Telegram",
@@ -1541,7 +1541,7 @@
       ],
       "routes": [
         {
-          "index": 68,
+          "index": 75,
           "target": "社交通讯"
         }
       ],
@@ -1569,7 +1569,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Telegram/Telegram_No_Resolve.yaml",
-      "elapsed_ms": 1184
+      "elapsed_ms": 11036
     },
     {
       "name": "YouTube-6",
@@ -1581,7 +1581,7 @@
       ],
       "routes": [
         {
-          "index": 63,
+          "index": 70,
           "target": "流媒体"
         }
       ],
@@ -1606,7 +1606,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/YouTube/YouTube_No_Resolve.yaml",
-      "elapsed_ms": 1312
+      "elapsed_ms": 11197
     },
     {
       "name": "ai-4",
@@ -1618,7 +1618,7 @@
       ],
       "routes": [
         {
-          "index": 59,
+          "index": 66,
           "target": "AI 服务"
         }
       ],
@@ -1641,7 +1641,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-ai-!cn.list",
-      "elapsed_ms": 1322
+      "elapsed_ms": 11205
     }
   ],
   "quality_score": {
@@ -1674,8 +1674,8 @@
   "template": {
     "id": "local:community_templates/leo/leo.yaml",
     "source_path": "community_templates/leo/leo.yaml",
-    "sha256": "a4870f7f0d39a9c3b3e753e7c457c139d41c227bb5ba33425a645c975aa3a32c",
+    "sha256": "734420043a17f8c4e7a31ce7741cf959a9033dc5a5eb7410219ad3c368974fa8",
     "provider_count": 8,
-    "rule_count": 139
+    "rule_count": 146
   }
 }

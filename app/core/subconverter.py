@@ -7,11 +7,13 @@ a node-only Clash document.
 from __future__ import annotations
 
 import os
+import asyncio
 from urllib.parse import urlparse
 
 import httpx
 
-from app.core.fetcher import FetchError, _ensure_resolved_host_is_public, _validate_url
+from app.core.fetcher import FetchError, _ensure_resolved_host_is_public, _validate_url, request_text
+from app.core.network import fetch_timeout
 
 
 class SubconverterError(ValueError):
@@ -39,26 +41,17 @@ def _validated_base_url() -> str:
 async def convert_subscription_to_clash(url: str) -> str:
     """Normalize one public subscription URL to a node-only Clash document."""
     try:
-        _validate_url(url)
-        await _ensure_resolved_host_is_public(urlparse(url).hostname)  # type: ignore[arg-type]
+        async with asyncio.timeout(fetch_timeout()):
+            _validate_url(url)
+            await _ensure_resolved_host_is_public(urlparse(url).hostname)
+            content = await request_text(
+                f"{_validated_base_url()}/sub", params={"target": "clash", "url": url, "list": "true"},
+                public=False, redirects=False,
+            )
+    except TimeoutError as exc:
+        raise SubconverterError("subconverter refresh deadline exceeded") from exc
     except FetchError as exc:
         raise SubconverterError(str(exc)) from exc
-
-    endpoint = f"{_validated_base_url()}/sub"
-    try:
-        async with httpx.AsyncClient(timeout=30.0, follow_redirects=False) as client:
-            response = await client.get(
-                endpoint,
-                params={"target": "clash", "url": url, "list": "true"},
-            )
-    except httpx.HTTPError as exc:
-        raise SubconverterError(f"subconverter request failed: {exc}") from exc
-
-    if not 200 <= response.status_code < 300:
-        # Never echo the upstream response body: it may contain content fetched
-        # from wherever `url` pointed, including internal network responses.
-        raise SubconverterError(f"subconverter returned HTTP {response.status_code}")
-
-    if not response.text.strip():
+    if not content.strip():
         raise SubconverterError("subconverter returned empty content")
-    return response.text
+    return content

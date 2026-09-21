@@ -46,6 +46,24 @@ class UnsupportedProtocolError(Exception):
         }
 
 
+@dataclass
+class UnsupportedNodeOptionError(Exception):
+    """One node cannot be represented; peers using the same protocol may work."""
+    node: str
+    fields: list[str]
+
+    def to_dict(self) -> dict:
+        return {"code": "unsupported_node_options", "node": self.node,
+                "fields": self.fields,
+                "suggestion": "目标客户端无法等价转换该节点的选项，已跳过该节点；请使用可兼容配置或 Mihomo 输出"}
+
+
+def incompatible_node_names(nodes: list[ProxyNode], warnings: list[dict]) -> set[str]:
+    protocols = {warning.get("value") for warning in warnings if warning.get("code") == "unsupported_protocol"}
+    names = {warning["node"] for warning in warnings if warning.get("code") == "unsupported_node_options"}
+    return names | {node.name for node in nodes if node.protocol in protocols}
+
+
 @dataclass(frozen=True)
 class IniDialect:
     name: str
@@ -154,7 +172,7 @@ def build_ini_config(
                 proxy_lines.append(dialect.node(node))
             compiled_nodes.append(node)
             compiled_node_names.append(node.name)
-        except UnsupportedProtocolError as exc:
+        except (UnsupportedProtocolError, UnsupportedNodeOptionError) as exc:
             warnings.append(exc.to_dict())
 
     if dialect.require_nodes and not compiled_nodes:

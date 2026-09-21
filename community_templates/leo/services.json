@@ -10,11 +10,19 @@
       "rules": [
         {
           "match": "DOMAIN-SUFFIX,anthropic.com",
-          "template_inline": false
+          "template_inline": true
         },
         {
           "match": "DOMAIN-SUFFIX,claude.ai",
-          "template_inline": false
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN-SUFFIX,claude.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN-SUFFIX,claudeusercontent.com",
+          "template_inline": true
         }
       ],
       "probe_urls": [
@@ -22,12 +30,22 @@
       ],
       "destinations": [
         "anthropic.com",
-        "claude.ai"
+        "claude.ai",
+        "api.anthropic.com",
+        "platform.claude.com",
+        "downloads.claude.ai",
+        "bridge.claudeusercontent.com"
       ],
       "rule_providers": [
         "Claude"
       ],
-      "geosite_tags": []
+      "geosite_tags": [],
+      "diagnostic_destinations": [
+        "claude.ai",
+        "api.anthropic.com",
+        "platform.claude.com",
+        "bridge.claudeusercontent.com"
+      ]
     },
     {
       "id": "openai",
@@ -83,6 +101,38 @@
         {
           "match": "DOMAIN-SUFFIX,challenges.cloudflare.com",
           "template_inline": true
+        },
+        {
+          "match": "DOMAIN,humb.apple.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN-SUFFIX,intercom.io",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN-SUFFIX,intercomcdn.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN,js.stripe.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN,o207216.ingest.sentry.io",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN,o33249.ingest.sentry.io",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN,rum.browser-intake-datadoghq.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN-SUFFIX,ct.sendgrid.net",
+          "template_inline": true
         }
       ],
       "probe_urls": [
@@ -101,11 +151,28 @@
         "images.workoscdn.com",
         "setup.workos.com",
         "workos.imgix.net",
-        "challenges.cloudflare.com"
+        "challenges.cloudflare.com",
+        "humb.apple.com",
+        "js.intercomcdn.com",
+        "api-iam.intercom.io",
+        "js.stripe.com",
+        "o207216.ingest.sentry.io",
+        "o33249.ingest.sentry.io",
+        "rum.browser-intake-datadoghq.com",
+        "url.ct.sendgrid.net"
       ],
       "rule_providers": [],
       "geosite_tags": [
         "openai"
+      ],
+      "diagnostic_destinations": [
+        "openai.com",
+        "ios.chat.openai.com",
+        "auth.openai.com",
+        "chatgpt.com",
+        "ws.chatgpt.com",
+        "cdn.openaimerge.com",
+        "humb.apple.com"
       ]
     },
     {

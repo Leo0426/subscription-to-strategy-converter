@@ -12,13 +12,17 @@ Flow:
 from __future__ import annotations
 
 import re
+import json
 from dataclasses import dataclass
 from ipaddress import ip_address
 from typing import Any
 
 from app.ir import ProxyNode
+from app.core.parsers.clash import ir_to_clash_dict
+from app.core.platforms.surge_profile import replace_surge_routing
 from app.core.platforms.ini import (
-    IniDialect, UnsupportedProtocolError, UnsupportedRuleTypeError, build_ini_config,
+    IniDialect, UnsupportedNodeOptionError, UnsupportedProtocolError, UnsupportedRuleTypeError, build_ini_config,
+    incompatible_node_names,
 )
 
 
@@ -232,6 +236,88 @@ _BUILTIN_TARGETS: frozenset[str] = frozenset({"DIRECT", "REJECT", "REJECT-DROP"}
 
 # ── Node mapping layer ─────────────────────────────────────────────────────
 
+# Surge owns session pooling and its TLS client fingerprint. These options
+# cannot be mapped, but do not change the node's endpoint/authentication.
+_ANYTLS_TUNING = frozenset({
+    "client-fingerprint", "client-metadata", "idle-session-check-interval",
+    "idle-session-timeout", "min-idle-session",
+})
+_ANYTLS_MAPPED = frozenset({
+    "name", "type", "server", "port", "password", "tls", "sni", "skip-cert-verify",
+    "alpn", "fingerprint", "name-cert-verify", "disable-reuse", "udp",
+})
+
+
+def _anytls_line(node: ProxyNode) -> str:
+    proxy = ir_to_clash_dict(node)
+    unsupported = set(proxy) - _ANYTLS_MAPPED - _ANYTLS_TUNING
+    if not proxy.get("password"):
+        unsupported.add("password")
+    for field in ("disable-reuse", "skip-cert-verify", "udp"):
+        if field in proxy and not isinstance(proxy[field], bool):
+            unsupported.add(field)
+    if not 1 <= node.port <= 65535:
+        unsupported.add("port")
+    for field, value in (("name", node.name), ("server", node.server)):
+        if not value or any(char in value for char in ',=\r\n"'):
+            unsupported.add(field)
+    if node.name.lstrip().startswith(("#", ";")):
+        unsupported.add("name")
+    for field in ("password", "sni", "name-cert-verify", "fingerprint"):
+        if any(ord(char) < 32 for char in str(proxy.get(field, ""))):
+            unsupported.add(field)
+    alpn = proxy.get("alpn", [])
+    if not isinstance(alpn, list) or any(
+        not isinstance(value, str) or not value or "," in value or any(ord(c) < 32 for c in value)
+        for value in alpn
+    ):
+        unsupported.add("alpn")
+    fingerprint = str(proxy.get("fingerprint") or "").replace(":", "")
+    if fingerprint and not re.fullmatch(r"[0-9a-fA-F]{64}", fingerprint):
+        unsupported.add("fingerprint")
+    if unsupported:
+        fields = sorted(field if re.fullmatch(r"[a-zA-Z0-9_-]{1,64}", field) else "unknown" for field in unsupported)
+        raise UnsupportedNodeOptionError(node.name, fields)
+
+    # Quote strings so commas, quotes and whitespace in credentials survive INI.
+    parts = [f"anytls, {node.server}, {node.port}",
+             "password=" + json.dumps(str(proxy["password"]), ensure_ascii=False)]
+    for source, target in (("sni", "sni"), ("name-cert-verify", "server-cert-verify-name")):
+        if proxy.get(source):
+            parts.append(target + "=" + json.dumps(str(proxy[source]), ensure_ascii=False))
+    if proxy.get("skip-cert-verify"):
+        parts.append("skip-cert-verify=true")
+    if alpn:
+        parts.append("alpn=" + json.dumps(",".join(alpn), ensure_ascii=False))
+    if fingerprint:
+        parts.append("server-cert-fingerprint-sha256=" + fingerprint)
+    if "disable-reuse" in proxy:
+        parts.append("reuse=" + ("false" if proxy["disable-reuse"] else "true"))
+    return f"{node.name} = {', '.join(parts)}"
+
+
+def _anytls_warnings(nodes: list[ProxyNode]) -> list[dict]:
+    warnings: list[dict] = []
+    minimum = ("5.17.0", "6.4.3")
+    for node in nodes:
+        proxy = ir_to_clash_dict(node)
+        ignored = set(proxy) & _ANYTLS_TUNING
+        if proxy.get("udp") is False:
+            ignored.add("udp")  # Surge AnyTLS always offers UDP-over-TCP relay.
+        if ignored:
+            warnings.append({"code": "ignored_node_options", "node": node.name,
+                             "fields": sorted(ignored),
+                             "suggestion": "Surge AnyTLS 使用客户端自己的 TLS 指纹、会话池和 UDP 行为；列出的选项未转换，Mihomo 输出仍保留原值"})
+        if proxy.get("alpn") and minimum < ("5.20.0", "6.7.0"):
+            minimum = ("5.20.0", "6.7.0")
+        if proxy.get("name-cert-verify"):
+            minimum = ("5.21.0", "6.8.0")
+    if nodes:
+        warnings.append({"code": "client_version_requirement", "value": "anytls",
+                         "minimum_versions": {"ios": minimum[0], "mac": minimum[1]},
+                         "suggestion": f"本次 AnyTLS 及 TLS 参数要求 Surge iOS {minimum[0]}+ / Mac {minimum[1]}+；未检测实际客户端版本"})
+    return warnings
+
 
 def _ss_line(node: ProxyNode) -> str:
     cipher = _SS_CIPHER_MAP.get(
@@ -325,13 +411,15 @@ def _vmess_line(node: ProxyNode) -> str:
 def _node_to_surge_line(node: ProxyNode) -> str:
     """Return a Surge [Proxy] line.
 
-    Raises UnsupportedProtocolError for protocols Surge does not support.
+    Raises a compatibility error for protocols/options this exporter cannot emit.
     """
     proto = node.protocol
     if proto == "ss":
         return _ss_line(node)
     if proto == "trojan":
         return _trojan_line(node)
+    if proto == "anytls":
+        return _anytls_line(node)
     if proto == "vmess":
         return _vmess_line(node)
     if proto in {"http", "https"}:
@@ -341,7 +429,7 @@ def _node_to_surge_line(node: ProxyNode) -> str:
     raise UnsupportedProtocolError(
         code="unsupported_protocol",
         value=proto,
-        suggestion=f"Surge 不支持 {proto}，该节点已跳过",
+        suggestion=f"当前转换器尚未支持 {proto} 的 Surge 输出，该节点已跳过",
     )
 
 
@@ -548,31 +636,32 @@ def build_surge_config(
     rule_providers: dict[str, Any],
     *,
     dns_config: dict[str, Any] | None = None,
+    source_profile: str | None = None,
 ) -> tuple[str, list[dict]]:
     """Compile a complete Surge .conf string.
 
     Returns ``(conf, warnings)``. Unsupported node protocols and rule-set URLs
     are reported and skipped while compilation continues. Node-only DNS
     settings that cannot be preserved are reported without changing their scope.
+    A native source owns all non-routing sections, including the proxy entries.
     """
     conf, warnings = build_ini_config(
         nodes, proxy_groups, rules, rule_providers,
         dialect=IniDialect(
             name="Surge",
-            node=_node_to_surge_line,
+            node=None if source_profile is not None else _node_to_surge_line,
             group=_group_to_surge_line,
             rule=_rule_to_surge_line,
             rule_types=_SURGE_RULE_TYPES,
-            general=_general_section(),
-            host=_host_section,
+            general="" if source_profile is not None else _general_section(),
+            host=(lambda _nodes: None) if source_profile is not None else _host_section,
         ),
     )
-    unsupported_protocols = {
-        warning["value"]
-        for warning in warnings
-        if warning.get("code") == "unsupported_protocol"
-    }
-    emitted_nodes = [node for node in nodes if node.protocol not in unsupported_protocols]
+    skipped_nodes = incompatible_node_names(nodes, warnings)
+    emitted_nodes = [node for node in nodes if node.name not in skipped_nodes]
+    warnings.extend(_anytls_warnings([node for node in emitted_nodes if node.protocol == "anytls"]))
+    if source_profile is not None:
+        return replace_surge_routing(source_profile, conf), warnings
     if _proxy_hostnames(emitted_nodes):
         dns_warning = _node_dns_warning(dns_config)
         if dns_warning is not None:

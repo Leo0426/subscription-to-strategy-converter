@@ -2,6 +2,8 @@
 
 Status: accepted
 
+Update: ADR 0016 supersedes the reconstructed node format below with the airport's unchanged native subscription. The two-link lifecycle remains. Full native profiles retain non-routing settings; node-only sources receive a rules/groups-only companion.
+
 The operator requires Clash, Surge, and Shadowrocket as public client families. This expands the two-target boundary recorded in ADR 0006 and CONTEXT while retaining the same Profile and PolicySnapshot lifecycle.
 
 Shadowrocket receives a Clash-compatible node subscription (`target=shadowrocket`) and an accompanying native policy configuration (`target=shadowrocket-config`). The UI exposes both import steps. Modern node fields remain in the structured node representation; the native configuration owns service groups and ordered compatible Leo rules. This follows the node format used by [Sub-Store's Shadowrocket producer](https://github.com/sub-store-org/Sub-Store/blob/master/backend/src/core/proxy-utils/producers/shadowrocket.js) and the group/rule syntax in the [authored Shadowrocket configuration examples](https://github.com/LOWERTOP/Shadowrocket/blob/main/lazy_group.conf), inspected on 2026-09-08.

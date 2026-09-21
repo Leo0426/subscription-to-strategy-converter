@@ -9,7 +9,7 @@ from app.ir import ProxyNode, TLSConfig, TransportConfig
 
 _PROXY_SECTION = re.compile(r"^\s*\[proxy\]\s*$", re.IGNORECASE | re.MULTILINE)
 _SECTION = re.compile(r"^\s*\[[^]]+\]\s*$")
-_SUPPORTED_PROTOCOLS = {"ss", "trojan", "vmess", "http", "https", "socks5", "socks5-tls"}
+_SUPPORTED_PROTOCOLS = {"ss", "trojan", "vmess", "http", "https", "socks5", "socks5-tls", "anytls"}
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 
 
@@ -31,7 +31,10 @@ def _parse_options(parts: list[str]) -> dict[str, str]:
     for part in parts:
         key, separator, value = part.partition("=")
         if separator:
-            options[key.strip().lower()] = value.strip()
+            value = value.strip()
+            if len(value) >= 2 and value[0] in {'"', "'"} and value[-1] == value[0]:
+                value = re.sub(r"\\(.)", r"\1", value[1:-1])
+            options[key.strip().lower()] = value
     return options
 
 
@@ -56,12 +59,15 @@ def _split_fields(value: str, line_number: int) -> list[str]:
             current.append(character)
             escaped = False
         elif quote and character == "\\":
+            current.append(character)
             escaped = True
         elif quote and character == quote:
+            current.append(character)
             quote = ""
         elif quote:
             current.append(character)
         elif character in {'"', "'"}:
+            current.append(character)
             quote = character
         elif character == ",":
             fields.append("".join(current).strip())
@@ -75,6 +81,28 @@ def _split_fields(value: str, line_number: int) -> list[str]:
         current.append("\\")
     fields.append("".join(current).strip())
     return fields
+
+
+def _anytls_extra(options: dict[str, str], line_number: int) -> dict[str, Any]:
+    supported = {"password", "reuse", "sni", "skip-cert-verify", "alpn",
+                 "server-cert-verify-name", "server-cert-fingerprint-sha256"}
+    if options.keys() - supported:
+        # Do not silently discard wrappers, client certificates or proxy chains.
+        raise SurgeParseError(f"unsupported AnyTLS options at line {line_number}; use a Mihomo subscription for this node")
+    if not options.get("password"):
+        raise SurgeParseError(f"AnyTLS password is required at line {line_number}")
+    for field in ("reuse", "skip-cert-verify"):
+        if field in options and options[field].lower() not in {"true", "false", "1", "0", "yes", "no", "on", "off"}:
+            raise SurgeParseError(f"invalid AnyTLS {field} at line {line_number}")
+    if options.get("sni", "").lower() == "off":
+        raise SurgeParseError(f"AnyTLS sni=off has no equivalent Mihomo setting at line {line_number}")
+    passthrough: dict[str, Any] = {"udp": True}
+    if options.get("server-cert-verify-name"):
+        passthrough["name-cert-verify"] = options["server-cert-verify-name"]
+    extra: dict[str, Any] = {"password": options["password"], "_clash_passthrough": passthrough}
+    if "reuse" in options:
+        extra["disable_reuse"] = not _as_bool(options["reuse"])
+    return extra
 
 
 def _node_from_parts(name: str, parts: list[str], line_number: int) -> ProxyNode | None:
@@ -97,7 +125,7 @@ def _node_from_parts(name: str, parts: list[str], line_number: int) -> ProxyNode
 
     options = _parse_options(parts[3:])
     protocol = surge_protocol
-    tls_enabled = surge_protocol in {"trojan", "https", "socks5-tls"} or _as_bool(options.get("tls"))
+    tls_enabled = surge_protocol in {"trojan", "https", "socks5-tls", "anytls"} or _as_bool(options.get("tls"))
     if surge_protocol == "https":
         protocol = "http"
     elif surge_protocol == "socks5-tls":
@@ -116,6 +144,8 @@ def _node_from_parts(name: str, parts: list[str], line_number: int) -> ProxyNode
             extra["obfs_host"] = options["obfs-host"]
         if _as_bool(options.get("udp-relay")):
             extra["udp"] = True
+    elif protocol == "anytls":
+        extra = _anytls_extra(options, line_number)
     elif protocol == "trojan":
         extra = {"password": options.get("password", "")}
         if _as_bool(options.get("udp-relay")):
@@ -157,6 +187,8 @@ def _node_from_parts(name: str, parts: list[str], line_number: int) -> ProxyNode
             enabled=tls_enabled,
             sni=options.get("sni", ""),
             insecure=_as_bool(options.get("skip-cert-verify")),
+            alpn=[value.strip() for value in options.get("alpn", "").split(",") if value.strip()] if protocol == "anytls" else [],
+            fingerprint=options.get("server-cert-fingerprint-sha256", "") if protocol == "anytls" else "",
         ),
         transport=transport,
         extra=extra,

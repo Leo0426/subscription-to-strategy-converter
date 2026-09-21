@@ -4,13 +4,13 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light" />
   <meta name="referrer" content="same-origin" />
-  <title>Subflow 5.1 · 策略订阅工作台</title>
+  <title>Subflow 6.1 · 策略订阅工作台</title>
   <link rel="icon" type="image/png" href="/static/assets/subflow-logo.png" />
-  <link rel="stylesheet" href="/static/flow.css?v=50" />
+  <link rel="stylesheet" href="/static/flow.css?v=51" />
 </head>
 <body>
 <header class="simple-header">
-  <a class="simple-brand" href="/" aria-label="Subflow 首页"><span class="simple-logo"><img src="/static/assets/subflow-logo.png" alt="" /></span><strong>Subflow</strong><span class="version-badge">5.1</span></a>
+  <a class="simple-brand" href="/" aria-label="Subflow 首页"><span class="simple-logo"><img src="/static/assets/subflow-logo.png" alt="" /></span><strong>Subflow</strong><span class="version-badge">6.1</span></a>
   <span class="simple-health" id="health-chip"><i></i><span>检查服务</span></span>
 </header>
 <main class="simple-shell">
@@ -59,10 +59,16 @@
         <p data-output-target="shadowrocket" class="helper">Shadowrocket：先添加节点订阅，再在「配置 → 添加配置」导入并启用配套配置。更新时同步更新这两项。</p>
         <p id="publish-reach-warning" class="inline-status is-error" hidden></p>
       </section>
+      <section id="publication-status-panel" class="simple-section" hidden aria-live="polite">
+        <h2>已保存订阅的刷新状态</h2>
+        <div id="publication-status"></div>
+        <button id="refresh-publications-button" class="simple-button secondary" type="button" disabled>强制刷新已保存的订阅</button>
+        <p class="helper">此操作重新读取上游，不保存当前草稿。完成后仍需在电脑和手机客户端更新订阅；可核对配置首行的版本与生成时间。</p>
+      </section>
       <section class="simple-section diagnostic-section" aria-labelledby="diagnose-title">
         <div class="section-heading"><div><h2 id="diagnose-title">服务无法访问？</h2><p class="helper">先核对分流，再按需读取客户端与探测目标服务。</p></div></div>
         <div class="diagnose-controls"><label class="field" for="diagnose-service"><span>服务</span><select id="diagnose-service"><option value="openai">ChatGPT / OpenAI</option></select></label><label class="field" for="diagnose-client"><span>客户端</span><select id="diagnose-client"><option value="mihomo">Mihomo / OpenClash</option><option value="surge">Surge Mac</option></select></label></div>
-        <label class="runtime-option"><input type="checkbox" id="diagnose-runtime" /><span>同时请求客户端实测（只读取状态与发起探测，不修改选择）</span></label>
+        <label class="runtime-option"><input type="checkbox" id="diagnose-runtime" /><span>同时请求客户端实测（连续 3 轮，查看失败率与延迟波动，不修改选择）</span></label>
         <p id="runtime-state" class="helper">未连接客户端 · 实际节点与访问未验证</p>
         <button id="diagnose-button" class="simple-button secondary" type="button" disabled>检查这个服务</button>
         <div id="diagnose-result" hidden aria-live="polite"></div>
@@ -73,5 +79,5 @@
   </div>
 </main>
 <div class="toast" id="toast" hidden role="status"></div>
-<script src="/static/flow.js?v=50"></script>
+<script src="/static/flow.js?v=51"></script>
 </body></html>

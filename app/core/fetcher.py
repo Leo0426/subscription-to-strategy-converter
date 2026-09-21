@@ -7,7 +7,11 @@ import socket
 from urllib.parse import urlparse
 
 import dns.resolver
+import dns.asyncresolver
+import json
 import httpx
+
+from app.core.network import fetch_timeout, max_subscription_bytes, outbound_client
 
 
 class FetchError(ValueError):
@@ -68,23 +72,18 @@ def _is_fake_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     return any(ip in network for network in FAKE_IP_NETWORKS)
 
 
-def _resolve_via_udp_dns(hostname: str) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
-    """Query 8.8.8.8:53 directly over UDP, bypassing the system resolver."""
-    resolver = dns.resolver.Resolver(configure=False)
+async def _resolve_via_udp_dns(hostname: str) -> list:
+    resolver = dns.asyncresolver.Resolver(configure=False)
     resolver.nameservers = ["8.8.8.8"]
-    resolver.timeout = 5
-    resolver.lifetime = 5
-    ips: list[ipaddress.IPv4Address | ipaddress.IPv6Address] = []
-    for rdtype in ("A", "AAAA"):
+    resolver.timeout = resolver.lifetime = 5
+    async def query(rdtype):
         try:
-            for rdata in resolver.resolve(hostname, rdtype):
-                try:
-                    ips.append(ipaddress.ip_address(str(rdata)))
-                except ValueError:
-                    pass
-        except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.resolver.NoNameservers, dns.exception.Timeout):
-            pass
-    return ips
+            answer = await resolver.resolve(hostname, rdtype)
+            return [ipaddress.ip_address(str(record)) for record in answer]
+        except (dns.exception.DNSException, ValueError):
+            return []
+    answers = await asyncio.gather(query('A'), query('AAAA'))
+    return [ip for answer in answers for ip in answer]
 
 
 #: JSON DoH endpoints queried by IP so fake-ip DNS cannot intercept them.
@@ -96,30 +95,28 @@ _DOH_ENDPOINTS = (
 )
 
 
-async def _resolve_via_doh(hostname: str) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
-    """DNS-over-HTTPS by resolver IP; first endpoint that answers wins."""
-    async with httpx.AsyncClient(timeout=5.0) as client:
-        for endpoint in _DOH_ENDPOINTS:
-            ips: list[ipaddress.IPv4Address | ipaddress.IPv6Address] = []
-            for rdtype, rtype_id in (("A", 1), ("AAAA", 28)):
-                try:
-                    resp = await client.get(
-                        endpoint,
-                        params={"name": hostname, "type": rdtype},
-                        headers={"Accept": "application/dns-json"},
-                    )
-                    if resp.status_code == 200:
-                        for answer in resp.json().get("Answer", []):
-                            if answer.get("type") == rtype_id:
-                                try:
-                                    ips.append(ipaddress.ip_address(answer["data"]))
-                                except (ValueError, KeyError):
-                                    pass
-                except (httpx.HTTPError, Exception):
-                    pass
-            if ips:
-                return ips
-    return []
+async def _resolve_via_doh(hostname: str) -> list:
+    async with outbound_client() as client:
+        async def query(endpoint, kind):
+            try:
+                async with client.stream('GET', endpoint, params={'name': hostname, 'type': kind},
+                                         headers={'Accept': 'application/dns-json'}, timeout=5) as response:
+                    if response.status_code != 200:
+                        return []
+                    content = bytearray()
+                    async for chunk in response.aiter_bytes():
+                        if len(content) + len(chunk) > 65536:
+                            return []
+                        content.extend(chunk)
+                    payload = json.loads(content)
+                    if not isinstance(payload, dict) or not isinstance(payload.get('Answer', []), list):
+                        return []
+                    return [ipaddress.ip_address(record['data']) for record in payload.get('Answer', [])
+                            if isinstance(record, dict) and record.get('type') == kind]
+            except (httpx.HTTPError, ValueError, KeyError, TypeError):
+                return []
+        answers = await asyncio.gather(*(query(endpoint, kind) for endpoint in _DOH_ENDPOINTS for kind in (1, 28)))
+        return [ip for answer in answers for ip in answer]
 
 
 async def _ensure_resolved_host_is_public(hostname: str) -> None:
@@ -142,51 +139,83 @@ async def _ensure_resolved_host_is_public(hostname: str) -> None:
     if not fake_ip_hits:
         return
 
-    # System DNS returned fake-ips (Clash fake-ip mode).
-    # Try UDP DNS to 8.8.8.8, then DoH to 1.1.1.1 (IP-based, immune to fake-ip).
-    for resolver_fn in (
-        lambda h: asyncio.to_thread(_resolve_via_udp_dns, h),
-        _resolve_via_doh,
-    ):
-        all_ips = await resolver_fn(hostname)
-        # Drop fake-ips — the resolver may also have been intercepted by Clash
-        public_candidates = [ip for ip in all_ips if not _is_fake_ip(ip)]
-        if not public_candidates:
-            continue
-        for ip in public_candidates:
-            if _is_blocked_ip(ip):
-                raise FetchError(_blocked_ip_message(ip))
-        return  # At least one public non-blocked IP confirmed
+    tasks = [asyncio.create_task(resolver(hostname)) for resolver in (_resolve_via_udp_dns, _resolve_via_doh)]
+    try:
+        for completed in asyncio.as_completed(tasks):
+            candidates = [ip for ip in await completed if not _is_fake_ip(ip)]
+            if not candidates:
+                continue
+            for ip in candidates:
+                if _is_blocked_ip(ip):
+                    raise FetchError(_blocked_ip_message(ip))
+            return
+    finally:
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
 
     raise FetchError(_blocked_ip_message(fake_ip_hits[0]))
 
 
-async def fetch_subscription(url: str) -> str:
-    current_url = url
-
+async def fetch_subscription(url: str, *, target: str = "mihomo") -> str:
     user_agent = (
-        os.environ.get("SUBFLOW_SUBSCRIPTION_USER_AGENT", "").strip()
+        (os.environ.get("SUBFLOW_SHADOWROCKET_USER_AGENT", "").strip() if target == "shadowrocket" else "")
+        or os.environ.get("SUBFLOW_SUBSCRIPTION_USER_AGENT", "").strip()
+        or ("Shadowrocket/2.2.70" if target == "shadowrocket" else "")
         or DEFAULT_SUBSCRIPTION_USER_AGENT
     )
-    headers = {"User-Agent": user_agent}
+    return await request_text(url, headers={"User-Agent": user_agent})
+
+
+async def request_text(url: str, *, headers: dict | None = None, params: dict | None = None,
+                       public: bool = True, redirects: bool = True) -> str:
+    """Bound the whole request, including validation, redirects and one retry.
+
+    Only operator-configured compatibility endpoints may use public=False;
+    the original subscription still passes public validation before forwarding.
+    """
     try:
-        async with httpx.AsyncClient(timeout=15.0, follow_redirects=False, headers=headers) as client:
-            for _ in range(6):
-                _validate_url(current_url)
-                parsed = urlparse(current_url)
-                await _ensure_resolved_host_is_public(parsed.hostname)  # type: ignore[arg-type]
-
-                response = await client.get(current_url)
-                if not response.is_redirect:
-                    if response.status_code < 200 or response.status_code >= 300:
-                        raise FetchError(f"subscription fetch failed with HTTP {response.status_code}")
-                    return response.text
-
-                redirect_url = response.headers.get("location")
-                if not redirect_url:
-                    raise FetchError("subscription redirect response is missing Location")
-                current_url = str(response.url.join(redirect_url))
-            else:
-                raise FetchError("subscription fetch exceeded redirect limit")
+        async with asyncio.timeout(fetch_timeout()), outbound_client() as client:
+            current_url = url
+            # Keep provider redirect tickets within this fetch; the pooled
+            # client's own jar rejects cookies from every subscription.
+            cookies = httpx.Cookies()
+            for hop in range(6):
+                if public:
+                    _validate_url(current_url)
+                    await _ensure_resolved_host_is_public(urlparse(current_url).hostname)
+                for attempt in range(2):
+                    if attempt and public:
+                        await _ensure_resolved_host_is_public(urlparse(current_url).hostname)
+                    try:
+                        async with client.stream('GET', current_url, headers=headers, params=params, cookies=cookies) as response:
+                            cookies.extract_cookies(response)
+                            if response.is_redirect and redirects:
+                                location = response.headers.get('location')
+                                if not location:
+                                    raise FetchError('subscription redirect response is missing Location')
+                                current_url = str(response.url.join(location))
+                                params = None
+                                break
+                            if response.status_code in {502, 503, 504} and attempt == 0:
+                                await asyncio.sleep(0.1)
+                                continue
+                            if not 200 <= response.status_code < 300:
+                                raise FetchError(f'subscription fetch failed with HTTP {response.status_code}')
+                            content = bytearray()
+                            limit = max_subscription_bytes()
+                            async for chunk in response.aiter_bytes():
+                                if len(content) + len(chunk) > limit:
+                                    raise FetchError('subscription exceeds decoded size limit')
+                                content.extend(chunk)
+                            return content.decode(response.encoding or 'utf-8', errors='replace')
+                    except httpx.TransportError:
+                        if attempt:
+                            raise
+                        await asyncio.sleep(0.1)
+            raise FetchError('subscription fetch exceeded redirect limit')
+    except TimeoutError as exc:
+        raise FetchError('subscription refresh deadline exceeded') from exc
     except httpx.HTTPError as exc:
-        raise FetchError(f"failed to fetch subscription: {exc}") from exc
+        raise FetchError(f'subscription network failure ({type(exc).__name__})') from exc

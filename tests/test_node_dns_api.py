@@ -38,7 +38,7 @@ def test_mihomo_subscription_keeps_private_node_dns(subscription_client: TestCli
     assert response.status_code == 200
     _, config = parse_clash_yaml_full(response.text)
     assert config["dns"]["proxy-server-nameserver"] == [_PRIVATE_RESOLVER]
-    assert config["dns"]["enhanced-mode"] == "fake-ip"
+    assert "enhanced-mode" not in config["dns"]
 
 
 @pytest.mark.parametrize("endpoint", ["subscribe", "render"])

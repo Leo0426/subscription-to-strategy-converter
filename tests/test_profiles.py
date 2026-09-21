@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from app.core.profiles import ProfileStore
-from app.core.subscription import SubscriptionError
+from app.core.fetcher import FetchError
 from app.main import app
 
 
@@ -84,7 +84,7 @@ def test_profile_subscription_falls_back_to_last_successful_artifact(tmp_path, m
 
     async def fake_fetch_subscription(url: str) -> str:
         if not upstream["available"]:
-            raise SubscriptionError("upstream unavailable")
+            raise FetchError("upstream unavailable")
         return """
 proxies:
   - name: HK-01
@@ -109,7 +109,7 @@ proxies:
     fresh = client.get(created["subscribe_url"])
 
     upstream["available"] = False
-    stale = client.get(created["subscribe_url"])
+    stale = client.get(created["subscribe_url"] + "&force_refresh=true")
 
     assert stale.status_code == 200
     assert stale.text == fresh.text
@@ -162,7 +162,7 @@ proxies:
 
     first = client.get(created["subscribe_url"])
     upstream["name"] = "US-New"
-    second = client.get(created["subscribe_url"])
+    second = client.get(created["subscribe_url"] + "&force_refresh=true")
 
     assert "- US-Old" in first.text
     assert "- US-New" not in first.text

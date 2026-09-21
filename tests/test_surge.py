@@ -833,7 +833,7 @@ def test_leo_surge_keeps_the_us_node_pool_manual() -> None:
 
     assert "美国节点 = select, 美国 SS" in conf
     assert "美国节点 = url-test" not in conf
-    assert "AI 服务 = select, 美国节点, 默认代理, 自动选择, 手动选择" in conf
+    assert "AI 服务 = select, 美国节点, 手动选择" in conf
     assert "proxy-test-url = http://www.apple.com/library/test/success.html" in conf
 
 
@@ -865,7 +865,7 @@ def test_leo_surge_prunes_manual_us_group_when_all_us_nodes_are_unsupported() ->
     )
 
     assert "美国节点 =" not in conf
-    assert "AI 服务 = select, 默认代理, 自动选择, 手动选择" in conf
+    assert "AI 服务 = select, 手动选择" in conf
     assert [warning["value"] for warning in warnings if warning["code"] == "unsupported_protocol"] == [
         "hysteria2",
         "tuic",

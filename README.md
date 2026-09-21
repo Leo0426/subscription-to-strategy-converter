@@ -1,8 +1,8 @@
-# Subflow 5.1 · 策略订阅工作台
+# Subflow 6.1 · 策略订阅工作台
 
-把一条已授权的通用、Clash/Mihomo 或 Surge 节点订阅，转换成 **Clash / OpenClash、Surge 和 Shadowrocket 的长期策略订阅**。基于 [Leo 策略](community_templates/leo/leo.yaml)，在同一页完成节点读取、服务出口设置、兼容检查和订阅更新。
+把一条已授权的通用、Clash/Mihomo、Surge 或 Shadowrocket 订阅，结合分流规则发布为 **Clash / OpenClash、Surge 和 Shadowrocket 的长期策略订阅**。基于 [Leo 策略](community_templates/leo/leo.yaml)，在同一页完成节点读取、服务出口设置、兼容检查和订阅更新。
 
-[快速开始](#快速开始) · [使用流程](#使用流程) · [客户端兼容](#客户端兼容) · [常见问题](#常见问题) · [5.1 升级说明](docs/releases/5.1.md)
+[快速开始](#快速开始) · [使用流程](#使用流程) · [客户端兼容](#客户端兼容) · [常见问题](#常见问题) · [6.1 升级说明](docs/releases/6.1.md)
 
 ## 能做什么
 
@@ -11,6 +11,7 @@
 - **更新原订阅**：粘贴已有 Subflow 订阅链接，编辑同一个 Profile，保留原 ID、token 和客户端链接。
 - **明确升级旧配置**：旧策略快照可以先预览规则变化和无法保留的出口，再应用到草稿并保存。
 - **按需诊断服务**：查看服务域名的配置路径；连接客户端后，读取当前节点并发起探测。
+- **看清订阅状态**：显示已保存版本、配置标识和生成时间，支持强制刷新；短时重复请求复用产物，并发刷新合并处理。
 
 Subflow 管理配置与转换结果。节点连通、目标服务接受访问和完整登录成功，是需要分别验证的结果。
 
@@ -44,13 +45,13 @@ uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
 ### 指定架构打包
 
 ```sh
-./scripts/docker-build.sh amd64 5.1
-./scripts/docker-export.sh amd64 5.1
+./scripts/docker-build.sh amd64 6.1
+./scripts/docker-export.sh amd64 6.1
 ```
 
-生成本地镜像 `subflow:5.1-amd64`（`linux/amd64`），并导出到 `dist/docker/subflow-5.1-linux-amd64.tar.gz`。需要 ARM64 时，将两条命令的 `amd64` 改为 `arm64`。
+生成本地镜像 `subflow:6.1-amd64`（`linux/amd64`），并导出到 `dist/docker/subflow-6.1-linux-amd64.tar.gz`。需要 ARM64 时，将两条命令的 `amd64` 改为 `arm64`。
 
-镜像标签用于本地构建或归档导入，不代表已发布到公共镜像仓库。归档加载、已有部署升级与回退步骤见 [5.1 发布说明](docs/releases/5.1.md)。
+镜像标签用于本地构建或归档导入，不代表已发布到公共镜像仓库。归档加载、已有部署升级与回退步骤见 [6.1 发布说明](docs/releases/6.1.md)。
 
 ## 使用流程
 
@@ -75,19 +76,33 @@ uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
 
 | 客户端 | 输出 | 导入方式 |
 | --- | --- | --- |
-| Clash / OpenClash（Mihomo / Clash.Meta 内核） | 完整 Leo YAML | 添加 Clash / Mihomo 订阅链接 |
+| Clash / OpenClash（Mihomo / Clash.Meta 内核） | 机场连接配置 + Leo 分流 YAML | 添加 Clash / Mihomo 订阅链接 |
 | Surge 5.21+ | 节点、策略组及兼容规则的 `.conf` | 添加 Surge 订阅链接 |
-| Shadowrocket | 节点 YAML + 配套 Leo `.conf` | 添加节点订阅；再从「配置 → 添加配置」导入并启用配套配置 |
+| Shadowrocket | 机场原生订阅原文 + 配套分流 `.conf` | 添加节点订阅；再从「配置 → 添加配置」导入并启用配套配置 |
 
-Shadowrocket 需要同步刷新两个链接，以保持节点名称和策略组引用一致。当前节点转换覆盖 SS、SSR、VMess、VLESS、Trojan、Hysteria、Hysteria2、TUIC、AnyTLS、HTTP、SOCKS5；具体字段保留能力由回归测试覆盖，实际支持仍取决于客户端。
+Shadowrocket 需要同步刷新两个链接，以保持节点名称和策略组引用一致。节点订阅原文直接传递，包括未知参数、原始名称、Base64 编码、流量和备注信息；不经过节点序列化器。清单解析只读取规则引用需要的名称、协议和地址，不能识别或存在歧义时明确报错。
 
-Surge 和 Shadowrocket 兼容输出会跳过不支持的协议或规则，并显示提示。MRS、GEOSITE、逻辑规则及 Mihomo 专属 DNS 设置不保证等价转换。旧 Clash 内核不在完整 Leo 配置的兼容范围内。
+Surge 跨格式输出会跳过不支持的协议并显示提示。Surge 和 Shadowrocket 的分流输出会提示不支持的规则；MRS、GEOSITE 和逻辑规则不保证等价转换。Shadowrocket 原生节点不按我们的转换器协议列表过滤。旧 Clash 内核不在完整 Leo 配置的兼容范围内。
+
+**三个客户端统一遵循“机场负责连接配置，Subflow 负责分流”。** Leo 提供规则和必要策略组；不再默认接管机场的 DNS、Hosts、监听端口、TUN 等公共设置。源配置未设置的项继续采用客户端默认值。
+
+- **Clash / Mihomo**：以机场原生 YAML 为底稿，保留全部公共设置、节点字段、原始节点名及连接所需的机场策略组和 Provider；不对原生节点应用跨格式修正。生成的策略组或规则 Provider 与机场重名时，重命名生成项并同步修改引用。源 `mode` 为全局或直连时切换为规则模式并提示，以使分流生效。
+- **Surge 原生输入 → Surge**：保留 `[General]`、`[Host]`、`[Proxy]` 及其他非分流段，包括专用 DNS、DoH、测速地址、超时、IPv6 和节点原始参数。只替换 `[Rule]` 并增加所需策略组；保留原组及代理链引用。内部规范化的节点选择映射回原名，有歧义的名称冲突明确报错。移除上游 `#!MANAGED-CONFIG` 指令，避免更新回机场原始规则；通过 Subflow 订阅链接刷新。
+- **Shadowrocket**：以 Shadowrocket 身份请求机场，原生订阅保持原文。机场返回完整 INI 时，配套配置保留所有非分流段及原策略组，只替换规则并增加必要策略组。机场只返回节点时，配套配置仅含策略组和规则，不补造 `[General]`、DNS 或 Hosts，也不从 Mihomo 配置挑选字段重建。
+
+同一 `/all/` 链接在浏览器和不同客户端中可能返回不同内容。Mihomo 和 Shadowrocket 分别读取自己的来源，订阅缓存按来源格式区分。Shadowrocket 原文中不插入 Subflow 注释；生成标识保留在响应头，避免破坏 Base64 订阅。
+
+API 调用方应通过 `/render` 或订阅接口生成原生 Surge 输出。`/workspace/preview` 的策略 IR 不携带完整原生配置，因此直接传给 `/compile` 生成 Surge 会明确报错，避免再次丢失机场连接设置。
+
+Mihomo 工作区预览显示实际保留的机场设置；无损可表达的工作区可继续编译，且保留兼容提示。若节点字段无法通过策略 IR 无损往返，或跨格式预览缺少完整来源上下文，`/compile` 会要求改用 `/render` 或订阅接口。日常工作台生成和刷新链接不受这个策略 IR 限制影响。
+
+AnyTLS 已支持 Mihomo / Surge 来源，以及 Mihomo、Surge、Shadowrocket 输出。Surge 的 AnyTLS 最低要求为 iOS 5.17.0 / Mac 6.4.3；带 ALPN 时为 iOS 5.20.0 / Mac 6.7.0，带独立证书校验名称时为 iOS 5.21.0 / Mac 6.8.0。完整 Leo 仍遵循上表的策略兼容基线；检查结果会提示本次节点所需版本，不会自动检测客户端版本。字段映射、不能等价转换的选项和验证范围见 [AnyTLS 兼容说明](docs/anytls-compatibility.md)。
 
 ### 通用订阅与兼容适配器
 
-Subflow 默认以 Mihomo User-Agent 请求上游，保留原始链接参数。若提供方要求特定 User-Agent，可配置 `SUBFLOW_SUBSCRIPTION_USER_AGENT`。
+Mihomo 默认以 Mihomo User-Agent 请求上游；Shadowrocket 及其配套配置使用 Shadowrocket User-Agent。原始 URL 参数保持不变。`SUBFLOW_SUBSCRIPTION_USER_AGENT` 可统一覆盖身份，`SUBFLOW_SHADOWROCKET_USER_AGENT` 可单独覆盖 Shadowrocket，且优先于统一设置。
 
-固定返回 Base64 / URI 列表的链接，需要改用提供方的 Clash/Mihomo 链接，或启用自建兼容适配器：
+Shadowrocket 原生 Base64 / URI 链接可以直接使用。若要将这些格式转换为 Mihomo 或 Surge，需要改用提供方对应格式的链接，或启用自建兼容适配器：
 
 ```sh
 docker compose -f docker-compose.yml -f docker-compose.compatibility.yml up -d --build
@@ -102,7 +117,11 @@ docker compose -f docker-compose.yml -f docker-compose.compatibility.yml up -d -
 | `SUBFLOW_DB_PATH` | 数据库路径；本地默认 `data/subflow.db`，镜像内默认 `/app/data/subflow.db` |
 | `SUBFLOW_PUBLIC_BASE_URL` | 客户端可达的 Subflow 地址，用于生成订阅链接 |
 | `SUBFLOW_SUBSCRIPTION_USER_AGENT` | 覆盖请求上游订阅时的 User-Agent |
+| `SUBFLOW_SHADOWROCKET_USER_AGENT` | 单独覆盖 Shadowrocket 原生订阅请求身份 |
 | `SUBFLOW_SUBCONVERTER_URL` | 自建 subconverter 地址，启用后用于兼容订阅转换 |
+| `SUBFLOW_CACHE_TTL` | 新鲜产物复用秒数，默认 30，范围 0–300；0 关闭复用 |
+| `SUBFLOW_FETCH_TIMEOUT` | 来源读取及兼容转换的网络总时限，默认 20 秒，范围 0.05–60 |
+| `SUBFLOW_MAX_SUBSCRIPTION_BYTES` | 解码后来源响应大小上限，默认 5 MiB，范围 1 KiB–20 MiB |
 | `SUBFLOW_MIHOMO_CONTROLLER` | 可选：Mihomo / OpenClash 控制器地址 |
 | `SUBFLOW_MIHOMO_SECRET` | 可选：控制器已有的认证密钥 |
 | `SUBFLOW_SURGE_CLI` | 可选：本机 Surge CLI 路径；macOS 默认自动发现标准安装位置 |
@@ -111,7 +130,7 @@ Docker 部署时将需要的变量添加到服务的 `environment` 中，再重�
 
 Profile 在数据库中保存订阅来源与策略偏好，订阅链接中的 token 也用于授权编辑。公开策略账本仅展示模板与审计信息。请按私有数据管理数据库、备份和带 token 的链接。
 
-已有部署升级时保持原数据挂载和访问地址。5.0 没有数据库表结构迁移，但新服务偏好不保证旧版本能够理解；回退需要旧镜像及升级前数据库备份。详见 [升级与回退](docs/releases/5.0.md#已有部署升级与回退)。
+已有部署升级时保持原数据挂载和访问地址。本轮会自动补充 Profile 编辑计数和产物元数据列，保留 ID、token 和客户端链接；回退需要旧镜像及升级前数据库备份。缓存、迁移和故障边界见 [订阅刷新与设备排查](docs/subscription-refresh.md)。历史版本步骤见 [升级与回退](docs/releases/5.0.md#已有部署升级与回退)。
 
 ## 常见问题
 
@@ -125,7 +144,11 @@ Profile 在数据库中保存订阅来源与策略偏好，订阅链接中的 to
 
 **上游订阅暂时不可用，会怎样？**
 
-已有 Profile 在外部依赖获取失败时，可返回该客户端最后成功生成的产物，并用 `X-Subflow-Stale: true` 标记。各客户端产物独立缓存；没有历史产物时无法回退。更新 Profile 会清除旧产物缓存。
+已有 Profile 在外部依赖获取失败时，可返回同一已保存版本、同一客户端最后成功生成的产物，并用 `X-Subflow-Stale: true` 标记。更新 Profile 会清除旧产物，并阻止旧请求写回缓存。正常产物默认复用 30 秒，可在工作台强制刷新；服务器刷新完成后仍需让客户端更新订阅。
+
+**电脑正常，手机 ChatGPT / Claude 不能用，怎么排查？**
+
+先核对两端订阅首行的配置标识、生成时间和实际所选节点，再检查手机登录、API 与资源域名的请求记录。本机 Surge 诊断不代表手机状态。具体步骤见 [设备对照与诊断范围](docs/subscription-refresh.md#p2看清设备拿到什么请求走到哪里)。
 
 **为什么客户端拿不到生成的链接？**
 
@@ -141,9 +164,12 @@ uv run python scripts/sync-service-rules.py --check
 [服务目录](community_templates/leo/services.json) 是产品服务规则和旧 RulePack 的共同来源。修改规则后运行 `uv run python scripts/sync-service-rules.py`，同步独立 Leo 模板，并按 [规则维护说明](community_templates/leo/README.md) 更新审计。
 
 - [项目上下文与模块职责](CONTEXT.md)
+- [订阅刷新、稳定性与设备排查](docs/subscription-refresh.md)
 - [服务偏好与客户端验证决策](docs/adr/0014-intent-workbench-and-client-validation.md)
-- [5.1 发布与验收记录](docs/releases/5.1.md)
+- [6.1 发布说明](docs/releases/6.1.md)
+- [6.0 历史发布记录](docs/releases/6.0.md)
+- [5.1 历史发布记录](docs/releases/5.1.md)
 - [5.0 发布与验收记录](docs/releases/5.0.md)
 - 本地交互式 API 文档：启动后访问 `/docs`；健康检查：`/health`。
 
-5.1 交付时通过 446 项自动化测试、服务目录同步和 amd64 容器合成订阅验收；镜像内 59 个应用及模板文件与工作区一致。测试覆盖生成内容和接口行为；真实客户端导入、ChatGPT 登录与对话需在使用环境中验收。5.0 的浏览器核心流程与历史验收见对应发布记录。
+6.1 的验收范围见发布说明，实际镜像和归档验证结果记录在随包提供的 `subflow-6.1-build.json` 中。测试覆盖生成内容和接口行为；真实客户端导入、ChatGPT / Claude 登录与对话需在使用环境中验收。历史版本的验收见对应发布记录。

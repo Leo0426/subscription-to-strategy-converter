@@ -109,11 +109,11 @@ proxy-groups:
   interval: 600
   tolerance: 150
 - name: AI 服务
+  # 固定出口优先；通用探针可达不代表 AI 服务可用，不能按延迟跨地区切换。
+  # 没有美国节点时在“手动选择”中明确选定可用节点。
   type: select
   proxies:
   - 美国节点
-  - 默认代理
-  - 自动选择
   - 手动选择
 - name: 美国节点
   # 手动固定所选美国节点；健康检查只更新连通性和延迟，不参与选路。
@@ -235,6 +235,10 @@ rule-providers:
     interval: 86400
 rules:
 # Managed service rules: services.json
+- DOMAIN-SUFFIX,anthropic.com,AI 服务
+- DOMAIN-SUFFIX,claude.ai,AI 服务
+- DOMAIN-SUFFIX,claude.com,AI 服务
+- DOMAIN-SUFFIX,claudeusercontent.com,AI 服务
 - DOMAIN-SUFFIX,openai.com,AI 服务
 - DOMAIN-SUFFIX,chatgpt.com,AI 服务
 - DOMAIN-SUFFIX,oaistatic.com,AI 服务
@@ -247,13 +251,21 @@ rules:
 - DOMAIN,setup.workos.com,AI 服务
 - DOMAIN,workos.imgix.net,AI 服务
 - DOMAIN-SUFFIX,challenges.cloudflare.com,AI 服务
+- DOMAIN,humb.apple.com,AI 服务
+- DOMAIN-SUFFIX,intercom.io,AI 服务
+- DOMAIN-SUFFIX,intercomcdn.com,AI 服务
+- DOMAIN,js.stripe.com,AI 服务
+- DOMAIN,o207216.ingest.sentry.io,AI 服务
+- DOMAIN,o33249.ingest.sentry.io,AI 服务
+- DOMAIN,rum.browser-intake-datadoghq.com,AI 服务
+- DOMAIN-SUFFIX,ct.sendgrid.net,AI 服务
 # End managed service rules
 - DOMAIN-SUFFIX,tokfinity.com,DIRECT
 - DOMAIN-SUFFIX,hcaptcha.com,AI 服务
 - DOMAIN-SUFFIX,recaptcha.net,AI 服务
 - DOMAIN-SUFFIX,gvt1.com,Google
-# WebRTC (STUN/TURN) — inlined from GitMetaio/Surfing WebRTC.list; kept native
-# because Surge rejects DST-PORT inside external RULE-SET files ("Invalid line").
+# 仅为具名公共 STUN 主机保留直连；不能把所有 3478/5349 等端口强制直连，
+# 无域名的语音与其他应用流量继续按服务、地理规则和最终出口分流。
 - DOMAIN,stun1.l.google.com,DIRECT
 - DOMAIN,stun2.l.google.com,DIRECT
 - DOMAIN,stun3.l.google.com,DIRECT
@@ -279,11 +291,6 @@ rules:
 - DOMAIN,turn2.turnserver.me,DIRECT
 - DOMAIN,relay.metered.ca,DIRECT
 - DOMAIN,global.stun.twilio.com,DIRECT
-- DST-PORT,19302,DIRECT
-- DST-PORT,3478,DIRECT
-- DST-PORT,5349,DIRECT
-- DST-PORT,10000,DIRECT
-- DST-PORT,5350,DIRECT
 # Homebrew Formula API 先于广义厂商源走开发服务。
 - DOMAIN,formulae.brew.sh,开发服务
 # 中国区服务与 iCloud 先于广义厂商源直连。

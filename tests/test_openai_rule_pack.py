@@ -52,6 +52,14 @@ _DESTINATIONS = (
     "images.workoscdn.com",
     "setup.workos.com",
     "workos.imgix.net",
+    "humb.apple.com",
+    "js.intercomcdn.com",
+    "api-iam.intercom.io",
+    "js.stripe.com",
+    "o207216.ingest.sentry.io",
+    "o33249.ingest.sentry.io",
+    "rum.browser-intake-datadoghq.com",
+    "url.ct.sendgrid.net",
 )
 
 

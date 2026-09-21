@@ -8,6 +8,7 @@ A self-hosted Clash/Mihomo, Surge and Shadowrocket policy release control plane 
 
 - Subflow owns policy intent, structural transformation, semantic validation, target-specific releases, and subscription lifecycle.
 - Protocol parsing and broad format conversion are compatibility inputs, not the product's differentiating capability.
+- Airport subscriptions own connectivity and common settings for all three public clients; Subflow owns routing rules and the policy groups needed to express them. Same-format publication preserves the source envelope; cross-format publication maps equivalent settings and reports compatibility limits (ADR 0016).
 - Clash/Mihomo is the semantic quality target; Surge and Shadowrocket are public compatibility targets with explicit warnings for skipped protocols and rule sets.
 - Business policy is assembled from visible RulePacks; RouteIntent and reusable NodePools optionally override the selected packs' egress behavior.
 - The initial operator is one advanced user running a private local or self-hosted deployment; public conversion SaaS and multi-tenancy are outside the current scope.
@@ -37,14 +38,14 @@ New issues should state which pain points they address.
 | **NodeSelector** | A stable, named query over the current `ProxyNode` inventory using include/exclude name regexes and optional protocols; referenced as `selector:<id>` by proxy groups |
 | **NodePool** | A product-facing, reusable set of nodes declared by region, protocol, include keywords, and exclude keywords; compiled into a NodeSelector |
 | **RouteIntent** | A product-facing declaration containing NodePools and per-service primary pool, optional fallback pool, and final target |
-| **Leo Template** | The single supported configuration at `community_templates/leo/leo.yaml`; it supplies DNS/TUN, proxy groups, providers and the full ordered rule graph |
+| **Leo Template** | The single supported policy source at `community_templates/leo/leo.yaml`; it supplies proxy groups, providers and the full ordered rule graph. Its standalone DNS/TUN defaults do not override subscription connectivity. |
 | **PolicyPreset** | A small product-facing, named starting policy graph that is copied into a Profile and may then be freely composed |
 | **RulePack** | A selectable product module containing one business target group, its dependent groups, and the concrete ordered rules that route to it |
 | **RulePackSelection** | The ordered set of RulePack identifiers chosen by a user and compiled into a PolicySnapshot |
 | **PolicySnapshot** | The complete `SelectedPolicy` stored in a Profile after preset selection or custom composition; later preset changes do not mutate it |
 | **PolicyWorkspace** | Product core for the MVP: an in-memory policy workspace holding nodes, groups, rules, providers, settings, graph data, analyzer findings, simulator traces, and compile output |
 | **PolicyWorkbench** | The single-page product surface for source connection, fine-grained ServiceRoute overrides, validation, Profile publication, and public Leo audit evidence |
-| **Profile** | A mutable policy intent containing one authorized source, ServiceRoutes, and target-specific publication choices |
+| **Profile** | A mutable policy intent containing one authorized source, ServiceRoutes, and target-specific publication choices; its generation identifies the current saved edit, without retaining edit history |
 | **ServiceRoute** | One entry in a RouteIntent that maps a catalog service to a primary NodePool, optional fallback NodePool, and final target |
 | **RuleSource** | A policy-rule input identified by its origin, format, version, and content digest |
 | **ProxyGroup** | A named group of nodes or groups with a dispatch strategy (select / url-test / fallback / load-balance) |
@@ -81,6 +82,7 @@ Token-protected Subscription URLs
 | `app/core/parser.py` | Raw Clash YAML parsing |
 | `app/core/parsers/clash.py` | `clash_to_ir()` and `ir_to_clash_dict()` — bridge between Clash dicts and `ProxyNode` |
 | `app/core/parsers/surge.py` | Parses supported Surge `[Proxy]` entries into `ProxyNode` while rejecting malformed recognized entries |
+| `app/core/parsers/shadowrocket.py` | Reads native URI/Base64/INI policy inventory and retains the complete native profile; opaque nodes must never be serialized as converted connections |
 | `app/core/normalizer.py` | Post-parse dedup and normalization for `ProxyNode` lists |
 | `app/core/fetcher.py` | HTTP fetching with SSRF safety checks |
 | `app/core/subscription.py` | `load_subscription()` — end-to-end: URL → Clash YAML or Surge config → normalized `ProxyNode` list |
@@ -101,6 +103,8 @@ Token-protected Subscription URLs
 | `app/core/rule_source_audit.py` | RuleSource availability/content/supply-chain audit, structural-v2 quality score, and the published `audit.json` snapshot |
 | `app/core/renderer.py` | `render_yaml()` — serializes a dict to YAML string |
 | `app/core/platforms/surge.py` | Public Surge compatibility compiler; reports skipped protocols and unsupported MRS rule sets |
+| `app/core/platforms/surge_profile.py` | Replaces native Surge routing while preserving the provider's connectivity sections and auxiliary groups |
+| `app/core/platforms/mihomo.py` | Merges compiled policy into the native source envelope, retaining connectivity and disambiguating generated references |
 | `app/core/platforms/shadowrocket.py` | Public Shadowrocket node subscription and companion native policy compiler |
 | `app/core/platforms/ini.py` | Shared INI artifact assembly, compatibility warnings and target-group closure |
 | `app/core/platforms/singbox.py` | Experimental sing-box compiler |
@@ -163,22 +167,26 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 |----------|----------|---------|
 | Mihomo / Clash | Product semantic quality bar | `app/core/policy_workspace.py` → `workspace_to_mihomo_config()` + `app/core/renderer.py` |
 | Surge 5.21+ | Public compatibility target; unsupported protocols and MRS sources are skipped with warnings | `app/core/platforms/surge.py` |
-| Shadowrocket | Public compatibility target: node YAML plus native policy config | `app/core/platforms/shadowrocket.py` |
+| Shadowrocket | Original native subscription plus policy overlay / native config with replaced routing | `app/core/platforms/shadowrocket.py` |
 | sing-box | Internal experimental compiler; rejected by Leo-backed product interfaces | `app/core/platforms/singbox.py` |
 
 ## Key Invariants
 
-- `ProxyNode` is the only internal representation of a proxy — never pass raw dicts across module boundaries
+- `ProxyNode` is the representation used by policy logic. Native source envelopes are carried separately to platform compilers for lossless publication; policy transformations do not mutate them.
+- Native Surge output preserves all non-routing sections, raw proxy parameters, original node identifiers and aliases; normalized inventory references map back to native names. Source groups remain for native dependencies, while colliding generated groups receive unique Subflow-prefixed names. Ambiguous node/group identifiers fail clearly. Only the original managed-update directive is removed so refreshes cannot revert to the raw upstream rules. Cross-format output still uses the compatibility compiler. A native-origin policy-only Workspace cannot be compiled to Surge without the source context; callers use the render/subscription path instead.
 - Clash fields not yet modeled by `ProxyNode` must survive Mihomo round trips through the private `_clash_passthrough` payload; policy code must not depend on that payload
-- A non-empty Clash source `dns.proxy-server-nameserver` is a node-connectivity hint and must survive into the Mihomo artifact; Leo continues to own all other traffic-domain DNS policy
+- AnyTLS models implicit TLS, password and reuse in ProxyNode while retaining other Mihomo fields. Surge import/export maps compatible TLS options and reports minimum client versions; non-equivalent tuning is warned, while unmapped node/security options exclude only the affected node. Fixed ServiceRoutes cannot publish an excluded node even when peers use the same protocol. See `docs/anytls-compatibility.md`.
+- Native Clash/Mihomo publication preserves all source common settings, including DNS, Hosts, ports and TUN; absent source settings stay absent. Raw nodes and auxiliary source groups/providers preserve connectivity references. Generated group/provider collisions are renamed with their references; ambiguous node identities fail clearly. The only general override is rule mode when required for routing, with a warning.
+- Mihomo Workspace preview materializes the effective source envelope once; same-target compilation retains finalized native provider egress and compile warnings. Lossy native-node IR round trips and cross-format previews missing source context direct callers to render/subscription instead of silently losing settings. Provenance markers stay outside client settings.
+- Shadowrocket requests its own native response, preserves the subscription text exactly, and keeps all non-routing sections when a complete native INI is available. A nodes-only source yields a policy-only companion with no General/Host defaults. Never rebuild Shadowrocket common settings from Mihomo fields. Source node names map back from normalized inventory references; native nodes are not filtered by a cross-format serializer's protocol list. Publication identity remains in HTTP headers instead of altering the native body.
 - Surge compilation reports `unsupported_node_dns` when emitted domain-backed nodes need node-only resolver settings that it cannot preserve; diagnostics must never expose resolver URLs or subscriber tokens, and must not silently widen these settings to all traffic-domain DNS
 - Subconverter is an opt-in input compatibility Adapter used only after direct Clash/Surge parsing fails; it never owns templates, rules, target rendering, or the Profile lifecycle
-- Universal subscription URLs negotiate Mihomo/Clash.Meta content through the fetcher's default User-Agent, overridable with `SUBFLOW_SUBSCRIPTION_USER_AGENT`; URL parameters remain intact and redirect destinations retain the same validation. Forced Base64/URI inputs still require the opt-in compatibility Adapter.
+- Universal subscriptions use target-specific negotiation: Mihomo/Clash.Meta by default, Shadowrocket for its native subscription and companion config. The global `SUBFLOW_SUBSCRIPTION_USER_AGENT` override is subordinate to `SUBFLOW_SHADOWROCKET_USER_AGENT` for Shadowrocket; both affect publication identity. Native Shadowrocket Base64/URI inputs require no adapter. Other cross-format Base64/URI inputs retain the opt-in Adapter boundary.
 - Every URL forwarded to an external fetcher (subscription source, Subconverter) must pass the same DNS-rebinding check as `fetch_subscription()`; a hostname that resolves to a private/loopback IP is rejected before the request is made
 - Shadowsocks transport options required for connectivity, including Surge `obfs` and `obfs-host`, must survive input normalization and map to the equivalent target-client syntax
-- Mihomo HTTP simple-obfs output removes a hostname's trailing empty-port colon (`host:`): Mihomo appends the node port, producing a rejected `host::port` header otherwise. This target-specific normalization must not mutate the shared ProxyNode or alter other plugins, TLS obfs, explicit ports, or IPv6 literals.
+- Cross-format Mihomo HTTP simple-obfs output removes a hostname's trailing empty-port colon (`host:`): Mihomo appends the node port, producing a rejected `host::port` header otherwise. Native Mihomo node fields remain unchanged. This conversion-only normalization must not mutate shared ProxyNode data or alter other plugins, TLS obfs, explicit ports, or IPv6 literals.
 - Mihomo output from `/convert` and `/subscribe` must compile through `PolicyWorkspace` via `compile_mihomo_config()`
-- Mihomo health probes use HTTP `HEAD`; every probe URL and `expected-status` pair must be validated with `HEAD`. AI traffic uses a manual US-only Selector whose Cloudflare 204 health check updates connectivity and latency but never authorizes automatic node switching
+- Mihomo health probes use HTTP `HEAD`; every probe URL and `expected-status` pair must be validated with `HEAD`. AI traffic uses a manual US-only Selector whose Cloudflare 204 health check updates connectivity and latency but never authorizes automatic node switching; absent US nodes, AI delegates only to manual selection, never a global latency group (ADR 0015)
 - Mihomo is the first quality-bar compiler; other compilers remain experimental until semantic parity is explicit
 - Experimental compilers should report unsupported protocols without breaking the workspace loop
 - `RULE-SET` in Surge uses a direct URL (not provider name); the compiler resolves the name via `rule_providers` dict
@@ -191,8 +199,9 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - Profiles persist in SQLite; access requires both the profile ID and an independent token whose hash is stored in the database
 - A Profile has one source subscription, service preferences (or a legacy PolicySnapshot), and target-specific Clash/Mihomo, Surge and paired Shadowrocket publications
 - Shadowrocket node subscriptions and companion policy configs have distinct artifact keys. Both share the same Profile/token; users update both resources to keep node names and policy-group references synchronized (ADR 0013).
-- A Profile may serve its last successful artifact only for an external source dependency failure and must mark it with `X-Subflow-Stale: true`
-- Updating a Profile invalidates all previously compiled artifacts before the new intent can be served
+- Fresh Profile artifacts may be reused within a bounded TTL only for the same saved generation, target and current policy/compiler identity; every request still authenticates. A force refresh bypasses freshness reuse, not shared in-flight work. See `docs/subscription-refresh.md`.
+- A Profile may serve a stale artifact only for an external source dependency failure, with the same saved generation and target, and must mark it with `X-Subflow-Stale: true`. An older policy/compiler identity is allowed in this failure case only, retaining its true identity and generation time; malformed source or compile failures cannot fall back.
+- Updating a Profile invalidates all previously compiled artifacts before the new intent can be served; an older in-flight request cannot write artifacts into the new generation
 - Legacy Claude transforms preserve provider URLs, rule order, DNS/TUN settings, and every non-Claude policy edge. Modern service transforms prepend catalog rules and retarget only that service's owned provider/GEOSITE references while preserving DNS/TUN and unrelated routes (ADR 0014).
 - Legacy Claude customization requires a recognizable Claude rule/provider in the selected template. Modern ServiceRoute modes use the shared service catalog (ADR 0014).
 - Surge direct service transforms fail closed when they require incompatible template semantics; normal Profile compilation is best-effort and reports skipped protocols and MRS rule sets through warnings
@@ -205,12 +214,12 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - Expert composition replaces the complete PolicySnapshot and does not combine implicitly with RouteIntent changes
 - PolicyWorkbench keeps creation, stable-link editing, client validation, explicit legacy upgrades and optional service diagnosis on one page and exposes only fine-grained ServiceRoute overrides; template structure and RuleSource evidence remain queryable through the public ledger
 - A stored PolicySnapshot does not automatically merge later PolicyPreset changes; updating from a preset is an explicit reset operation
-- `NodeSelector` references are expanded against the latest upstream `ProxyNode` inventory on every preview/render/Profile subscription request; unknown selectors fail closed and selectors producing an empty group are publish-blocking errors
+- `NodeSelector` references are expanded against the newly fetched upstream `ProxyNode` inventory on compilation; Profile subscription requests may reuse a fresh artifact within the bounded cache window. Unknown selectors fail closed and selectors producing an empty group are publish-blocking errors
 - Rules after the first `MATCH` or `FINAL` are unreachable and must be reported by the analyzer
 - Leo's named service GEOSITEs and domestic game exceptions precede broad `gfw` / `geolocation-!cn` routes; generic default-proxy port or inbound-name rules must not preempt China/private direct catchalls. Unclassified traffic uses the final `MATCH`.
 - A structurally valid artifact is not necessarily a runnable one; the analyzer reports target-client runtime feasibility (RuleProvider reachability, cold-start provider budget, core version requirements) as warnings that never block publication
 - New RuleSources must pass the admission checklist in `community_templates/leo/README.md` (trusted upstream, no third-party proxy fronts, pin when possible, cost-proportional, no high overlap, no target conflicts); the structural-v2 score and the analyzer share one provider-count budget
-- Leo is intentionally a lightweight runtime policy: its regression budget is at most 8 RuleProviders, 140 rules, 12 KiB of source YAML, 14 ProxyGroups, 3 health-check groups, 380 total group-member edges, 200 potential probe memberships, and 34 KiB of rendered YAML for the fixed 144-node SS fixture; exceeding one budget requires an explicit architecture decision and cold-start evidence
+- Leo is intentionally a lightweight runtime policy: its regression budget is at most 8 RuleProviders, 150 rules, 13 KiB of source YAML, 14 ProxyGroups, 3 health-check groups, 380 total group-member edges, 200 potential probe memberships, and 34 KiB of rendered YAML for the fixed 144-node SS fixture; exceeding one budget requires an explicit architecture decision and cold-start evidence
 - IP-layer RULE-SETs may route to a service group only for services with genuine domainless direct-IP traffic (Telegram, Discord voice) and must carry `no-resolve`; shared-infrastructure services (AI, Google, streaming) get no IP-layer routing at all, because their front IPs carry unrelated services and a resolving IP rule splits one page across two egresses — geo/private fallbacks targeting DIRECT legitimately resolve
 - Known debt against that boundary: the pinned Google and YouTube classical sources still contain 5 and 3 IP entries. Both source entries and outer references are `no-resolve`, and the public audit exposes their types and resolving count; this containment is not compliance and must not be used as precedent for a new RuleSource
 - RuleProviders hosted where the client has no direct route must declare `proxy: <group>`; `provider_egress.py` owns that decision for both the compiler and the analyzer
@@ -240,6 +249,7 @@ Current (accepted, authoritative for their area):
 - [ADR 0012: No Release/ProfileRevision rollback history](docs/adr/0012-no-release-rollback-history.md)
 - [ADR 0013: Shadowrocket paired policy publication](docs/adr/0013-shadowrocket-paired-policy-publication.md)
 - [ADR 0014: Service intent workbench and explicit client validation](docs/adr/0014-intent-workbench-and-client-validation.md) — supersedes ADR 0009's default snapshot assembly; legacy boundaries remain
+- [ADR 0015: AI session routing and inline rule budget](docs/adr/0015-ai-session-routing-and-inline-budget.md)
 
 Superseded (kept only as decision history; do not treat as current guidance):
 

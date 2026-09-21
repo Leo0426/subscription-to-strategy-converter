@@ -157,12 +157,12 @@ def test_subscribe_returns_yaml(client: TestClient, monkeypatch: pytest.MonkeyPa
 
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/yaml")
-    assert "mixed-port: 7890" in response.text
+    assert "mixed-port:" not in response.text
     assert "RULE-SET,Claude,AI 服务" in response.text
     assert "name: 香港 01" in response.text
 
 
-def test_subscribe_preserves_source_proxy_dns_without_replacing_leo_dns_policy(
+def test_subscribe_preserves_all_source_dns_instead_of_template_defaults(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -203,12 +203,11 @@ proxies:
     assert config["dns"]["proxy-server-nameserver"] == [
         "https://node-dns.example/dns-query/subscriber"
     ]
-    assert config["dns"]["enable"] is True
-    assert config["dns"]["enhanced-mode"] == "fake-ip"
-    assert config["dns"]["fake-ip-range"] == "198.18.0.1/16"
+    assert config["dns"]["enable"] is False
+    assert config["dns"]["enhanced-mode"] == "redir-host"
+    assert config["dns"]["fake-ip-range"] == "203.0.113.1/24"
     assert config["dns"]["nameserver"] == [
-        "https://dns.alidns.com/dns-query",
-        "https://doh.pub/dns-query",
+        "https://traffic-dns.example/dns-query",
     ]
 
 
@@ -383,7 +382,7 @@ def test_subscribe_accepts_encoded_custom_strategy(
 
     assert response.status_code == 200
     assert "name: Work" in response.text
-    assert "  - 香港 01" in response.text
+    assert "  - 香港  01" in response.text
     assert "  - DIRECT" in response.text
 
 
@@ -574,7 +573,7 @@ proxies:
      ("cdn.example.com:8080", "cdn.example.com:8080"),
      ("[2001:db8::1]", "[2001:db8::1]")],
 )
-def test_mihomo_subscription_removes_empty_http_obfs_host_port(
+def test_mihomo_only_repairs_http_obfs_host_for_cross_format_sources(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
     source_format: str,
@@ -604,4 +603,4 @@ def test_mihomo_subscription_removes_empty_http_obfs_host_port(
     })
     assert response.status_code == 200
     node = next(p for p in YAML(typ="safe").load(response.text)["proxies"] if p["name"] == "TW01")
-    assert node["plugin-opts"] == {"mode": "http", "host": expected}
+    assert node["plugin-opts"] == {"mode": "http", "host": expected if source_format == "surge" else host}

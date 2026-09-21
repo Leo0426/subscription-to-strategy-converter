@@ -75,10 +75,10 @@ def test_leo_lightweight_shape_and_generated_footprint() -> None:
     groups = compiled["proxy-groups"]
     rules = compiled["rules"]
 
-    assert _LEO_TEMPLATE_PATH.stat().st_size <= 12 * 1024
+    assert _LEO_TEMPLATE_PATH.stat().st_size <= 13 * 1024
     assert len(template["rule-providers"]) == 8
     assert len(template["proxy-groups"]) == 14
-    assert len(template["rules"]) <= 140
+    assert len(template["rules"]) <= 150
     assert len(groups) == 14
     assert sum(group["type"] == "url-test" for group in groups) == 2
     assert sum(len(group.get("proxies", [])) for group in groups) <= 380
@@ -91,7 +91,7 @@ def test_leo_lightweight_shape_and_generated_footprint() -> None:
     # 1.5 KiB, but would trade away useful cross-region recovery for a cosmetic
     # size target.  The previous 144-node artifact was over 84 KiB.
     assert len(render_yaml(compiled).encode("utf-8")) <= 34 * 1024
-    assert len(rules) <= 140
+    assert len(rules) <= 150
 
     provider_rules = [
         rule
@@ -522,13 +522,30 @@ def test_leo_uses_no_resolve_variants_for_mixed_google_sources() -> None:
     assert providers["YouTube-6"]["url"].endswith("/YouTube_No_Resolve.yaml")
 
 
-def test_leo_ai_service_reuses_bounded_supported_region_groups() -> None:
+def test_leo_ai_without_us_nodes_requires_manual_selection_not_latency_switching() -> None:
     template = load_template(LEO_TEMPLATE_ID)
     config = apply_template(template, [_node("其他 01"), _node("香港 01")])
 
     assert "美国节点" not in {group["name"] for group in config["proxy-groups"]}
     ai_service = _group(config, "AI 服务")
-    assert ai_service["proxies"] == ["默认代理", "自动选择", "手动选择"]
+    assert ai_service["proxies"] == ["手动选择"]
+
+
+def test_leo_ai_egress_cannot_reach_an_automatic_or_direct_policy() -> None:
+    nodes = [_node("香港 01"), _node("US01"), _node("日本 01")]
+    config = compile_mihomo_config(apply_template(load_template(LEO_TEMPLATE_ID), nodes), nodes)
+    groups = {g["name"]: g for g in config["proxy-groups"]}
+    pending = ["AI 服务"]
+    seen = set()
+    while pending:
+        name = pending.pop()
+        if name in seen:
+            continue
+        seen.add(name)
+        assert name not in {"DIRECT", "REJECT"}
+        if name in groups:
+            assert groups[name]["type"] == "select"
+            pending.extend(groups[name]["proxies"])
 
 
 def test_leo_ai_service_uses_a_manual_us_group_with_a_generic_connectivity_probe() -> None:

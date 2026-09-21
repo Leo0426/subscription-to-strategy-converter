@@ -36,7 +36,7 @@ def test_fixed_service_uses_one_node_for_main_login_and_assets(client):
     assert group['proxies'] == ['TW01']
     for match in ['DOMAIN-SUFFIX,chatgpt.com', 'DOMAIN,cdn.openaimerge.com', 'DOMAIN-SUFFIX,challenges.cloudflare.com']:
         assert f'{match},OpenAI' in config['rules']
-    assert config['dns']['enhanced-mode'] == 'fake-ip'
+    assert 'dns' not in config
 
 
 def test_check_reports_each_client_and_does_not_claim_runtime_access(client):
@@ -147,6 +147,55 @@ def test_mihomo_runtime_reads_configured_controller_and_probes_selected_node(cli
     assert all(p['status']=='reachable' for p in runtime['probes'])
     assert 'operator-secret' not in response.text
     assert all(r.url.host=='controller.example' for r in calls)
+
+
+def test_runtime_samples_report_failures_spread_and_selection_changes(client, monkeypatch):
+    import httpx
+    monkeypatch.setenv('SUBFLOW_MIHOMO_CONTROLLER', 'http://controller.example:9090')
+    group_reads = 0
+    counts = {}
+    def handler(req):
+        nonlocal group_reads
+        if req.url.path == '/proxies':
+            group_reads += 1
+            node = 'TW01' if group_reads < 6 else 'US01'
+            return httpx.Response(200, json={'proxies':{'AI 服务':{'now':node},node:{'type':'Shadowsocks'}}})
+        url = req.url.params['url']
+        counts[url] = counts.get(url, 0) + 1
+        if counts[url] == 2:
+            return httpx.Response(504, json={'message':'unavailable'})
+        return httpx.Response(200, json={'delay':100 if counts[url] == 1 else 140})
+    original = httpx.AsyncClient
+    monkeypatch.setattr('app.core.runtime_diagnostics.httpx.AsyncClient', lambda **kw: original(**kw, transport=httpx.MockTransport(handler)))
+    response = client.post('/diagnose', json={'request':request(),'service':'openai','runtime':True,'samples':3})
+    assert response.status_code == 200, response.text
+    runtime = response.json()['runtime']
+    assert runtime['selection_stable'] is False
+    assert runtime['completed_samples'] == 3
+    assert runtime['probes'][0]['failures'] == 1
+    assert runtime['probes'][0]['latency_spread_ms'] == 40
+    assert runtime['probes'][0]['sample_count'] == 3
+    assert client.post('/diagnose', json={'request':request(),'samples':100}).status_code == 422
+
+
+def test_surge_diagnostics_compare_mobile_domains_and_redact_rule_urls(client, monkeypatch):
+    monkeypatch.setenv('SUBFLOW_SURGE_CLI', __file__)
+    calls = []
+    async def command(*args):
+        calls.append(args)
+        if args[:2] == ('http', 'probe'):
+            return 0, 'Status: 200\nDuration: 123\n'
+        assert args[:2] == ('rule', 'explain')
+        node = 'DIRECT' if args[2] == 'humb.apple.com' else 'US01'
+        return 0, f'Matched rule: RULE-SET,https://rules.example/list?secret=private,{node}\nFinal policy: {node} (Shadowsocks)\n'
+    monkeypatch.setattr('app.core.runtime_diagnostics._cli', command)
+    response = client.post('/diagnose', json={'request':request(),'service':'openai','runtime':True,'client':'surge'})
+    assert response.status_code == 200, response.text
+    runtime = response.json()['runtime']
+    assert runtime['consistent_exit'] is False
+    assert runtime['selection_stable'] is True
+    assert {r['domain'] for r in runtime['domain_routes']} >= {'ios.chat.openai.com','humb.apple.com','ws.chatgpt.com'}
+    assert 'secret=private' not in response.text
 
 
 def test_incompatible_fixed_node_cannot_publish_even_with_another_supported_node(client, monkeypatch):

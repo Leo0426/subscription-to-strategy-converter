@@ -34,6 +34,7 @@ function payload() {
 function invalidate() { $("#diagnose-result").hidden=true; state.epoch++; state.check=null; state.checkedInput=null; $("#check-results").hidden=true; $("#publish-result").hidden=true; $("#check-state").textContent=state.nodes.length?"配置已改变，请重新检查":"先读取订阅节点"; updateActions(); }
 function updateActions() {
   const ready=state.nodes.length>0 && selectedTargets().length>0 && !state.busy;
+  $("#refresh-publications-button").disabled=!state.profile||state.busy;
   $("#check-button").disabled=!ready;
   $("#diagnose-button").disabled=!ready;
   $("#generate-button").disabled=!ready||!state.check?.can_publish||state.checkedInput!==JSON.stringify(payload());
@@ -220,6 +221,37 @@ function showPublished(body) {
   showReachWarning(new URL(body.subscribe_urls.clash,location.origin).hostname);
   $("#publish-result").hidden=false;
 }
+function renderPublicationStatus(body) {
+  $("#publication-status-panel").hidden=false;
+  const rows=Object.entries(body.publications||{});
+  const labels={...CLIENT_LABELS,"shadowrocket-config":"Shadowrocket 配置"};
+  const status=m=>m.last_status==="stale"?"上次刷新失败，使用上次成功配置":m.revision!==body.current_publication_revision?"基础配置已变化，等待刷新":"已生成，设备更新状态需在客户端核对";
+  $("#publication-status").innerHTML=`<p>已保存版本 ${escapeHtml(body.generation)} · ${escapeHtml(body.cache_ttl_seconds)} 秒内重复请求可复用服务器缓存</p>${rows.length?`<div class="table-scroll"><table><thead><tr><th>客户端</th><th>配置标识 / 生成时间</th><th>状态</th></tr></thead><tbody>${rows.map(([target,m])=>`<tr><td>${escapeHtml(labels[target]||target)}</td><td>${escapeHtml((m.revision||"").slice(0,12))}<br>${escapeHtml(auditTime(m.generated_at))}</td><td>${escapeHtml(status(m))}</td></tr>`).join("")}</tbody></table></div>`:"<p>此版本尚未生成配置；客户端下次更新时生成。</p>"}`;
+}
+async function loadPublicationStatus() {
+  const p=state.profile;
+  if(!p) return null;
+  const body=await jsonRequest(`/profiles/${encodeURIComponent(p.id)}/draft?token=${encodeURIComponent(p.token)}`);
+  if(state.profile===p) renderPublicationStatus(body);
+  return body;
+}
+async function refreshPublications() {
+  const p=state.profile;
+  if(!p) throw new Error("请先打开或保存订阅。");
+  const saved=await loadPublicationStatus();
+  const targets=[...new Set(saved.request.publication_targets||[saved.request.target==="clash"?"mihomo":saved.request.target])];
+  if(targets.includes("shadowrocket")) targets.push("shadowrocket-config");
+  const outcomes=await Promise.allSettled(targets.map(async target=>{
+    const response=await fetch(`/subscribe/${encodeURIComponent(p.id)}?token=${encodeURIComponent(p.token)}&target=${encodeURIComponent(target)}&force_refresh=true`,{cache:"no-store"});
+    await response.text();
+    if(!response.ok) throw new Error(`${CLIENT_LABELS[target]||target} 刷新失败（HTTP ${response.status}）`);
+    return response.headers.get("X-Subflow-Stale")==="true";
+  }));
+  await loadPublicationStatus();
+  const errors=outcomes.filter(r=>r.status==="rejected").map(r=>r.reason.message);
+  if(errors.length) throw new Error(errors.join("；"));
+  showToast(outcomes.some(r=>r.value)?"上游暂不可用，部分输出使用上次成功配置":"服务器配置已刷新，请在各客户端更新订阅");
+}
 async function saveProfile() {
   if(!state.check?.can_publish||state.checkedInput!==JSON.stringify(payload())) throw new Error("配置已变化，请重新检查。");
   const editing=Boolean(state.profile);
@@ -227,6 +259,7 @@ async function saveProfile() {
   if(!editing) state.profile={id:body.id,token:body.token};
   showPublished(body); $("#publish-title").textContent=editing?"已更新，原订阅链接保持不变":"已保存订阅";
   $("#profile-status").textContent=`正在编辑：${$("#profile-name").value.trim()||state.profile.id.slice(0,8)}`;
+  await loadPublicationStatus();
   showToast(editing?"原订阅已更新，请在客户端刷新":"订阅已保存");
 }
 async function openProfile() {
@@ -241,6 +274,7 @@ async function openProfile() {
   restoreChoices(body.request.service_routes); $("#legacy-panel").hidden=!state.legacy; $("#upgrade-result").hidden=true;
   $("#profile-status").textContent=`正在编辑：${body.request.profile_name||state.profile.id.slice(0,8)} · ${state.legacy?"旧策略快照":body.update_available?"基础规则已更新，出口偏好保留":"跟随当前 Leo 与服务规则"}`;
   $("#existing-profile-url").value="";
+  renderPublicationStatus(body);
   await loadNodes();
 }
 async function previewUpgrade() {
@@ -257,22 +291,24 @@ function applyUpgrade() {
 }
 async function diagnose() {
   const service=$("#diagnose-service").value;
-  const report=await postJson("/diagnose",{request:payload(),service,runtime:$("#diagnose-runtime").checked,client:$("#diagnose-client").value});
+  const report=await postJson("/diagnose",{request:payload(),service,runtime:$("#diagnose-runtime").checked,client:$("#diagnose-client").value,samples:$("#diagnose-runtime").checked?3:1});
   const actual=report.runtime;
+  const observed=actual.domain_routes?`<details class="check-details" open><summary>客户端实际域名出口</summary><p>${actual.consistent_exit?"已检查域名出口一致":"存在出口差异或未能读取，请逐项核对"}</p><div class="table-scroll"><table><thead><tr><th>域名</th><th>实际节点</th><th>命中规则</th></tr></thead><tbody>${actual.domain_routes.map(d=>`<tr><td>${escapeHtml(d.domain)}</td><td>${escapeHtml(d.actual_node||"未读取")}</td><td>${escapeHtml(d.rule||"未读取")}</td></tr>`).join("")}</tbody></table></div></details>`:"";
   $("#diagnose-result").hidden=false;
-  $("#diagnose-result").innerHTML=`<div class="diagnosis-summary"><b>${escapeHtml(report.service.label)}</b><p>配置分流：${report.service.status==="consistent"?"已检查的服务域名使用同一策略":"部分域名需要客户端规则数据，或存在出口差异"}</p><p>客户端观测：${escapeHtml(actual.actual_node||"未验证")}</p><p>${escapeHtml(actual.message)}</p>${actual.service_tested===false?'<p>该服务尚未配置专用探测地址，本次仅检查通用连通性。</p>':""}</div><details class="check-details" open><summary>配置路径（不是客户端实时选择）</summary><div class="table-scroll"><table><thead><tr><th>域名</th><th>配置路径</th></tr></thead><tbody>${report.service.domains.map(d=>`<tr><td>${escapeHtml(d.domain)}</td><td>${escapeHtml(d.path.join(" → "))}${d.status!=="matched"?" · 需运行态规则":""}</td></tr>`).join("")}</tbody></table></div></details>${actual.probes?`<div class="probe-list">${actual.probes.map(p=>`<p><b>${p.status==="reachable"?"探测可达":"探测未通过"}</b><span>${escapeHtml(p.url)}</span><small>${p.http_status?`HTTP ${p.http_status} · `:""}${p.latency_ms!=null?`${Math.round(p.latency_ms)} ms`:"未取得成功响应"}</small></p>`).join("")}</div><p class="helper">此结果只对应本次探测，不代表完整登录、对话或长期可用。</p>`:""}`;
+  $("#diagnose-result").innerHTML=`<div class="diagnosis-summary"><b>${escapeHtml(report.service.label)}</b><p>配置分流：${report.service.status==="consistent"?"已检查的服务域名使用同一策略":"部分域名需要客户端规则数据，或存在出口差异"}</p><p>客户端观测：${escapeHtml(actual.actual_node||"未验证")}</p><p>${escapeHtml(actual.message)}</p>${actual.service_tested===false?'<p>该服务尚未配置专用探测地址，本次仅检查通用连通性。</p>':""}</div><details class="check-details" open><summary>配置路径（不是客户端实时选择）</summary><div class="table-scroll"><table><thead><tr><th>域名</th><th>配置路径</th></tr></thead><tbody>${report.service.domains.map(d=>`<tr><td>${escapeHtml(d.domain)}</td><td>${escapeHtml(d.path.join(" → "))}${d.status!=="matched"?" · 需运行态规则":""}</td></tr>`).join("")}</tbody></table></div></details>${observed}${actual.probes?`<div class="probe-list">${actual.probes.map(p=>`<p><b>${p.status==="reachable"?"探测可达":p.status==="degraded"?"间歇失败":"探测未通过"}</b><span>${escapeHtml(p.url)}</span><small>${p.http_status?`HTTP ${p.http_status} · `:""}${p.latency_ms!=null?`${Math.round(p.latency_ms)} ms`:"未取得成功响应"} · ${p.sample_count||1} 次采样 · 失败 ${Math.round((p.failure_rate||0)*100)}%${p.latency_spread_ms!=null?` · 延迟波动 ${Math.round(p.latency_spread_ms)} ms`:""} · ${escapeHtml(p.node||"未读取节点")}</small></p>`).join("")}</div><p class="helper">此结果只对应本次探测，不代表完整登录、对话或长期可用。</p>`:""}`;
 }
 function newProfile() {
   state.profile=null;state.legacy=null;state.upgrade=null;state.nodes=[];restoreChoices();
   for(const id of ["subscription-url","profile-name","existing-profile-url"]) $("#"+id).value="";
   $("#profile-status").textContent="正在新建订阅";$("#legacy-panel").hidden=true;$("#source-result").hidden=true;$("#diagnose-result").hidden=true;
+  $("#publication-status-panel").hidden=true;
   invalidate();renderServices();setNotice("");
 }
 async function loadHealth() {
   try { const body=await jsonRequest("/system/status"); const ok=body.app?.status==="ok"&&body.profile_db?.status==="ok"; $("#health-chip").classList.toggle("is-ok",ok); $("#health-chip span").textContent=ok?"服务正常":"服务异常"; } catch { $("#health-chip span").textContent="服务不可用"; }
 }
 function bindEvents() {
-  const actions={"validate-source-button":["读取中…",loadNodes],"check-button":["检查中…",checkConfig],"generate-button":["保存中…",saveProfile],"open-profile-button":["打开中…",openProfile],"preview-upgrade-button":["比较中…",previewUpgrade],"diagnose-button":["检查中…",diagnose]};
+  const actions={"refresh-publications-button":["刷新中…",refreshPublications],"validate-source-button":["读取中…",loadNodes],"check-button":["检查中…",checkConfig],"generate-button":["保存中…",saveProfile],"open-profile-button":["打开中…",openProfile],"preview-upgrade-button":["比较中…",previewUpgrade],"diagnose-button":["检查中…",diagnose]};
   for(const [id,[label,fn]] of Object.entries(actions)) $("#"+id).addEventListener("click",event=>busy(event.currentTarget,label,fn));
   $("#new-profile-button").addEventListener("click",newProfile);
   $("#subscription-url").addEventListener("input",()=>{state.nodes=[];$("#source-result").hidden=true;invalidate();});

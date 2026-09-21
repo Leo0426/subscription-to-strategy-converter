@@ -7,6 +7,10 @@ from typing import Any
 from app.ir import ProxyNode, TLSConfig, TransportConfig
 
 
+class AnyTLSOptionError(ValueError):
+    """Invalid source option; the message never includes credentials or values."""
+
+
 # ── dict → IR ─────────────────────────────────────────────────────────────
 
 
@@ -34,7 +38,11 @@ def _passthrough_fields(proxy: dict, protocol: str) -> dict[str, Any]:
     # this adapter actually models.  New Mihomo protocols must otherwise pass
     # through byte-for-byte (apart from YAML formatting); treating their common
     # looking fields as owned can silently drop connection-critical options.
-    if protocol in _PROTOCOL_OWNED_FIELDS:
+    if protocol == "anytls":
+        # Retain explicit false/default TLS values and evolving AnyTLS options.
+        # Authentication and reuse have canonical IR fields for other compilers.
+        owned = _IDENTITY_FIELDS | {"password", "disable-reuse"}
+    elif protocol in _PROTOCOL_OWNED_FIELDS:
         owned = _COMMON_OWNED_FIELDS | _PROTOCOL_OWNED_FIELDS[protocol]
         if str(proxy.get("network") or "").lower() in _MODELED_TRANSPORTS:
             owned = owned | {"network"}
@@ -45,8 +53,8 @@ def _passthrough_fields(proxy: dict, protocol: str) -> dict[str, Any]:
 
 def _tls(proxy: dict) -> TLSConfig:
     protocol = str(proxy.get("type") or "").lower()
-    # Trojan and Hysteria2 always use TLS even when the key is absent
-    enabled = bool(proxy.get("tls")) or protocol in {"trojan", "hysteria2", "tuic"}
+    # These protocols always use TLS even when the key is absent.
+    enabled = bool(proxy.get("tls")) or protocol in {"trojan", "hysteria2", "tuic", "anytls"}
 
     reality_opts = proxy.get("reality-opts") or {}
     reality: dict[str, Any] = {}
@@ -110,6 +118,10 @@ def clash_to_ir(proxy: dict) -> ProxyNode:
     protocol = str(proxy.get("type") or "").lower()
     if protocol == "socks":
         protocol = "socks5"
+    if protocol == "anytls":
+        for field in ("skip-cert-verify", "udp", "disable-reuse"):
+            if field in proxy and not isinstance(proxy[field], bool):
+                raise AnyTLSOptionError(f"AnyTLS {field} must be a YAML boolean")
 
     extra: dict[str, Any] = {}
     passthrough = _passthrough_fields(proxy, protocol)
@@ -138,6 +150,12 @@ def clash_to_ir(proxy: dict) -> ProxyNode:
         extra["flow"] = str(proxy.get("flow") or "")
         if proxy.get("udp"):
             extra["udp"] = True
+
+    elif protocol == "anytls":
+        password = proxy.get("password")
+        extra["password"] = str(password) if password is not None else ""
+        if "disable-reuse" in proxy:
+            extra["disable_reuse"] = proxy["disable-reuse"]
 
     elif protocol == "trojan":
         extra["password"] = str(proxy.get("password") or "")
@@ -193,9 +211,9 @@ def ir_to_clash_dict(node: ProxyNode) -> dict[str, Any]:
         "port": node.port,
     })
 
-    # TLS — trojan/hysteria2/tuic imply TLS; don't duplicate the key
+    # Implicit TLS protocols do not need a redundant tls key.
     proto = node.protocol
-    tls_implicit = proto in {"trojan", "hysteria2", "tuic"}
+    tls_implicit = proto in {"trojan", "hysteria2", "tuic", "anytls"}
 
     if node.tls.enabled and not tls_implicit:
         d["tls"] = True
@@ -322,6 +340,18 @@ def ir_to_clash_dict(node: ProxyNode) -> dict[str, Any]:
             d["flow"] = node.extra["flow"]
         if node.extra.get("udp"):
             d["udp"] = True
+
+    elif proto == "anytls":
+        # Workspaces produced before AnyTLS modeling kept auth in passthrough.
+        d["password"] = node.extra.get("password", d.get("password", ""))
+        # Explicit defaults are retained, but stale passthrough values must not
+        # override edits made to the canonical TLS fields in a workspace.
+        for key, value in (("sni", node.tls.sni), ("skip-cert-verify", node.tls.insecure),
+                           ("alpn", list(node.tls.alpn)), ("fingerprint", node.tls.fingerprint)):
+            if key in d or value:
+                d[key] = value
+        if "disable_reuse" in node.extra:
+            d["disable-reuse"] = node.extra["disable_reuse"]
 
     elif proto == "trojan":
         d["password"] = node.extra.get("password", "")
