@@ -36,12 +36,13 @@ def test_native_connectivity_and_raw_node_fields_survive_policy_replacement():
     source = {
         "mixed-port": 8888, "mode": "rule", "ipv6": False,
         "dns": {"enable": True, "enhanced-mode": "redir-host",
-                "nameserver": ["https://resolver.example/dns-query#Airport"]},
+                "nameserver": ["https://resolver.example/dns-query#Airport"],
+                "fake-ip-filter": ["rule-set:private"]},
         "tun": {"enable": False}, "hosts": {"node.example.com": "203.0.113.1"},
         "sniffer": {"enable": False}, "profile": {"store-selected": True},
         "proxies": [node(udp=False, **{"servername": "front.example", "dialer-proxy": "Airport",
                                     "custom-transport": {"value": "keep-me"}})],
-        "proxy-groups": [{"name": "Airport", "type": "select", "proxies": ["DIRECT"]}],
+        "proxy-groups": [{"name": "Airport", "type": "select", "proxies": ["DIRECT"], "use": ["airport"]}],
         "proxy-providers": {"airport": {"type": "http", "url": "https://source.example/nodes?token=secret",
                                         "proxy": "Airport"}},
         "rule-providers": {"private": {"type": "inline", "behavior": "domain", "payload": ["private.example"]}},
@@ -55,11 +56,11 @@ def test_native_connectivity_and_raw_node_fields_survive_policy_replacement():
                 "proxies", "proxy-providers", "rule-providers"):
         assert result[key] == before[key], key
     assert result["proxy-groups"] == [
-        {"name": "Airport", "type": "select", "proxies": ["DIRECT"]},
+        {"name": "Airport", "type": "select", "proxies": ["DIRECT"], "use": ["airport"]},
         {"name": "Default", "type": "select", "proxies": ["US  01"]},
     ]
     assert result["rules"] == ["DOMAIN-SUFFIX,chatgpt.com,Default", "MATCH,Default"]
-    assert warnings == []
+    assert [warning["code"] for warning in warnings] == ["opaque_proxy_provider_dependencies"]
     assert source == before
 
 
@@ -79,7 +80,8 @@ def test_absent_native_settings_stay_absent_and_internal_metadata_is_removed():
 def test_generated_name_collision_does_not_rewire_source_dns_or_proxy_chains():
     source = {
         "proxies": [node(**{"dialer-proxy": "Default"})],
-        "dns": {"nameserver": ["https://dns.example/query#Default"]},
+        "dns": {"nameserver": ["https://dns.example/query#Default"],
+                "fallback": ["https://dns.example/query#Subflow Default"]},
         "proxy-groups": [
             {"name": "Default", "type": "select", "proxies": ["DIRECT"]},
             {"name": "Subflow Default", "type": "select", "proxies": ["DIRECT"]},
@@ -120,7 +122,7 @@ def test_generated_rule_providers_are_renamed_in_rules_without_changing_source_p
                        "path": "./rules/shared.yaml", "proxy": "Default"},
             "Subflow shared": {"type": "inline", "behavior": "domain", "payload": ["private.example"]},
         },
-        "dns": {"nameserver-policy": {"rule-set:shared": "https://dns.example/query#Default"}},
+        "dns": {"nameserver-policy": {"rule-set:shared,Subflow shared": "https://dns.example/query#Default"}},
     }
     policy = generated()
     policy["rule-providers"] = {
@@ -147,7 +149,8 @@ def test_generated_rule_providers_are_renamed_in_rules_without_changing_source_p
 def test_generated_proxy_provider_references_keep_their_own_download_egress():
     source = {"proxies": [node()], "proxy-providers": {
         "airport": {"type": "http", "url": "https://source.example/nodes", "path": "./providers/nodes.yaml"},
-    }}
+    }, "proxy-groups": [{"name": "Airport", "type": "select", "use": ["airport"]}],
+        "dns": {"nameserver": ["https://dns.example/query#Airport"]}}
     policy = generated()
     policy["proxy-providers"] = {
         "airport": {"type": "http", "url": "https://policy.example/nodes", "path": "./providers/nodes.yaml",
@@ -158,7 +161,7 @@ def test_generated_proxy_provider_references_keep_their_own_download_egress():
     result, _ = build(source, policy)
 
     assert result["proxy-providers"]["airport"] == source["proxy-providers"]["airport"]
-    assert result["proxy-groups"][0]["use"] == ["Subflow airport"]
+    assert result["proxy-groups"][1]["use"] == ["Subflow airport"]
     provider = result["proxy-providers"]["Subflow airport"]
     assert provider["proxy"] == "US  01"
     assert provider["override"]["dialer-proxy"] == "US  01"
@@ -212,6 +215,7 @@ def test_ambiguous_native_names_fail_closed_without_leaking_node_credentials(pro
 
 def test_duplicate_connection_aliases_remain_available_to_native_groups():
     source = {"proxies": [node(), node("Source alias")],
+              "dns": {"nameserver": ["https://dns.example/query#Airport"]},
               "proxy-groups": [{"name": "Airport", "type": "select", "proxies": ["Source alias"]}]}
 
     result, _ = build(source)
@@ -293,7 +297,7 @@ def test_local_file_provider_collision_fails_without_disclosing_private_path():
 
     source = {"proxies": [node()], "rule-providers": {
         "source": {"type": "file", "path": "./private-token.yaml", "behavior": "domain"},
-    }}
+    }, "dns": {"fake-ip-filter": ["rule-set:source"]}}
     policy = generated()
     policy["rule-providers"] = {
         "generated": {"type": "file", "path": "private-token.yaml", "behavior": "domain"},
@@ -309,7 +313,9 @@ def test_provider_cache_collision_uses_an_unoccupied_path_across_both_provider_t
         "source": {"type": "http", "path": "./cache/shared.yaml", "url": "https://airport.example/nodes"},
     }, "rule-providers": {
         "source-rules": {"type": "file", "path": "./cache/subflow-shared.yaml", "behavior": "domain"},
-    }}
+    }, "dns": {"fake-ip-filter": ["rule-set:source-rules"],
+               "nameserver": ["https://dns.example/query#Airport"]},
+        "proxy-groups": [{"name": "Airport", "type": "select", "use": ["source"]}]}
     policy = generated()
     policy["rule-providers"] = {
         "generated": {"type": "http", "path": "cache/shared.yaml", "url": "https://rules.example/new"},
@@ -332,6 +338,7 @@ def test_normalized_node_cannot_capture_a_builtin_routing_target(name):
 def test_structured_generated_rule_references_are_rewritten_consistently():
     source = {
         "proxies": [node()],
+        "dns": {"nameserver-policy": {"rule-set:shared": "https://dns.example/query#Default"}},
         "proxy-groups": [{"name": "Default", "type": "select", "proxies": ["DIRECT"]}],
         "rule-providers": {"shared": {"type": "inline", "payload": []}},
     }

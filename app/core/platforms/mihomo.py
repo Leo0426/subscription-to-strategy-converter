@@ -9,6 +9,7 @@ from typing import Any
 
 from app.core.normalizer import normalize_nodes_with_source_names
 from app.core.parsers.clash import clash_to_ir, ir_to_clash_dict
+from app.core.platforms.mihomo_dependencies import has_opaque_proxy_payload, prune_native_policy
 from app.core.policy_workspace import compile_mihomo_config
 from app.ir import BUILTIN_POLICY_TARGETS, ProxyNode
 
@@ -43,6 +44,11 @@ def _validate_source_structure(source: dict[str, Any]) -> None:
         for provider in providers.values():
             if any(field in provider and not isinstance(provider[field], str) for field in ("path", "proxy")):
                 raise NativeMihomoProfileError("机场提供器的 path/proxy 必须为字符串")
+    subrules = source.get("sub-rules", {})
+    if (not isinstance(subrules, dict)
+            or any(not isinstance(name, str) or not isinstance(rules, list)
+                   for name, rules in subrules.items())):
+        raise NativeMihomoProfileError("机场配置的 sub-rules 必须为名称到规则数组的映射")
     if source.get("source-format") is not None and not isinstance(source["source-format"], str):
         raise NativeMihomoProfileError("机场来源格式标识无效")
 
@@ -173,6 +179,15 @@ def build_mihomo_config(
                 adapted = ir_to_clash_dict(parsed)
                 raw["plugin-opts"] = deepcopy(adapted["plugin-opts"])
 
+    # Drop obsolete airport routing before resolving names/paths, so dead
+    # definitions neither clutter clients nor force unnecessary renames.
+    result = prune_native_policy(result, compiled)
+    if ((result.get("proxy-groups") or result.get("sub-rules"))
+            and any(has_opaque_proxy_payload(provider) for provider in result.get("proxy-providers", {}).values())):
+        warnings.append({"code": "opaque_proxy_provider_dependencies", "field": "proxy-providers",
+                         "suggestion": "仍使用外部或动态改写的节点集合，已保留其节点可能依赖的机场策略组和子规则，避免清理后断开连接"})
+    native_groups = result.get("proxy-groups") or []
+    native_group_names = _definition_names(native_groups)
     group_names = _renames(generated_names, raw_names | native_group_names)
     target_names = {**node_names, **group_names}
     rule_provider_names = _renames(set(compiled["rule-providers"]), set(result.get("rule-providers") or {}))

@@ -15,7 +15,7 @@ BASE_DIR = Path(__file__).resolve().parent
 app = FastAPI(
     lifespan=network_lifespan,
     title="Subflow Strategy Builder",
-    version="6.1.0",
+    version="6.2.0",
     description="Manage service routing preferences and validate Mihomo, Surge and Shadowrocket subscriptions.",
 )
 

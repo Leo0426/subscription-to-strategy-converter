@@ -1,8 +1,8 @@
-# Subflow 6.1 · 策略订阅工作台
+# Subflow 6.2 · 策略订阅工作台
 
 把一条已授权的通用、Clash/Mihomo、Surge 或 Shadowrocket 订阅，结合分流规则发布为 **Clash / OpenClash、Surge 和 Shadowrocket 的长期策略订阅**。基于 [Leo 策略](community_templates/leo/leo.yaml)，在同一页完成节点读取、服务出口设置、兼容检查和订阅更新。
 
-[快速开始](#快速开始) · [使用流程](#使用流程) · [客户端兼容](#客户端兼容) · [常见问题](#常见问题) · [6.1 升级说明](docs/releases/6.1.md)
+[快速开始](#快速开始) · [使用流程](#使用流程) · [客户端兼容](#客户端兼容) · [常见问题](#常见问题) · [6.2 升级说明](docs/releases/6.2.md)
 
 ## 能做什么
 
@@ -45,13 +45,13 @@ uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
 ### 指定架构打包
 
 ```sh
-./scripts/docker-build.sh amd64 6.1
-./scripts/docker-export.sh amd64 6.1
+./scripts/docker-build.sh amd64 6.2
+./scripts/docker-export.sh amd64 6.2
 ```
 
-生成本地镜像 `subflow:6.1-amd64`（`linux/amd64`），并导出到 `dist/docker/subflow-6.1-linux-amd64.tar.gz`。需要 ARM64 时，将两条命令的 `amd64` 改为 `arm64`。
+生成本地镜像 `subflow:6.2-amd64`（`linux/amd64`），并导出到 `dist/docker/subflow-6.2-linux-amd64.tar.gz`。需要 ARM64 时，将两条命令的 `amd64` 改为 `arm64`。
 
-镜像标签用于本地构建或归档导入，不代表已发布到公共镜像仓库。归档加载、已有部署升级与回退步骤见 [6.1 发布说明](docs/releases/6.1.md)。
+镜像标签用于本地构建或归档导入，不代表已发布到公共镜像仓库。归档加载、已有部署升级与回退步骤见 [6.2 发布说明](docs/releases/6.2.md)。
 
 ## 使用流程
 
@@ -86,7 +86,7 @@ Surge 跨格式输出会跳过不支持的协议并显示提示。Surge 和 Shad
 
 **三个客户端统一遵循“机场负责连接配置，Subflow 负责分流”。** Leo 提供规则和必要策略组；不再默认接管机场的 DNS、Hosts、监听端口、TUN 等公共设置。源配置未设置的项继续采用客户端默认值。
 
-- **Clash / Mihomo**：以机场原生 YAML 为底稿，保留全部公共设置、节点字段、原始节点名及连接所需的机场策略组和 Provider；不对原生节点应用跨格式修正。生成的策略组或规则 Provider 与机场重名时，重命名生成项并同步修改引用。源 `mode` 为全局或直连时切换为规则模式并提示，以使分流生效。
+- **Clash / Mihomo**：以机场原生 YAML 为底稿，保留全部公共设置、节点字段和原始节点名；不对原生节点应用跨格式修正。替换业务规则后，从节点、DNS、TUN、监听配置和新策略追踪依赖，清理无引用的机场策略组、Provider 和子规则。被使用的组若动态引入全部代理 Provider，则保留这些 Provider。仍在使用的外部集合或表达式动态改写的节点，需保留其可能依赖的机场组和子规则，并显示提示。仍需保留的定义与生成项重名时，重命名生成项并同步修改引用。源 `mode` 为全局或直连时切换为规则模式并提示，以使分流生效。
 - **Surge 原生输入 → Surge**：保留 `[General]`、`[Host]`、`[Proxy]` 及其他非分流段，包括专用 DNS、DoH、测速地址、超时、IPv6 和节点原始参数。只替换 `[Rule]` 并增加所需策略组；保留原组及代理链引用。内部规范化的节点选择映射回原名，有歧义的名称冲突明确报错。移除上游 `#!MANAGED-CONFIG` 指令，避免更新回机场原始规则；通过 Subflow 订阅链接刷新。
 - **Shadowrocket**：以 Shadowrocket 身份请求机场，原生订阅保持原文。机场返回完整 INI 时，配套配置保留所有非分流段及原策略组，只替换规则并增加必要策略组。机场只返回节点时，配套配置仅含策略组和规则，不补造 `[General]`、DNS 或 Hosts，也不从 Mihomo 配置挑选字段重建。
 
@@ -166,10 +166,11 @@ uv run python scripts/sync-service-rules.py --check
 - [项目上下文与模块职责](CONTEXT.md)
 - [订阅刷新、稳定性与设备排查](docs/subscription-refresh.md)
 - [服务偏好与客户端验证决策](docs/adr/0014-intent-workbench-and-client-validation.md)
-- [6.1 发布说明](docs/releases/6.1.md)
+- [6.2 发布说明](docs/releases/6.2.md)
+- [6.1 历史发布记录](docs/releases/6.1.md)
 - [6.0 历史发布记录](docs/releases/6.0.md)
 - [5.1 历史发布记录](docs/releases/5.1.md)
 - [5.0 发布与验收记录](docs/releases/5.0.md)
 - 本地交互式 API 文档：启动后访问 `/docs`；健康检查：`/health`。
 
-6.1 的验收范围见发布说明，实际镜像和归档验证结果记录在随包提供的 `subflow-6.1-build.json` 中。测试覆盖生成内容和接口行为；真实客户端导入、ChatGPT / Claude 登录与对话需在使用环境中验收。历史版本的验收见对应发布记录。
+6.2 的验收范围见发布说明，实际镜像和归档验证结果记录在随包提供的 `subflow-6.2-build.json` 中。测试覆盖生成内容和接口行为；真实客户端导入、ChatGPT / Claude 登录与对话需在使用环境中验收。历史版本的验收见对应发布记录。
