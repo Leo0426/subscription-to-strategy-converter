@@ -77,20 +77,20 @@ def test_leo_lightweight_shape_and_generated_footprint() -> None:
 
     assert _LEO_TEMPLATE_PATH.stat().st_size <= 13 * 1024
     assert len(template["rule-providers"]) == 8
-    assert len(template["proxy-groups"]) == 14
+    assert len(template["proxy-groups"]) == 15
     assert len(template["rules"]) <= 150
-    assert len(groups) == 14
+    assert len(groups) == 15
     assert sum(group["type"] == "url-test" for group in groups) == 2
-    assert sum(len(group.get("proxies", [])) for group in groups) <= 380
+    assert sum(len(group.get("proxies", [])) for group in groups) <= 405
     assert sum(
         len(group.get("proxies", []))
         for group in groups
         if group.get("url")
-    ) <= 200
+    ) <= 225
     # Preserve the global automatic fallback: removing it would save roughly
     # 1.5 KiB, but would trade away useful cross-region recovery for a cosmetic
     # size target.  The previous 144-node artifact was over 84 KiB.
-    assert len(render_yaml(compiled).encode("utf-8")) <= 34 * 1024
+    assert len(render_yaml(compiled).encode("utf-8")) <= 35 * 1024
     assert len(rules) <= 150
 
     provider_rules = [
@@ -283,6 +283,31 @@ def test_leo_hong_kong_group_does_not_match_unrelated_names() -> None:
     )
 
     assert _group(config, "香港自动")["proxies"] == ["香港 01"]
+
+
+def test_leo_exposes_singapore_nodes_as_a_manual_ai_egress() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+    config = apply_template(
+        template,
+        [
+            _node("美国 01"),
+            _node("新加坡 01"),
+            _node("Singapore 02"),
+            _node("SG-03"),
+            _node("RUSSIA 01"),
+        ],
+    )
+
+    assert _group(config, "新加坡节点")["proxies"] == [
+        "新加坡 01",
+        "Singapore 02",
+        "SG-03",
+    ]
+    assert _group(config, "AI 服务")["proxies"] == [
+        "美国节点",
+        "新加坡节点",
+        "手动选择",
+    ]
 
 
 def test_leo_prunes_empty_region_groups_and_their_parent_references() -> None:

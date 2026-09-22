@@ -161,7 +161,7 @@ function renderLeoReference() {
     </details>
     <details class="reference-module" open>
       <summary>地区节点选择</summary>
-      <div class="reference-module-body"><p class="reference-note">仅保留香港低延迟池；AI 服务改为美国节点手动选择；连通性测试只更新延迟，不会自动切换节点。</p><div class="reference-chips">${regionNames.map((name) => `<span class="reference-chip">${escapeHtml(name)}</span>`).join("")}</div></div>
+      <div class="reference-module-body"><p class="reference-note">仅保留香港低延迟池；AI 服务提供美国和新加坡节点手动选择；连通性测试只更新延迟，不会自动切换节点。</p><div class="reference-chips">${regionNames.map((name) => `<span class="reference-chip">${escapeHtml(name)}</span>`).join("")}</div></div>
     </details>
     <details class="reference-module">
       <summary>服务默认出口</summary>

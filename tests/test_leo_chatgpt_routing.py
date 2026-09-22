@@ -42,6 +42,9 @@ _CHATGPT_DESTINATIONS = (
     "o33249.ingest.sentry.io",
     "rum.browser-intake-datadoghq.com",
     "url.ct.sendgrid.net",
+    "accounts.google.com",
+    "oauth2.googleapis.com",
+    "openidconnect.googleapis.com",
 )
 
 
@@ -135,4 +138,18 @@ def test_chatgpt_login_exceptions_do_not_capture_entire_shared_providers(destina
     )
     trace = simulate_destination(config_to_workspace(config, nodes), destination)
     assert trace.target == "默认代理"
+    assert trace.resolved == "香港 01"
+
+
+def test_chatgpt_google_login_exceptions_do_not_capture_generic_google_traffic() -> None:
+    nodes = _nodes()
+    config = compile_mihomo_config(
+        apply_template(load_template(LEO_TEMPLATE_ID), nodes), nodes
+    )
+
+    trace = simulate_destination(
+        config_to_workspace(config, nodes), "drive.google.com"
+    )
+
+    assert trace.target != "AI 服务"
     assert trace.resolved == "香港 01"

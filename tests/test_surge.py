@@ -870,8 +870,8 @@ def test_leo_surge_keeps_core_services_when_mihomo_only_rules_are_skipped() -> N
     assert "FINAL,默认代理" in conf
 
 
-def test_leo_surge_keeps_the_us_node_pool_manual() -> None:
-    nodes = [_ss("美国 SS"), _ss("香港 SS")]
+def test_leo_surge_keeps_the_ai_region_pools_manual() -> None:
+    nodes = [_ss("美国 SS"), _ss("新加坡 SS"), _ss("香港 SS")]
     config = apply_template(load_template(LEO_TEMPLATE_ID), nodes)
 
     conf, _ = build_surge_config(
@@ -883,7 +883,9 @@ def test_leo_surge_keeps_the_us_node_pool_manual() -> None:
 
     assert "美国节点 = select, 美国 SS" in conf
     assert "美国节点 = url-test" not in conf
-    assert "AI 服务 = select, 美国节点, 手动选择" in conf
+    assert "新加坡节点 = select, 新加坡 SS" in conf
+    assert "新加坡节点 = url-test" not in conf
+    assert "AI 服务 = select, 美国节点, 新加坡节点, 手动选择" in conf
     assert "proxy-test-url = http://www.apple.com/library/test/success.html" in conf
 
 

@@ -103,6 +103,18 @@
           "template_inline": true
         },
         {
+          "match": "DOMAIN,accounts.google.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN,oauth2.googleapis.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN,openidconnect.googleapis.com",
+          "template_inline": true
+        },
+        {
           "match": "DOMAIN,humb.apple.com",
           "template_inline": true
         },
@@ -152,6 +164,9 @@
         "setup.workos.com",
         "workos.imgix.net",
         "challenges.cloudflare.com",
+        "accounts.google.com",
+        "oauth2.googleapis.com",
+        "openidconnect.googleapis.com",
         "humb.apple.com",
         "js.intercomcdn.com",
         "api-iam.intercom.io",
@@ -169,6 +184,7 @@
         "openai.com",
         "ios.chat.openai.com",
         "auth.openai.com",
+        "accounts.google.com",
         "chatgpt.com",
         "ws.chatgpt.com",
         "cdn.openaimerge.com",

@@ -40,7 +40,7 @@ def test_list_item_has_required_fields(client: TestClient) -> None:
     item = yaml_items[0]
     assert item["format"] == "yaml"
     assert isinstance(item["proxy_group_count"], int)
-    assert item["proxy_group_count"] == 14
+    assert item["proxy_group_count"] == 15
     assert isinstance(item["rule_count"], int)
     assert item["surge_compatible"] is False
     assert "source_path" in item

@@ -60,6 +60,9 @@ _DESTINATIONS = (
     "o33249.ingest.sentry.io",
     "rum.browser-intake-datadoghq.com",
     "url.ct.sendgrid.net",
+    "accounts.google.com",
+    "oauth2.googleapis.com",
+    "openidconnect.googleapis.com",
 )
 
 

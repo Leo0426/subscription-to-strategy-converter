@@ -110,16 +110,27 @@ proxy-groups:
   tolerance: 100
 - name: AI 服务
   # 固定出口优先；通用探针可达不代表 AI 服务可用，不能按延迟跨地区切换。
-  # 没有美国节点时在“手动选择”中明确选定可用节点。
+  # 没有美国或新加坡节点时在“手动选择”中明确选定可用节点。
   type: select
   proxies:
   - 美国节点
+  - 新加坡节点
   - 手动选择
 - name: 美国节点
   # 手动固定所选美国节点；健康检查只更新连通性和延迟，不参与选路。
   type: select
   include-all: true
   filter: (?i)(美国|美國|🇺🇸|United States|(^|[^A-Za-z])(US|USA|LAX|SJC|SFO)([^A-Za-z]|$))
+  url: https://cp.cloudflare.com/generate_204
+  expected-status: 204
+  timeout: 5000
+  lazy: true
+  interval: 600
+- name: 新加坡节点
+  # 手动固定所选新加坡节点；健康检查只更新连通性和延迟，不参与选路。
+  type: select
+  include-all: true
+  filter: (?i)(新加坡|🇸🇬|Singapore|(^|[^A-Za-z])SG([^A-Za-z]|$))
   url: https://cp.cloudflare.com/generate_204
   expected-status: 204
   timeout: 5000
@@ -251,6 +262,9 @@ rules:
 - DOMAIN,setup.workos.com,AI 服务
 - DOMAIN,workos.imgix.net,AI 服务
 - DOMAIN-SUFFIX,challenges.cloudflare.com,AI 服务
+- DOMAIN,accounts.google.com,AI 服务
+- DOMAIN,oauth2.googleapis.com,AI 服务
+- DOMAIN,openidconnect.googleapis.com,AI 服务
 - DOMAIN,humb.apple.com,AI 服务
 - DOMAIN-SUFFIX,intercom.io,AI 服务
 - DOMAIN-SUFFIX,intercomcdn.com,AI 服务
