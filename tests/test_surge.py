@@ -11,6 +11,7 @@ from app.core.platforms.surge import (
     _rule_to_surge_line,
     build_surge_config,
 )
+from app.core.platforms.surge_audit import tls_verification_warning
 from app.core.template_engine import LEO_TEMPLATE_ID, apply_template, load_template
 from app.ir import ProxyNode, TLSConfig, TransportConfig
 
@@ -133,6 +134,28 @@ def test_trojan_skip_cert_verify() -> None:
     line = _node_to_surge_line(node)
     assert line is not None
     assert "skip-cert-verify=true" in line
+
+
+def test_insecure_tls_nodes_are_aggregated_without_node_details() -> None:
+    nodes = [
+        ProxyNode(
+            name=f"TLS-{index}",
+            protocol="anytls",
+            server=f"tls-{index}.example.com",
+            port=443,
+            tls=TLSConfig(enabled=True, insecure=index < 2),
+            extra={"password": f"secret-{index}"},
+        )
+        for index in range(3)
+    ]
+
+    warning = tls_verification_warning(nodes)
+
+    assert warning == {
+        "code": "insecure_tls_nodes",
+        "count": 2,
+        "suggestion": "2 个 TLS 节点关闭了服务器证书验证；仅在机场要求时保留，并确认节点来源可信",
+    }
 
 
 def test_http_proxy_line() -> None:

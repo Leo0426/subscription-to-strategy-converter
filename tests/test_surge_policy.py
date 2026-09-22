@@ -1,3 +1,6 @@
+import json
+import re
+
 from fastapi.testclient import TestClient
 from ruamel.yaml import YAML
 
@@ -226,3 +229,84 @@ def test_surge_workspace_preview_exposes_policy_diagnostics(monkeypatch) -> None
         "auto_test_protocol_filter",
         "auto_test_protocol_filter",
     ]
+
+
+def _section(config: str, name: str) -> str:
+    match = re.search(
+        rf"(?ms)^\[{re.escape(name)}\]\n(.*?)(?=^\[|\Z)",
+        config,
+    )
+    assert match is not None
+    return match.group(1).strip()
+
+
+def _native_source() -> str:
+    proxies = [
+        f"香港 SS {index:02} = ss, hk-ss-{index}.example.com, 443, "
+        "encrypt-method=aes-128-gcm, password=test"
+        for index in range(1, 16)
+    ]
+    proxies += [
+        f"其他 SS {index:02} = ss, other-ss-{index}.example.com, 443, "
+        "encrypt-method=aes-128-gcm, password=test"
+        for index in range(1, 69)
+    ]
+    proxies += [
+        f"香港 AnyTLS {index:02} = anytls, hk-any-{index}.example.com, 443, "
+        "password=test, skip-cert-verify=true"
+        for index in range(1, 17)
+    ]
+    proxies += [
+        f"美国 AnyTLS {index:02} = anytls, us-any-{index}.example.com, 443, "
+        "password=test, skip-cert-verify=true"
+        for index in range(1, 46)
+    ]
+    return """[General]
+allow-wifi-access = true
+doh-server = https://resolver.example/dns-query?token=private-token
+loglevel = info
+include-all-networks = true
+include-apns = true
+include-cellular-services = true
+
+[Proxy]
+""" + "\n".join(proxies) + "\n"
+
+
+def test_end_to_end_saved_surge_profile_filters_and_audits(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    async def fetch(_url: str) -> str:
+        return _native_source()
+
+    monkeypatch.setenv("SUBFLOW_DB_PATH", str(tmp_path / "profiles.db"))
+    monkeypatch.setattr("app.core.subscription.fetch_subscription", fetch)
+    with TestClient(app) as client:
+        created_response = client.post(
+            "/profiles",
+            json={
+                "subscription_url": "https://example.com/sub",
+                "target": "surge",
+                "publication_targets": ["surge"],
+                "surge_preferences": {"auto_test_protocols": ["anytls"]},
+            },
+        )
+        assert created_response.status_code == 201, created_response.text
+        response = client.get(created_response.json()["subscribe_urls"]["surge"])
+
+    assert response.status_code == 200, response.text
+    assert len(_surge_group_members(response.text, "自动选择")) == 61
+    assert len(_surge_group_members(response.text, "香港自动")) == 16
+    assert len(_surge_group_members(response.text, "手动选择")) == 144
+    assert "PROCESS-NAME" not in _section(response.text, "Rule")
+    assert _section(response.text, "Rule").splitlines()[-1].startswith("FINAL,")
+    assert "allow-wifi-access = true" in _section(response.text, "General")
+    warnings = json.loads(response.headers.get("X-Compile-Warnings", "[]"))
+    assert {item["code"] for item in warnings} >= {
+        "auto_test_protocol_filter",
+        "unsupported_rule_types",
+        "wifi_proxy_access_without_auth",
+        "insecure_tls_nodes",
+    }
+    assert "private-token" not in json.dumps(warnings)

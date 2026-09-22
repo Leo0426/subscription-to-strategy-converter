@@ -5,6 +5,7 @@ import re
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.platforms.surge_audit import audit_native_surge_profile
 from app.main import app
 
 
@@ -40,10 +41,51 @@ hide-apple-request = true
 ^http://example.com http://www.example.com 302
 """
 
+RISKY_GENERAL = """[General]
+Allow-WiFi-Access = true
+doh-server = https://resolver.example/dns-query?token=private-token
+loglevel = info
+include-all-networks = true
+include-apns = true
+include-cellular-services = true
+
+[Proxy]
+US01 = ss, node.example.com, 443, encrypt-method=aes-128-gcm, password=private-password
+"""
+
 
 def section(config, name):
     match = re.search(rf"(?im)^\[{re.escape(name)}\]\s*\n(.*?)(?=^\[|\Z)", config, re.S)
     return match.group(1).strip() if match else None
+
+
+def test_native_audit_detects_risky_mixed_case_general_settings_without_values() -> None:
+    warnings = audit_native_surge_profile(RISKY_GENERAL)
+
+    assert {warning["code"] for warning in warnings} == {
+        "wifi_proxy_access_without_auth",
+        "legacy_surge_option",
+        "surge_info_loglevel",
+        "surge_full_tunnel_scope",
+    }
+    serialized = json.dumps(warnings)
+    assert "private-token" not in serialized
+    assert "resolver.example" not in serialized
+    assert "private-password" not in serialized
+
+
+def test_native_audit_recognizes_wifi_auth_without_exposing_password() -> None:
+    warnings = audit_native_surge_profile(
+        RISKY_GENERAL.replace(
+            "doh-server =",
+            "wifi-access-http-auth = user:private-password\ndoh-server =",
+        )
+    )
+
+    assert "wifi_proxy_access_without_auth" not in {
+        warning["code"] for warning in warnings
+    }
+    assert "private-password" not in json.dumps(warnings)
 
 
 @pytest.fixture

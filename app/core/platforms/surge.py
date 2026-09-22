@@ -21,6 +21,10 @@ from app.ir import ProxyNode
 from app.core.parsers.clash import ir_to_clash_dict
 from app.core.platforms.surge_profile import replace_surge_routing
 from app.core.platforms.surge_capabilities import SURGE_IOS_RULE_TYPES
+from app.core.platforms.surge_audit import (
+    audit_native_surge_profile,
+    tls_verification_warning,
+)
 from app.core.platforms.ini import (
     IniDialect, UnsupportedNodeOptionError, UnsupportedProtocolError, UnsupportedRuleTypeError, build_ini_config,
     incompatible_node_names,
@@ -653,7 +657,11 @@ def build_surge_config(
     skipped_nodes = incompatible_node_names(nodes, warnings)
     emitted_nodes = [node for node in nodes if node.name not in skipped_nodes]
     warnings.extend(_anytls_warnings([node for node in emitted_nodes if node.protocol == "anytls"]))
+    tls_warning = tls_verification_warning(emitted_nodes)
+    if tls_warning is not None:
+        warnings.append(tls_warning)
     if source_profile is not None:
+        warnings.extend(audit_native_surge_profile(source_profile))
         return replace_surge_routing(source_profile, conf), warnings
     if _proxy_hostnames(emitted_nodes):
         dns_warning = _node_dns_warning(dns_config)
