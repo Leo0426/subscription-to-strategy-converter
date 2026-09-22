@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import subprocess
+import tomllib
 
 from fastapi.testclient import TestClient
 
@@ -73,6 +74,21 @@ def test_root_and_legacy_advanced_route_serve_the_same_simple_page() -> None:
     assert "/static/flow.js?v=52" in root.text
     assert "/static/flow.css?v=52" in root.text
     assert "/static/assets/subflow-logo.png" in root.text
+
+
+def test_release_metadata_is_consistently_6_5() -> None:
+    root = Path(__file__).resolve().parents[1]
+    page = TestClient(app).get("/").text
+    schema = TestClient(app).get("/openapi.json").json()
+    project = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+
+    assert schema["info"]["version"] == "6.5.0"
+    assert project["project"]["version"] == "6.5.0"
+    assert "Subflow 6.5" in page
+    assert '<span class="version-badge">6.5</span>' in page
+    assert 'org.opencontainers.image.version="6.5.0"' in (
+        root / "Dockerfile"
+    ).read_text(encoding="utf-8")
 
 
 def test_page_only_exposes_the_primary_subscription_flow() -> None:

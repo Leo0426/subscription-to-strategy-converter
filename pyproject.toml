@@ -1,6 +1,6 @@
 [project]
 name = "subscription-to-strategy-converter"
-version = "6.2.0"
+version = "6.5.0"
 description = "Convert authorized Clash subscriptions into Mihomo strategy configs."
 readme = "README.md"
 requires-python = ">=3.12"
