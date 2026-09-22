@@ -663,6 +663,74 @@ def _redirect_missing_rule_targets(config: dict, node_names: list[str]) -> None:
             rule[target_key] = fallback
 
 
+def filter_auto_test_protocols(
+    config: dict,
+    nodes: list[ProxyNode],
+    protocols: list[str],
+) -> list[dict]:
+    """Restrict node members of materialized url-test groups by protocol.
+
+    Other member kinds, including nested policy groups, remain untouched.
+    Empty groups and their references are removed through the same graph
+    closure used by template materialization.
+    """
+    normalized_protocols = list(
+        dict.fromkeys(
+            protocol.strip().lower()
+            for protocol in protocols
+            if protocol.strip()
+        )
+    )
+    if not normalized_protocols:
+        return []
+
+    groups = config.get("proxy-groups")
+    if not isinstance(groups, list):
+        return []
+
+    nodes_by_name = {node.name: node for node in nodes}
+    allowed_protocols = set(normalized_protocols)
+    diagnostics: list[dict] = []
+    emptied_groups: set[str] = set()
+
+    for group in groups:
+        if not isinstance(group, dict) or group.get("type") != "url-test":
+            continue
+        members = group.get("proxies")
+        if not isinstance(members, list):
+            continue
+
+        before = sum(str(member) in nodes_by_name for member in members)
+        filtered_members = [
+            member
+            for member in members
+            if str(member) not in nodes_by_name
+            or nodes_by_name[str(member)].protocol.strip().lower() in allowed_protocols
+        ]
+        after = sum(str(member) in nodes_by_name for member in filtered_members)
+        if before == after:
+            continue
+
+        group["proxies"] = filtered_members
+        group_name = str(group.get("name") or "")
+        diagnostics.append(
+            {
+                "code": "auto_test_protocol_filter",
+                "group": group_name,
+                "protocols": normalized_protocols,
+                "before": before,
+                "after": after,
+            }
+        )
+        if group_name and not filtered_members:
+            emptied_groups.add(group_name)
+
+    node_names = [node.name for node in nodes]
+    _prune_missing_group_members(groups, node_names, emptied_groups)
+    _redirect_missing_rule_targets(config, node_names)
+    return diagnostics
+
+
 def _dns_fragment_outbound(nameserver: str) -> str:
     """Return Mihomo's outbound/interface token from a DNS URL fragment."""
     _, separator, raw_fragment = nameserver.partition("#")

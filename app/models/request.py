@@ -3,6 +3,7 @@ from typing import Literal
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.models.intent import RouteIntent
+from app.models.surge import SurgePreferences
 from app.models.strategy import ClaudePolicy, CustomStrategy, SelectedPolicy, ServiceRoute
 from app.core.template_engine import LEO_TEMPLATE_ID
 
@@ -20,6 +21,7 @@ class ConvertRequest(BaseModel):
     selected_policy: SelectedPolicy | None = None
     claude_policy: ClaudePolicy | None = None
     service_routes: list[ServiceRoute] = Field(default_factory=list)
+    surge_preferences: SurgePreferences = Field(default_factory=SurgePreferences)
     publication_targets: list[Literal["mihomo", "surge", "shadowrocket"]] | None = Field(default=None, min_length=1, max_length=3)
     profile_name: str = Field(default="", max_length=80)
     policy_revision: str | None = Field(default=None, max_length=64)
