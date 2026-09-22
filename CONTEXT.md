@@ -46,6 +46,7 @@ New issues should state which pain points they address.
 | **PolicyWorkspace** | Product core for the MVP: an in-memory policy workspace holding nodes, groups, rules, providers, settings, graph data, analyzer findings, simulator traces, and compile output |
 | **PolicyWorkbench** | The single-page product surface for source connection, fine-grained ServiceRoute overrides, validation, Profile publication, and public Leo audit evidence |
 | **Profile** | A mutable policy intent containing one authorized source, ServiceRoutes, and target-specific publication choices; its generation identifies the current saved edit, without retaining edit history |
+| **SurgePreferences** | Explicit Profile intent for Surge-only publication behavior; `auto_test_protocols` restricts node members of automatic test groups without removing nodes from manual selectors |
 | **ServiceRoute** | One entry in a RouteIntent that maps a catalog service to a primary NodePool, optional fallback NodePool, and final target |
 | **RuleSource** | A policy-rule input identified by its origin, format, version, and content digest |
 | **ProxyGroup** | A named group of nodes or groups with a dispatch strategy (select / url-test / fallback / load-balance) |
@@ -87,7 +88,7 @@ Token-protected Subscription URLs
 | `app/core/fetcher.py` | HTTP fetching with SSRF safety checks |
 | `app/core/subscription.py` | `load_subscription()` — end-to-end: URL → Clash YAML or Surge config → normalized `ProxyNode` list |
 | `app/core/subconverter.py` | Optional compatibility Adapter: unsupported subscription URL → node-only Clash YAML through an operator-configured Subconverter |
-| `app/core/template_engine.py` | Built-in preset definitions, local template loader, `apply_template()`, `list_templates()` |
+| `app/core/template_engine.py` | Built-in preset definitions, local template loader, `apply_template()`, `list_templates()`, and target-local automatic-test protocol filtering |
 | `app/core/powerfullz.py` | Fetches powerfullz static YAML from jsDelivr CDN |
 | `app/core/policy_workspace.py` | Workspace conversion boundary: `config_to_workspace()`, `workspace_from_dict()`, `workspace_to_mihomo_config()`, `compile_mihomo_config()` |
 | `app/core/policy_graph.py` | `build_policy_graph()` → `PolicyGraph` (nodes + edges) |
@@ -103,6 +104,8 @@ Token-protected Subscription URLs
 | `app/core/rule_source_audit.py` | RuleSource availability/content/supply-chain audit, structural-v2 quality score, and the published `audit.json` snapshot |
 | `app/core/renderer.py` | `render_yaml()` — serializes a dict to YAML string |
 | `app/core/platforms/surge.py` | Public Surge compatibility compiler; reports skipped protocols and unsupported MRS rule sets |
+| `app/core/platforms/surge_capabilities.py` | Shared Surge iOS rule capability set used by template analysis and compilation |
+| `app/core/platforms/surge_audit.py` | Redacted, advisory audit of native Surge settings and emitted TLS verification risk |
 | `app/core/platforms/surge_profile.py` | Replaces native Surge routing while preserving the provider's connectivity sections and auxiliary groups |
 | `app/core/platforms/mihomo.py` | Merges compiled policy into the native source envelope, retaining connectivity and disambiguating generated references |
 | `app/core/platforms/mihomo_dependencies.py` | Removes unreachable native policy definitions while retaining the transitive dependencies of connectivity and generated policy |
@@ -116,6 +119,7 @@ Token-protected Subscription URLs
 | `app/api/health.py` | Health check |
 | `app/api/system.py` | Lightweight application and Profile database status API |
 | `app/models/` | Pydantic request/response models |
+| `app/models/surge.py` | Persisted `SurgePreferences` model and protocol normalization |
 
 ## Template Boundary
 
@@ -175,6 +179,8 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 
 - `ProxyNode` is the representation used by policy logic. Native source envelopes are carried separately to platform compilers for lossless publication; policy transformations do not mutate them.
 - Native Surge output preserves all non-routing sections, raw proxy parameters, original node identifiers and aliases; normalized inventory references map back to native names. Source groups remain for native dependencies, while colliding generated groups receive unique Subflow-prefixed names. Ambiguous node/group identifiers fail clearly. Only the original managed-update directive is removed so refreshes cannot revert to the raw upstream rules. Cross-format output still uses the compatibility compiler. A native-origin policy-only Workspace cannot be compiled to Surge without the source context; callers use the render/subscription path instead.
+- `surge_preferences.auto_test_protocols` is explicit Profile intent applied only while building Surge output. It filters node members of `url-test` groups after template materialization; nested groups remain, manual selectors retain every compatible node, and an absent or empty preference preserves legacy membership.
+- The public `surge` target means Surge iOS. The analyzer and compiler share one capability set; Mac-only `PROCESS-NAME` rules are skipped with both unique-type and skipped-rule counts. Native `[General]` remains source-owned: audits are advisory and redacted, and `skip-cert-verify` is never automatically disabled.
 - Clash fields not yet modeled by `ProxyNode` must survive Mihomo round trips through the private `_clash_passthrough` payload; policy code must not depend on that payload
 - AnyTLS models implicit TLS, password and reuse in ProxyNode while retaining other Mihomo fields. Surge import/export maps compatible TLS options and reports minimum client versions; non-equivalent tuning is warned, while unmapped node/security options exclude only the affected node. Fixed ServiceRoutes cannot publish an excluded node even when peers use the same protocol. See `docs/anytls-compatibility.md`.
 - Native Clash/Mihomo publication preserves all source common settings, including DNS, Hosts, ports and TUN; absent source settings stay absent. Keep raw nodes and only source groups/providers/sub-rules reachable from retained connectivity or generated policy, including transitive dependencies and dynamic provider inclusion. Replaced source rules never keep obsolete definitions alive. Prune before resolving generated group/provider names and cache paths; remaining collisions are renamed with their references, and ambiguous node identities fail clearly. The only general override is rule mode when required for routing, with a warning.
@@ -189,6 +195,7 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - Cross-format Mihomo HTTP simple-obfs output removes a hostname's trailing empty-port colon (`host:`): Mihomo appends the node port, producing a rejected `host::port` header otherwise. Native Mihomo node fields remain unchanged. This conversion-only normalization must not mutate shared ProxyNode data or alter other plugins, TLS obfs, explicit ports, or IPv6 literals.
 - Mihomo output from `/convert` and `/subscribe` must compile through `PolicyWorkspace` via `compile_mihomo_config()`
 - Mihomo health probes use HTTP `HEAD`; every probe URL and `expected-status` pair must be validated with `HEAD`. AI traffic uses a manual US-only Selector whose Cloudflare 204 health check updates connectivity and latency but never authorizes automatic node switching; absent US nodes, AI delegates only to manual selection, never a global latency group (ADR 0015)
+- ServiceRoute fallback requires two explicit node names. Its generic connectivity probe may switch only between those nodes and never proves that an AI service accepts either exit.
 - Mihomo is the first quality-bar compiler; other compilers remain experimental until semantic parity is explicit
 - Experimental compilers should report unsupported protocols without breaking the workspace loop
 - `RULE-SET` in Surge uses a direct URL (not provider name); the compiler resolves the name via `rule_providers` dict

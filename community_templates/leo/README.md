@@ -13,18 +13,18 @@
 
 - Mihomo/OpenClash 保留两套自动健康检查（全局自动、香港自动）和一套美国节点手动组检查。三组都使用 `https://cp.cloudflare.com/generate_204`，要求 HTTP 204，单节点等待上限为 5000 ms；`美国节点` 是 `select`，健康检查只更新可用性和延迟，绝不会按延迟自动切换。检查周期为 600 秒并保持 lazy：启动时会填充一次结果，之后仅在该组近期使用时继续检查。没有美国节点时仅保留手动选择，不会随全局测速自动换出口。
 - OpenClash 的“URL-Test 地址修改”无需再为 AI 设置特殊地址；建议关闭覆写并直接使用模板的 Cloudflare 204 通用探针。若必须覆写，应保持地址与 HTTP 204 期望状态一致。
-- Surge 兼容基线为 5.21+：原生 Surge 输入保留机场的 `[General] proxy-test-url` 和 `test-timeout`。Apple Provider 使用上游完整的 `Apple_All_No_Resolve.list`，避免基础列表漏掉域名规则。
+- Surge 兼容基线为 iOS 5.21+：两个自动组显式使用 100 ms 切换容差。Profile 的 `surge_preferences.auto_test_protocols` 可只限制 Surge 自动组的节点协议；手动组始终保留所有兼容节点，偏好为空时保持旧行为。仅支持 Mac 的 `PROCESS-NAME` 会从 iOS 产物跳过并计数提示。原生 Surge 输入保留机场的 `[General] proxy-test-url` 和 `test-timeout`。Apple Provider 使用上游完整的 `Apple_All_No_Resolve.list`，避免基础列表漏掉域名规则。
 - ChatGPT 的主站、WebSocket、静态资源、上传、`oaistatsig.com`、`cdn.openaimerge.com` 及官方列出的五个 WorkOS 登录/资源主机在模板中固定走 `AI 服务`，先于广义 Provider；依据是 [OpenAI 官方网络要求](https://help.openai.com/en/articles/9247338)（2026-09-12 核对）。WorkOS 与 imgix 仅按具体主机匹配，避免整个共享域名服务改走美国。2026-09-21 补充官方清单中的 `humb.apple.com`、Intercom、Stripe JS、两个 Sentry 主机、Datadog RUM 和 SendGrid 跟踪子域，防止被 Apple 或广告规则抢先处理。Stripe、Sentry、Datadog、Apple 均只例外匹配列出的主机；这些依赖中部分用于客服/遥测，放行不代表它们是每次对话失败的原因。
 - OpenAI RulePack 与 RouteIntent 同样保留这些资源及 Cloudflare 挑战域名的出口。已有 Profile 若保存了旧的替换式 PolicySnapshot，需要重新从规则包生成并保存策略；只刷新旧快照的订阅不会自动合并新规则。
 - ChatGPT 故障先核对 `AI 服务 → 美国节点` 的实际选择是否与可用原订阅为同一节点；Cloudflare 204 测速通过只说明探针可达，不证明 ChatGPT 可用。客户端保存的选择可能覆盖新配置首选；无美国节点时 `AI 服务` 只连接手动组，初始仍是订阅中的首个节点，必须手动选定实际可用节点。上述补全不改变 fake-ip，配置编译和路由回归也不替代同节点真实访问验证。
-- 三个客户端均以机场原生连接配置为准，Leo 负责规则和必要策略组。Mihomo 保留完整公共设置和节点字段；原生 Surge 保留非分流段；Shadowrocket 原生订阅直接传递，完整原生配置只替换分流，只有节点时只补充分流配置。跨格式 Surge 无法等价表达节点专用 DNS 时返回 `unsupported_node_dns` 提示（不含订阅凭据）。兼容提示不证明 DNS 就是故障原因。
+- 三个客户端均以机场原生连接配置为准，Leo 负责规则和必要策略组。Mihomo 保留完整公共设置和节点字段；原生 Surge 保留非分流段，并对高风险 `[General]` 设置给出脱敏、非阻断提示；Shadowrocket 原生订阅直接传递，完整原生配置只替换分流，只有节点时只补充分流配置。跨格式 Surge 无法等价表达节点专用 DNS 时返回 `unsupported_node_dns` 提示（不含订阅凭据）。证书验证关闭时只汇总节点数量，绝不自动删除 `skip-cert-verify`。兼容提示不证明 DNS 或证书设置就是故障原因。
 - `默认代理` 首选低延迟的香港池；Apple 与 Microsoft 均直连优先（两者都有国内数据中心，世纪互联 Azure/O365 的 `.cn` 端点经海外节点会被慢速或拒绝；Copilot 等已单独分流到 `AI 服务`）。Homebrew Formula API（`formulae.brew.sh`，托管在被 GFW 按 SNI 阻断的 GitHub Pages 段）固定走 `开发服务` 组。当前 8 个 RuleProvider 全部固定到 40 位提交，Mihomo 下载地址会改写到 canonical jsDelivr CDN 并明确固定为 `DIRECT`；Surge 产物也使用同一 CDN 上的原生 `.list`。冷启动不依赖尚未就绪的代理节点，也不再需要隐藏的规则更新组。`interval` 控制结果有效期，`tolerance` 控制切换阻尼，都不会缩短一次手动测速。轻量版删除了旧地区组和兼容别名；客户端若保存过这些组的选择，需要删除旧配置后重新导入。
 
 ## AI 使用与排错
 
 - Claude 的 `anthropic.com`、`claude.ai`、`claude.com`、`claudeusercontent.com` 现在内联并先于远程来源和广告规则；覆盖 API、OAuth 刷新、下载、MCP、Chrome 桥接和 Artifact 内容。依据：[Claude Code 官方网络要求](https://code.claude.com/docs/en/network-config)（2026-09-21 核对）。共享 Google Storage、npm、GitHub 和 CDN 继续使用各自服务策略。
 - 广义 `ai-4` 原本已有新的 Claude 域名，但旧服务目录/专用 Claude 源没有：指定 Claude 节点时，API 与新登录/内容域名可能仍使用不同出口。现在目录、RulePack、旧 Claude 覆写及独立模板一起同步；不能仅靠广义 AI 列表证明服务覆写完整。
-- 建议在工作台分别给 ChatGPT / OpenAI 和 Claude 设置 **固定节点**，用实际可用性选择节点；通用 204 延迟不能识别服务端 403。默认 `AI 服务` 仅保留美国手动组和全局手动组。修改全局手动组会影响使用它的服务，固定 ServiceRoute 可避免这种联动。
+- 建议在工作台分别给 ChatGPT / OpenAI 和 Claude 设置 **固定节点**，用实际可用性选择节点；通用 204 延迟不能识别服务端 403。需要故障切换时，ServiceRoute 使用两个明确的主备节点，通用探针只触发这两个节点之间的切换。默认 `AI 服务` 仅保留美国手动组和全局手动组，不引入通用延迟自动组。修改全局手动组会影响使用它的服务，固定 ServiceRoute 可避免这种联动。
 - 更新部署后刷新客户端订阅，并核对实际选择；`store-selected` 可能保留旧选择。旧 PolicySnapshot 需在工作台预览升级后保存，现代 ServiceRoute 会读取最新目录。无需清除所有应用数据。
 - 不再把 3478、5349、19302、10000、5350 端口一律直连，防止语音或其他应用绕过分流。具名 STUN 主机例外保留；无域名裸 IP 的语音仍按地理和最终策略处理，不能保证与 AI 域名的固定节点一致。节点不支持 UDP 时，应检查客户端/应用的 TCP 回退。
 - `tun.enable` 默认为 false。终端里的 Claude Code 若未经过透明代理，需要显式连接客户端的 HTTP 代理端口（本机 Mihomo 默认 7890），然后重启该 Claude Code 会话：
