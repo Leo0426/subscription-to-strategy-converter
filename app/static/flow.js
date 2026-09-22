@@ -5,6 +5,7 @@ const state = {
   serviceCategories: [{id:"ai",label:"AI 工具"},{id:"developer",label:"开发与系统"},{id:"streaming",label:"影音与通讯"}],
   servicePacks: [], serviceChoices: {}, nodes: [], profile: null, legacy: null,
   upgrade: null, check: null, checkedInput: null, epoch: 0, busy: false, showAll: false,
+  surgeProtocols: [],
 };
 const CLIENT_LABELS = {mihomo:"Clash / OpenClash",surge:"Surge",shadowrocket:"Shadowrocket"};
 function escapeHtml(value) { const div=document.createElement("div"); div.textContent=String(value??""); return div.innerHTML.replaceAll('"', "&quot;").replaceAll("'", "&#39;"); }
@@ -31,13 +32,17 @@ function updateSurgePreferenceVisibility() {
   $("#surge-auto-test-protocols").disabled=!selected;
 }
 function restoreSurgePreferences(preferences={}) {
-  const protocols=preferences?.auto_test_protocols||[];
-  $("#surge-auto-test-protocols").value=protocols.includes("anytls")?"anytls":"all";
+  const protocols=Array.isArray(preferences?.auto_test_protocols)?[...preferences.auto_test_protocols]:[];
+  const choice=protocols.length===0?"all":protocols.length===1&&protocols[0]==="anytls"?"anytls":"custom";
+  state.surgeProtocols=protocols;
+  $("#surge-auto-test-custom").hidden=choice!=="custom";
+  $("#surge-auto-test-protocols").value=choice;
   updateSurgePreferenceVisibility();
 }
 function payload() {
   const targets=selectedTargets();
-  const surge_preferences={auto_test_protocols:$("#surge-auto-test-protocols").value==="anytls"?["anytls"]:[]};
+  const surgeChoice=$("#surge-auto-test-protocols").value;
+  const surge_preferences={auto_test_protocols:surgeChoice==="custom"?[...state.surgeProtocols]:surgeChoice==="anytls"?["anytls"]:[]};
   const common={subscription_url:$("#subscription-url").value.trim(),template:LEO_TEMPLATE,profile_name:$("#profile-name").value.trim(),target:targets[0]||"mihomo",publication_targets:targets,surge_preferences};
   if(state.legacy) return {...structuredClone(state.legacy),...common};
   return {...common,service_routes:Object.entries(state.serviceChoices).filter(([,r])=>r.mode!=="default").map(([service,r])=>({service,mode:r.mode,egress:r.egress?.trim()||null,...(r.mode==="fallback"?{fallback:r.fallback?.trim()||null}:{})}))};
@@ -60,7 +65,7 @@ async function busy(button,label,operation) {
   const disabled=controls.map(el=>el.disabled); controls.forEach(el=>{el.disabled=true;}); button.textContent=label;
   setNotice("");
   try { await operation(); } catch(error) { if(error.checks) renderCheck(error.checks); setNotice(error.message); }
-  finally { controls.forEach((el,i)=>{el.disabled=disabled[i];}); state.busy=false; button.textContent=original; renderServices(); updateActions(); }
+  finally { controls.forEach((el,i)=>{el.disabled=disabled[i];}); state.busy=false; button.textContent=original; renderServices(); updateSurgePreferenceVisibility(); updateActions(); }
 }
 function defaultServiceTarget(id) { return state.servicePacks.find(s=>s.id===id)?.default_target||"默认代理"; }
 function leoEgressGroups() {

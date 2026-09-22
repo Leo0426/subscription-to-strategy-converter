@@ -1,8 +1,64 @@
+import json
 from pathlib import Path
+import subprocess
 
 from fastapi.testclient import TestClient
 
 from app.main import app
+
+
+def _run_flow_runtime(assertions: str) -> None:
+    flow_path = Path(__file__).resolve().parents[1] / "app" / "static" / "flow.js"
+    program = f"""
+const fs = require("node:fs");
+const vm = require("node:vm");
+const targets = [
+  {{value: "mihomo", checked: true}},
+  {{value: "surge", checked: false}},
+  {{value: "shadowrocket", checked: false}},
+];
+const elements = {{
+  "#global-notice": {{textContent: "", hidden: true}},
+  "#profile-name": {{value: ""}},
+  "#subscription-url": {{value: "https://example.com/sub"}},
+  "#surge-auto-test-row": {{hidden: true}},
+  "#surge-auto-test-protocols": {{value: "all", disabled: true}},
+  "#surge-auto-test-custom": {{hidden: true}},
+}};
+const controls = [elements["#surge-auto-test-protocols"]];
+const document = {{
+  querySelector: selector => elements[selector] || null,
+  querySelectorAll: selector => {{
+    if (selector === 'input[name="target"]:checked') return targets.filter(item => item.checked);
+    if (selector === ".config-workbench input, .config-workbench select, .config-workbench button") return controls;
+    return [];
+  }},
+  createElement: () => ({{textContent: "", innerHTML: ""}}),
+}};
+const context = vm.createContext({{
+  document,
+  elements,
+  targets,
+  console,
+  structuredClone,
+  setTimeout,
+  clearTimeout,
+  URL,
+  location: {{origin: "https://subflow.example"}},
+}});
+let source = fs.readFileSync({json.dumps(str(flow_path))}, "utf8");
+source = source.replace("\\ninit();\\n", "\\n");
+vm.runInContext(source, context);
+const result = vm.runInContext({json.dumps(assertions)}, context);
+Promise.resolve(result).catch(error => {{ console.error(error); process.exitCode = 1; }});
+"""
+    completed = subprocess.run(
+        ["node", "-e", program],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
 
 
 def test_root_and_legacy_advanced_route_serve_the_same_simple_page() -> None:
@@ -84,3 +140,54 @@ def test_workbench_round_trips_and_scopes_surge_auto_test_preference() -> None:
     assert "request.surge_preferences" in script
     assert "updateSurgePreferenceVisibility" in script
     assert 'selectedTargets().includes("surge")' in script
+
+
+def test_workbench_preserves_custom_protocol_lists_until_user_changes_control() -> None:
+    _run_flow_runtime(
+        """
+        (() => {
+          targets[0].checked = false;
+          targets[1].checked = true;
+          restoreSurgePreferences({auto_test_protocols: ["ss", "future-protocol"]});
+          if (elements["#surge-auto-test-protocols"].value !== "custom") {
+            throw new Error("custom protocol list was not represented as custom");
+          }
+          const preserved = payload().surge_preferences.auto_test_protocols;
+          if (JSON.stringify(preserved) !== JSON.stringify(["ss", "future-protocol"])) {
+            throw new Error(`custom protocols changed: ${JSON.stringify(preserved)}`);
+          }
+          elements["#surge-auto-test-protocols"].value = "anytls";
+          const changed = payload().surge_preferences.auto_test_protocols;
+          if (JSON.stringify(changed) !== JSON.stringify(["anytls"])) {
+            throw new Error(`explicit AnyTLS choice was not applied: ${JSON.stringify(changed)}`);
+          }
+        })()
+        """
+    )
+
+
+def test_opening_surge_profile_reenables_preference_after_busy_cleanup() -> None:
+    _run_flow_runtime(
+        """
+        (async () => {
+          updateSurgePreferenceVisibility();
+          if (!elements["#surge-auto-test-protocols"].disabled) {
+            throw new Error("precondition: selector should start disabled");
+          }
+          renderServices = () => {};
+          updateActions = () => {};
+          setNotice = () => {};
+          const button = {textContent: "打开"};
+          await busy(button, "打开中…", async () => {
+            targets[1].checked = true;
+            restoreSurgePreferences({auto_test_protocols: ["anytls"]});
+          });
+          if (elements["#surge-auto-test-row"].hidden) {
+            throw new Error("Surge preference row stayed hidden");
+          }
+          if (elements["#surge-auto-test-protocols"].disabled) {
+            throw new Error("Surge preference selector stayed disabled");
+          }
+        })()
+        """
+    )

@@ -9,6 +9,29 @@ from app.ir import ProxyNode
 _SECTION = re.compile(r"^\s*\[([^]\r\n]+)\]\s*(?:(?:#|;|//).*)?$")
 
 
+def _without_inline_comment(value: str) -> str:
+    quote = ""
+    escaped = False
+    index = 0
+    while index < len(value):
+        char = value[index]
+        if escaped:
+            escaped = False
+        elif quote:
+            if char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = ""
+        elif char in {'"', "'"}:
+            quote = char
+        elif (index == 0 or value[index - 1].isspace()) and (
+            char in {"#", ";"} or value.startswith("//", index)
+        ):
+            return value[:index].rstrip()
+        index += 1
+    return value.rstrip()
+
+
 def _general_options(source: str) -> dict[str, str]:
     options: dict[str, str] = {}
     in_general = False
@@ -23,7 +46,7 @@ def _general_options(source: str) -> dict[str, str]:
             continue
         key, separator, value = line.partition("=")
         if separator:
-            options[key.strip().casefold()] = value.strip().casefold()
+            options[key.strip().casefold()] = _without_inline_comment(value).strip().casefold()
     return options
 
 

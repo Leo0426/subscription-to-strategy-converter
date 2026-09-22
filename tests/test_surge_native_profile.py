@@ -88,6 +88,30 @@ def test_native_audit_recognizes_wifi_auth_without_exposing_password() -> None:
     assert "private-password" not in json.dumps(warnings)
 
 
+def test_native_audit_ignores_supported_inline_comments_when_comparing_values() -> None:
+    source = """[General]
+allow-wifi-access = true // shared proxy
+doh-server = https://resolver.example/dns-query#fragment // legacy name
+loglevel = info # temporary debugging
+include-all-networks = true ; tunnel scope
+include-apns = true // include push
+include-cellular-services = false
+
+[Proxy]
+US01 = ss, node.example.com, 443, encrypt-method=aes-128-gcm, password=secret
+"""
+
+    warnings = audit_native_surge_profile(source)
+
+    assert {warning["code"] for warning in warnings} == {
+        "wifi_proxy_access_without_auth",
+        "legacy_surge_option",
+        "surge_info_loglevel",
+        "surge_full_tunnel_scope",
+    }
+    assert "resolver.example" not in json.dumps(warnings)
+
+
 @pytest.fixture
 def native_client(monkeypatch, tmp_path):
     state = {"source": SOURCE}
