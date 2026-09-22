@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -12,8 +14,8 @@ def test_root_and_legacy_advanced_route_serve_the_same_simple_page() -> None:
     assert root.status_code == 200
     assert advanced.status_code == 200
     assert root.text == advanced.text
-    assert "/static/flow.js?v=51" in root.text
-    assert "/static/flow.css?v=51" in root.text
+    assert "/static/flow.js?v=52" in root.text
+    assert "/static/flow.css?v=52" in root.text
     assert "/static/assets/subflow-logo.png" in root.text
 
 
@@ -61,3 +63,24 @@ def test_page_generates_all_three_client_links_and_shadowrocket_policy() -> None
         assert f'id="published-{output}-url"' in page
         assert f'data-copy-output="{output}"' in page
     assert "配置 → 添加配置" in page
+
+
+def test_page_exposes_surge_auto_test_protocol_preference() -> None:
+    page = TestClient(app).get("/").text
+
+    assert 'id="surge-auto-test-protocols"' in page
+    assert 'value="all"' in page
+    assert 'value="anytls"' in page
+    assert "仅 AnyTLS" in page
+
+
+def test_workbench_round_trips_and_scopes_surge_auto_test_preference() -> None:
+    script = (
+        Path(__file__).resolve().parents[1] / "app" / "static" / "flow.js"
+    ).read_text(encoding="utf-8")
+
+    assert "surge_preferences" in script
+    assert "auto_test_protocols" in script
+    assert "request.surge_preferences" in script
+    assert "updateSurgePreferenceVisibility" in script
+    assert 'selectedTargets().includes("surge")' in script

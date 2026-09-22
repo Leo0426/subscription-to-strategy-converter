@@ -25,9 +25,20 @@ async function copyToClipboard(value,input) {
   input.focus(); input.select(); if(!document.execCommand("copy")) throw new Error("复制失败"); input.blur();
 }
 function selectedTargets() { return [...document.querySelectorAll('input[name="target"]:checked')].map(x=>x.value); }
+function updateSurgePreferenceVisibility() {
+  const selected=selectedTargets().includes("surge");
+  $("#surge-auto-test-row").hidden=!selected;
+  $("#surge-auto-test-protocols").disabled=!selected;
+}
+function restoreSurgePreferences(preferences={}) {
+  const protocols=preferences?.auto_test_protocols||[];
+  $("#surge-auto-test-protocols").value=protocols.includes("anytls")?"anytls":"all";
+  updateSurgePreferenceVisibility();
+}
 function payload() {
   const targets=selectedTargets();
-  const common={subscription_url:$("#subscription-url").value.trim(),template:LEO_TEMPLATE,profile_name:$("#profile-name").value.trim(),target:targets[0]||"mihomo",publication_targets:targets};
+  const surge_preferences={auto_test_protocols:$("#surge-auto-test-protocols").value==="anytls"?["anytls"]:[]};
+  const common={subscription_url:$("#subscription-url").value.trim(),template:LEO_TEMPLATE,profile_name:$("#profile-name").value.trim(),target:targets[0]||"mihomo",publication_targets:targets,surge_preferences};
   if(state.legacy) return {...structuredClone(state.legacy),...common};
   return {...common,service_routes:Object.entries(state.serviceChoices).filter(([,r])=>r.mode!=="default").map(([service,r])=>({service,mode:r.mode,egress:r.egress?.trim()||null,...(r.mode==="fallback"?{fallback:r.fallback?.trim()||null}:{})}))};
 }
@@ -271,7 +282,7 @@ async function openProfile() {
   $("#subscription-url").value=body.request.subscription_url; $("#profile-name").value=body.request.profile_name||"";
   const targets=body.request.publication_targets||[body.request.target==="clash"?"mihomo":body.request.target];
   document.querySelectorAll('input[name="target"]').forEach(el=>{el.checked=targets.includes(el.value)||targets.includes(el.value+"-config");});
-  restoreChoices(body.request.service_routes); $("#legacy-panel").hidden=!state.legacy; $("#upgrade-result").hidden=true;
+  restoreSurgePreferences(body.request.surge_preferences); restoreChoices(body.request.service_routes); $("#legacy-panel").hidden=!state.legacy; $("#upgrade-result").hidden=true;
   $("#profile-status").textContent=`正在编辑：${body.request.profile_name||state.profile.id.slice(0,8)} · ${state.legacy?"旧策略快照":body.update_available?"基础规则已更新，出口偏好保留":"跟随当前 Leo 与服务规则"}`;
   $("#existing-profile-url").value="";
   renderPublicationStatus(body);
@@ -285,7 +296,7 @@ async function previewUpgrade() {
 }
 function applyUpgrade() {
   if(!state.upgrade) return;
-  state.legacy=null; restoreChoices(state.upgrade.request.service_routes); $("#legacy-panel").hidden=true;
+  state.legacy=null; restoreSurgePreferences(state.upgrade.request.surge_preferences); restoreChoices(state.upgrade.request.service_routes); $("#legacy-panel").hidden=true;
   $("#profile-status").textContent="升级已应用到草稿，尚未保存；请检查后更新原订阅。";
   invalidate(); renderServices();
 }
@@ -299,6 +310,7 @@ async function diagnose() {
 }
 function newProfile() {
   state.profile=null;state.legacy=null;state.upgrade=null;state.nodes=[];restoreChoices();
+  restoreSurgePreferences();
   for(const id of ["subscription-url","profile-name","existing-profile-url"]) $("#"+id).value="";
   $("#profile-status").textContent="正在新建订阅";$("#legacy-panel").hidden=true;$("#source-result").hidden=true;$("#diagnose-result").hidden=true;
   $("#publication-status-panel").hidden=true;
@@ -313,7 +325,8 @@ function bindEvents() {
   $("#new-profile-button").addEventListener("click",newProfile);
   $("#subscription-url").addEventListener("input",()=>{state.nodes=[];$("#source-result").hidden=true;invalidate();});
   $("#profile-name").addEventListener("input",invalidate);
-  document.querySelectorAll('input[name="target"]').forEach(el=>el.addEventListener("change",invalidate));
+  document.querySelectorAll('input[name="target"]').forEach(el=>el.addEventListener("change",()=>{updateSurgePreferenceVisibility();invalidate();}));
+  $("#surge-auto-test-protocols").addEventListener("change",invalidate);
   for(const id of ["diagnose-service","diagnose-client","diagnose-runtime"]) $("#"+id).addEventListener("change",()=>{$("#diagnose-result").hidden=true;});
   $("#service-search").addEventListener("input",renderServices);
   $("#show-all-services").addEventListener("click",event=>{state.showAll=!state.showAll;event.target.textContent=state.showAll?"收起其他服务":"展开全部服务";renderServices();});
@@ -339,6 +352,7 @@ function bindEvents() {
 }
 async function init() {
   bindEvents();
+  updateSurgePreferenceVisibility();
   const results=await Promise.allSettled([
     jsonRequest(`/templates/detail?template=${encodeURIComponent(LEO_TEMPLATE)}`).then(body=>{state.leoGroups=body.proxy_groups||[];state.leoSummary=body.summary;state.publicData=body.public_data||[];}),
     jsonRequest("/templates/audit").then(body=>{state.leoAudit=body;}),

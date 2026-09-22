@@ -6,7 +6,7 @@
   <meta name="referrer" content="same-origin" />
   <title>Subflow 6.2 · 策略订阅工作台</title>
   <link rel="icon" type="image/png" href="/static/assets/subflow-logo.png" />
-  <link rel="stylesheet" href="/static/flow.css?v=51" />
+  <link rel="stylesheet" href="/static/flow.css?v=52" />
 </head>
 <body>
 <header class="simple-header">
@@ -35,6 +35,14 @@
           <label><input type="checkbox" name="target" value="surge" checked /><span>Surge<small>5.21+ 兼容输出</small></span></label>
           <label><input type="checkbox" name="target" value="shadowrocket" /><span>Shadowrocket<small>节点 + 配套配置</small></span></label>
         </fieldset>
+        <label class="field surge-preference" id="surge-auto-test-row">
+          <span>Surge 自动测速节点</span>
+          <select id="surge-auto-test-protocols">
+            <option value="all">全部兼容节点</option>
+            <option value="anytls">仅 AnyTLS</option>
+          </select>
+          <small>只影响自动测速组；手动选择仍保留全部节点。</small>
+        </label>
         <div class="source-line"><label for="subscription-url"><span>原始订阅 URL</span><input id="subscription-url" type="url" autocomplete="off" placeholder="https://example.com/sub?token=…" /></label><button class="simple-button secondary" id="validate-source-button" type="button">读取节点</button></div>
         <div id="source-result" class="inline-status" hidden></div>
       </section>
@@ -79,5 +87,5 @@
   </div>
 </main>
 <div class="toast" id="toast" hidden role="status"></div>
-<script src="/static/flow.js?v=51"></script>
+<script src="/static/flow.js?v=52"></script>
 </body></html>

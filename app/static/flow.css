@@ -239,6 +239,9 @@ button:focus-visible, summary:focus-visible { outline: 2px solid var(--green); o
 input[type=checkbox] { width: 16px; height: 16px; padding: 0; accent-color: var(--green); flex: 0 0 auto; }
 .client-picker span { font-weight: 600; font-size: 12px; }
 .client-picker small { display: block; color: var(--muted); margin-top: 3px; font-size: 10px; font-weight: 400; }
+.surge-preference { max-width: 360px; margin: 12px 0 16px; }
+.surge-preference select { height: 38px; background: #fafbf8; }
+.surge-preference small { color: var(--muted); font-size: 10px; line-height: 1.5; }
 .search-field { margin-bottom: 12px; }
 .search-field input { height: 38px; background: #fafbf8; }
 .service-list { border: 0; }
