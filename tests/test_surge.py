@@ -870,6 +870,32 @@ def test_leo_surge_keeps_core_services_when_mihomo_only_rules_are_skipped() -> N
     assert "FINAL,默认代理" in conf
 
 
+def test_leo_surge_keeps_domestic_douyin_and_fanqie_domain_routes() -> None:
+    node = _ss()
+    config = apply_template(load_template(LEO_TEMPLATE_ID), [node])
+
+    conf, _ = build_surge_config(
+        [node],
+        config["proxy-groups"],
+        config["rules"],
+        config["rule-providers"],
+    )
+
+    for line in (
+        "DOMAIN-SUFFIX,douyin.com,DIRECT",
+        "DOMAIN-SUFFIX,snssdk.com,DIRECT",
+        "DOMAIN-SUFFIX,zjcdn.com,DIRECT",
+        "DOMAIN-SUFFIX,fqnovel.com,DIRECT",
+        "DOMAIN-SUFFIX,fanqienovel.com,DIRECT",
+        "DOMAIN-SUFFIX,fqnovelvod.com,DIRECT",
+    ):
+        assert line in conf
+        assert conf.index(line) < conf.index("FINAL,默认代理")
+
+    assert "USER-AGENT,TikTok*,DIRECT" not in conf
+    assert "PROCESS-NAME,com.zhiliaoapp.musically,DIRECT" not in conf
+
+
 def test_leo_surge_keeps_the_ai_region_pools_manual() -> None:
     nodes = [_ss("美国 SS"), _ss("新加坡 SS"), _ss("香港 SS")]
     config = apply_template(load_template(LEO_TEMPLATE_ID), nodes)

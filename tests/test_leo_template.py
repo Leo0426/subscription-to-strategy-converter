@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from app.core.policy_analyzer import analyze_workspace
+from app.core.policy_simulator import simulate_destination
 from app.core.rule_source_audit import audit_snapshot_matches_template
 from app.core.policy_workspace import compile_mihomo_config, config_to_workspace
 from app.core.renderer import render_yaml
@@ -75,10 +76,10 @@ def test_leo_lightweight_shape_and_generated_footprint() -> None:
     groups = compiled["proxy-groups"]
     rules = compiled["rules"]
 
-    assert _LEO_TEMPLATE_PATH.stat().st_size <= 13 * 1024
+    assert _LEO_TEMPLATE_PATH.stat().st_size <= 15 * 1024
     assert len(template["rule-providers"]) == 8
     assert len(template["proxy-groups"]) == 15
-    assert len(template["rules"]) <= 150
+    assert len(template["rules"]) <= 185
     assert len(groups) == 15
     assert sum(group["type"] == "url-test" for group in groups) == 2
     assert sum(len(group.get("proxies", [])) for group in groups) <= 405
@@ -90,8 +91,8 @@ def test_leo_lightweight_shape_and_generated_footprint() -> None:
     # Preserve the global automatic fallback: removing it would save roughly
     # 1.5 KiB, but would trade away useful cross-region recovery for a cosmetic
     # size target.  The previous 144-node artifact was over 84 KiB.
-    assert len(render_yaml(compiled).encode("utf-8")) <= 35 * 1024
-    assert len(rules) <= 150
+    assert len(render_yaml(compiled).encode("utf-8")) <= 37 * 1024
+    assert len(rules) <= 185
 
     provider_rules = [
         rule
@@ -790,6 +791,39 @@ def test_leo_service_categories_precede_broad_proxy_geosites() -> None:
             parts[2] in _NAMED_SERVICE_TARGETS or parts[1] == "category-games@cn"
         ):
             assert index < broad_proxy, f"service category shadowed: {rule}"
+
+
+def test_leo_routes_domestic_douyin_and_fanqie_domains_direct() -> None:
+    nodes = [_node("香港 01")]
+    config = apply_template(load_template(LEO_TEMPLATE_ID), nodes)
+    workspace = config_to_workspace(compile_mihomo_config(config, nodes), nodes)
+
+    for destination in (
+        "api.douyin.com",
+        "is.snssdk.com",
+        "v3-dy-o-abtest.zjcdn.com",
+        "api.fqnovel.com",
+        "api.fanqienovel.com",
+        "video.fqnovelvod.com",
+    ):
+        trace = simulate_destination(workspace, destination)
+        assert trace.target == "DIRECT", destination
+        assert trace.resolved == "DIRECT", destination
+        assert trace.matched_rule is not None
+        assert trace.matched_rule.type in {"DOMAIN", "DOMAIN-SUFFIX"}
+
+
+def test_leo_domestic_bytedance_rules_follow_tiktok_and_precede_china_fallbacks() -> None:
+    rules = load_template(LEO_TEMPLATE_ID)["rules"]
+
+    tiktok = rules.index("GEOSITE,tiktok,流媒体")
+    first_domestic = rules.index("DOMAIN-SUFFIX,douyin.com,DIRECT")
+    last_domestic = rules.index("DOMAIN-SUFFIX,fqnovelvod.com,DIRECT")
+    china_fallback = rules.index("DOMAIN-SUFFIX,cn,DIRECT")
+
+    assert tiktok < first_domestic <= last_domestic < china_fallback
+    assert "USER-AGENT,TikTok*,DIRECT" not in rules
+    assert "PROCESS-NAME,com.zhiliaoapp.musically,DIRECT" not in rules
 
 
 def test_leo_generic_port_and_inbound_routes_do_not_bypass_direct_catchalls() -> None:

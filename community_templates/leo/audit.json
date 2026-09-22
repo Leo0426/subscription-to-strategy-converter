@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-22T14:43:32.077397+00:00",
+  "generated_at": "2026-09-22T15:28:39.811711+00:00",
   "summary": {
     "total": 8,
     "valid": 8,
@@ -138,7 +138,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         },
         {
@@ -155,7 +155,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         },
         {
@@ -172,7 +172,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         }
       ],
@@ -225,7 +225,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         },
         {
@@ -242,7 +242,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         },
         {
@@ -259,7 +259,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         }
       ],
@@ -297,7 +297,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         },
         {
@@ -314,7 +314,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         },
         {
@@ -331,7 +331,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         }
       ],
@@ -350,7 +350,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         }
       ],
@@ -412,7 +412,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -446,7 +446,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -465,7 +465,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -484,7 +484,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -503,7 +503,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -522,7 +522,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -541,7 +541,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -560,7 +560,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -579,7 +579,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -598,7 +598,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -617,7 +617,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -636,7 +636,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -655,7 +655,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -674,7 +674,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -693,7 +693,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -712,7 +712,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -731,7 +731,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -750,7 +750,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -769,7 +769,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -788,7 +788,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -807,7 +807,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -826,7 +826,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -845,7 +845,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -864,7 +864,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -883,7 +883,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -902,7 +902,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -921,7 +921,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -940,7 +940,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -959,7 +959,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -978,7 +978,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -997,7 +997,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -1016,7 +1016,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -1035,7 +1035,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -1054,7 +1054,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -1073,7 +1073,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -1092,7 +1092,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -1111,7 +1111,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -1130,7 +1130,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -1149,7 +1149,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -1168,7 +1168,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -1187,7 +1187,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -1206,7 +1206,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -1225,7 +1225,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -1244,7 +1244,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -1263,7 +1263,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -1282,7 +1282,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -1301,7 +1301,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -1320,7 +1320,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       },
@@ -1339,7 +1339,7 @@
             "rule_type": "DOMAIN-SUFFIX",
             "value": "cn",
             "target": "DIRECT",
-            "rule_index": 134
+            "rule_index": 168
           }
         ]
       }
@@ -1383,7 +1383,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Apple/Apple_Classical_No_Resolve.yaml",
-      "elapsed_ms": 1158
+      "elapsed_ms": 1101
     },
     {
       "name": "Claude",
@@ -1418,7 +1418,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Claude/Claude_No_Resolve.yaml",
-      "elapsed_ms": 2015
+      "elapsed_ms": 1100
     },
     {
       "name": "GitHub-5",
@@ -1453,7 +1453,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/GitHub/GitHub_No_Resolve.yaml",
-      "elapsed_ms": 2434
+      "elapsed_ms": 1300
     },
     {
       "name": "Google-2",
@@ -1492,7 +1492,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Google/Google_No_Resolve.yaml",
-      "elapsed_ms": 1696
+      "elapsed_ms": 1002
     },
     {
       "name": "Microsoft-6",
@@ -1529,7 +1529,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Microsoft/Microsoft_No_Resolve.yaml",
-      "elapsed_ms": 1109
+      "elapsed_ms": 1054
     },
     {
       "name": "Telegram",
@@ -1569,7 +1569,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Telegram/Telegram_No_Resolve.yaml",
-      "elapsed_ms": 1154
+      "elapsed_ms": 1097
     },
     {
       "name": "YouTube-6",
@@ -1606,7 +1606,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/YouTube/YouTube_No_Resolve.yaml",
-      "elapsed_ms": 2657
+      "elapsed_ms": 1086
     },
     {
       "name": "ai-4",
@@ -1641,7 +1641,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-ai-!cn.list",
-      "elapsed_ms": 1102
+      "elapsed_ms": 1095
     }
   ],
   "quality_score": {
@@ -1674,8 +1674,8 @@
   "template": {
     "id": "local:community_templates/leo/leo.yaml",
     "source_path": "community_templates/leo/leo.yaml",
-    "sha256": "f55924847e8bd1da950d2fc1620e2a3b4a66c2f3d22bf7178877a9c0eff77a8e",
+    "sha256": "a52a6236d240bad068e352b4163569177a1bf9f20f90671d71a7e5b712cd46dc",
     "provider_count": 8,
-    "rule_count": 149
+    "rule_count": 183
   }
 }

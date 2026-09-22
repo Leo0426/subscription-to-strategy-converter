@@ -14,6 +14,7 @@
 - Mihomo/OpenClash 保留两套自动健康检查（全局自动、香港自动）和美国、新加坡两套手动节点组检查。四组都使用 `https://cp.cloudflare.com/generate_204`，要求 HTTP 204，单节点等待上限为 5000 ms；两个地区节点组都是 `select`，健康检查只更新可用性和延迟，绝不会按延迟自动切换。检查周期为 600 秒并保持 lazy：启动时会填充一次结果，之后仅在该组近期使用时继续检查。没有美国或新加坡节点时，对应地区组会被裁剪，AI 服务仍保留其他可用地区组或全局手动选择。
 - OpenClash 的“URL-Test 地址修改”无需再为 AI 设置特殊地址；建议关闭覆写并直接使用模板的 Cloudflare 204 通用探针。若必须覆写，应保持地址与 HTTP 204 期望状态一致。
 - Surge 兼容基线为 iOS 5.21+：两个自动组显式使用 100 ms 切换容差。Profile 的 `surge_preferences.auto_test_protocols` 可只限制 Surge 自动组的节点协议；手动组始终保留所有兼容节点，偏好为空时保持旧行为。仅支持 Mac 的 `PROCESS-NAME` 会从 iOS 产物跳过并计数提示。原生 Surge 输入保留机场的 `[General] proxy-test-url` 和 `test-timeout`。Apple Provider 使用上游完整的 `Apple_All_No_Resolve.list`，避免基础列表漏掉域名规则。
+- Surge iOS 不支持 `GEOSITE`，也会忽略 Mac 专属的 `PROCESS-NAME`；仅靠 `.cn` 与 `GEOIP,cn,no-resolve` 无法覆盖抖音、红果和番茄小说使用的 `.com` 域名。模板因此内联固定提交 `8818705` 的 [ByteDance](https://github.com/blackmatrix7/ios_rule_script/blob/8818705adee20571a856daf11c9fc69c4929109a/rule/Surge/ByteDance/ByteDance_Resolve.list) / [DouYin](https://github.com/blackmatrix7/ios_rule_script/blob/8818705adee20571a856daf11c9fc69c4929109a/rule/Surge/DouYin/DouYin.list) 规则中与这些国内应用有关的域名子集，并补充实测出现的 `fanqienovel.com`，放在 TikTok/海外服务之后、广谱中国大陆兜底之前直连。上游的 `USER-AGENT,TikTok*` 和 TikTok 进程规则未纳入，`FINAL` 仍为 `默认代理`；没有导入完整 China 规则集。判定依据是 Surge 官方的 [进程规则平台限制](https://manual.nssurge.com/rules/process.html) 与 [规则顺序、DNS/no-resolve 语义](https://manual.nssurge.com/rules/overview.html)。
 - ChatGPT 的主站、WebSocket、静态资源、上传、`oaistatsig.com`、`cdn.openaimerge.com` 及官方列出的五个 WorkOS 登录/资源主机在模板中固定走 `AI 服务`，先于广义 Provider；依据是 [OpenAI 官方网络要求](https://help.openai.com/en/articles/9247338)（2026-09-12 核对）。WorkOS 与 imgix 仅按具体主机匹配，避免整个共享域名服务改走 AI 出口。2026-09-21 补充官方清单中的 `humb.apple.com`、Intercom、Stripe JS、两个 Sentry 主机、Datadog RUM 和 SendGrid 跟踪子域，防止被 Apple 或广告规则抢先处理。2026-09-22 又把 [Google 官方 OpenID Connect 文档](https://developers.google.com/identity/openid-connect/reference)列出的 `accounts.google.com`、`oauth2.googleapis.com`、`openidconnect.googleapis.com` 三个精确认证主机并入 OpenAI 路由，使第三方登录与 ChatGPT 会话保持同一出口；普通 Google 域名仍走原有 Google 策略。Stripe、Sentry、Datadog、Apple 均只例外匹配列出的主机；这些依赖中部分用于客服/遥测，放行不代表它们是每次对话失败的原因。
 - OpenAI RulePack 与 RouteIntent 同样保留这些资源及 Cloudflare 挑战域名的出口。已有 Profile 若保存了旧的替换式 PolicySnapshot，需要重新从规则包生成并保存策略；只刷新旧快照的订阅不会自动合并新规则。
 - ChatGPT 故障先核对 `AI 服务 → 美国节点 / 新加坡节点` 的实际选择是否与可用原订阅为同一节点；Cloudflare 204 测速通过只说明探针可达，不证明 ChatGPT 可用。客户端保存的选择可能覆盖新配置首选；无地区匹配节点时 `AI 服务` 只连接全局手动组，初始仍是订阅中的首个节点，必须手动选定实际可用节点。上述补全不改变 fake-ip，配置编译和路由回归也不替代同节点真实访问验证。
@@ -42,7 +43,7 @@
 ## 合并原则
 
 - 扫描完整配置：59 份。
-- 原始规则：2103 条；当前模板收敛为 146 条，其中仅 8 条 `RULE-SET`。OpenAI 与 Claude 核心域名及登录依赖内联以保证客户端主链路；Telegram 使用一份同时覆盖域名与无域名 IP 流量的 classical 规则源。
+- 原始规则：2103 条；当前模板为 183 条，其中仅 8 条 `RULE-SET`。OpenAI、Claude 和国内字节系关键域名内联以保证客户端主链路；Telegram 使用一份同时覆盖域名与无域名 IP 流量的 classical 规则源。
 - 初始远程规则源 716 个；内容审计先压缩到 161 个，本轮按 ADR 0011 的 intent-based consolidation 只保留 AI/Claude、GitHub、Apple、Google、Microsoft、YouTube 和 Telegram 八个核心来源。长尾服务使用 Mihomo 内置 GEOSITE/GEOIP 或最终默认代理，不再为每个小站点单独下载列表。
 - 同名但定义冲突的社区策略组没有机械拼接，而是映射到统一的地区、服务和兜底策略组。
 - 广告类规则映射到 `REJECT`，国内和网络基础规则映射到 `DIRECT`，其余规则映射到对应服务组。
@@ -53,7 +54,7 @@
 
 - 2026-09-22 公开审计快照与模板 SHA 匹配：8 个来源全部可用，0 个格式无效，0 个完整重复组，0 个高重叠对。审计工具使用客户端等效 UA（`clash.meta/1.18.0 (subflow-rule-audit)`），避免把来源的 UA 白名单误判为不可用。
 - 结构评分公式 v2（含供应链与冷启动维度）：99.99/100（A）。当前只有 2 个可信上游、0 个第三方代理中转、0 个不可固定版本来源；冷启动规则下载量为 115,603 B，较 161 源快照减少约 96.1%。
-- 轻量回归预算：RuleProvider 不超过 8 个、规则不超过 150 条、模板不超过 13 KiB（调整依据见 [ADR 0015](../../docs/adr/0015-ai-session-routing-and-inline-budget.md)）；固定 144 节点 SS 策略夹具最多 15 个组、2 个自动选择组、2 个带连通性测试的手动地区组、405 条组成员边、225 条潜在探针成员边，渲染结果不超过 35 KiB。35 KiB 保留了全局自动回退以及美国、新加坡两个 AI 候选池；同一夹具在精简前超过 84 KiB。真实节点若带 TLS/transport 等字段，输出字节数会更大，验收以结构预算与真实编译为准。
+- 轻量回归预算：RuleProvider 不超过 8 个、规则不超过 185 条、模板不超过 15 KiB（调整依据见 [ADR 0015](../../docs/adr/0015-ai-session-routing-and-inline-budget.md)）；固定 144 节点 SS 策略夹具最多 15 个组、2 个自动选择组、2 个带连通性测试的手动地区组、405 条组成员边、225 条潜在探针成员边，渲染结果不超过 37 KiB。新增空间只用于 Surge iOS 可执行的国内字节域名规则，仍保留全局自动回退以及美国、新加坡两个 AI 候选池；同一夹具在精简前超过 84 KiB。真实节点若带 TLS/transport 等字段，输出字节数会更大，验收以结构预算与真实编译为准。
 - 评分不替代语义准确率、覆盖率、长期新鲜度和内容漂移验证。
 - 当前没有 MRS-only 依赖；7 个 classical YAML 核心来源可转换为 Surge 原生列表，`ai-4` 是 Mihomo 的 domain 裸列表，Surge 会明确跳过并给出 warning。OpenAI 官方网络清单与 Claude 核心域名已内联，Telegram 的原生 Surge 列表覆盖域名与 IP；其他 Mihomo 专属规则仍以生成结果中的 warning 为准，公开接口会把模板标记为非完全兼容。
 - 已知边界例外：固定版本的 Google/YouTube classical 上游分别夹带 5/3 条 IP 规则。审计快照会通过 `rule_type_counts` 公开它们；当前来源和外层 `RULE-SET` 均使用 `no-resolve`，可防止为匹配这些规则而主动解析域名，但原始 IP 或已解析请求仍可命中。这是对严格“共享基础设施不做 IP 层服务分流”边界的已知技术债，不是新 RuleSource 的准入先例；彻底移除需要发布经审计的 Mihomo/Surge 等义纯域名双版本。

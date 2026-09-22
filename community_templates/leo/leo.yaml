@@ -382,6 +382,43 @@ rules:
 - GEOSITE,category-httpdns-cn,默认代理
 - GEOSITE,connectivity-check,默认代理
 - GEOSITE,googlefcm,Google
+# 国内字节系域名必须在 TikTok/海外服务之后直连。此处从固定提交的
+# ByteDance/DouYin 规则中只保留抖音、红果/番茄及其专属 CDN；显式排除
+# USER-AGENT,TikTok* 与 TikTok 进程规则，避免把国际版按应用身份直连。
+- DOMAIN,lf3-static.bytednsdoc.com,DIRECT
+- DOMAIN-SUFFIX,amemv.com,DIRECT
+- DOMAIN-SUFFIX,douyin.com,DIRECT
+- DOMAIN-SUFFIX,douyincdn.com,DIRECT
+- DOMAIN-SUFFIX,douyinpic.com,DIRECT
+- DOMAIN-SUFFIX,douyinstatic.com,DIRECT
+- DOMAIN-SUFFIX,douyinvod.com,DIRECT
+- DOMAIN-SUFFIX,idouyinpic.com,DIRECT
+- DOMAIN-SUFFIX,idouyinstatic.com,DIRECT
+- DOMAIN-SUFFIX,idouyinvod.com,DIRECT
+- DOMAIN-SUFFIX,iesdouyin.com,DIRECT
+- DOMAIN-SUFFIX,ixigua.com,DIRECT
+- DOMAIN-SUFFIX,ixiguavideo.com,DIRECT
+- DOMAIN-SUFFIX,pstatp.com,DIRECT
+- DOMAIN-SUFFIX,snssdk.com,DIRECT
+- DOMAIN-SUFFIX,toutiao.com,DIRECT
+- DOMAIN-SUFFIX,zjcdn.com,DIRECT
+- DOMAIN-SUFFIX,fanqienovel.com,DIRECT
+- DOMAIN-SUFFIX,fanqiecopyright.com,DIRECT
+- DOMAIN-SUFFIX,fanqieopen.com,DIRECT
+- DOMAIN-SUFFIX,fanqieopenpic.com,DIRECT
+- DOMAIN-SUFFIX,fanqieopenstatic.com,DIRECT
+- DOMAIN-SUFFIX,fanqieopenvod.com,DIRECT
+- DOMAIN-SUFFIX,fanqiesdk.com,DIRECT
+- DOMAIN-SUFFIX,fanqiesdkpic.com,DIRECT
+- DOMAIN-SUFFIX,fanqiesdkstatic.com,DIRECT
+- DOMAIN-SUFFIX,fanqiesdkvod.com,DIRECT
+- DOMAIN-SUFFIX,fqnovel-op.com,DIRECT
+- DOMAIN-SUFFIX,fqnovel.com,DIRECT
+- DOMAIN-SUFFIX,fqnovelim.com,DIRECT
+- DOMAIN-SUFFIX,fqnovelop.com,DIRECT
+- DOMAIN-SUFFIX,fqnovelpic.com,DIRECT
+- DOMAIN-SUFFIX,fqnovelstatic.com,DIRECT
+- DOMAIN-SUFFIX,fqnovelvod.com,DIRECT
 # 专用服务先于广谱代理。
 - GEOSITE,gfw,默认代理
 - GEOSITE,geolocation-!cn,默认代理
