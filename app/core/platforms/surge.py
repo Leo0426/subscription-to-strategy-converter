@@ -20,6 +20,7 @@ from typing import Any
 from app.ir import ProxyNode
 from app.core.parsers.clash import ir_to_clash_dict
 from app.core.platforms.surge_profile import replace_surge_routing
+from app.core.platforms.surge_capabilities import SURGE_IOS_RULE_TYPES
 from app.core.platforms.ini import (
     IniDialect, UnsupportedNodeOptionError, UnsupportedProtocolError, UnsupportedRuleTypeError, build_ini_config,
     incompatible_node_names,
@@ -219,14 +220,6 @@ _SS_CIPHER_MAP: dict[str, str] = {
     "rc4-md5": "rc4-md5",
     "xchacha20-ietf-poly1305": "xchacha20-ietf-poly1305",
 }
-
-# Rule types Surge 5 natively supports (MATCH → FINAL handled separately)
-_SURGE_RULE_TYPES: frozenset[str] = frozenset({
-    "DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD",
-    "IP-CIDR", "IP-CIDR6", "GEOIP",
-    "PROCESS-NAME", "USER-AGENT", "URL-REGEX",
-    "DEST-PORT", "RULE-SET", "FINAL",
-})
 
 # These rule types support the optional no-resolve flag in Surge
 _IP_RULE_TYPES: frozenset[str] = frozenset({"IP-CIDR", "IP-CIDR6", "GEOIP"})
@@ -534,7 +527,7 @@ def _rule_to_surge_line(
             return f"DEST-PORT,{value},{target}"
         return None
 
-    if rule_type not in _SURGE_RULE_TYPES:
+    if rule_type not in SURGE_IOS_RULE_TYPES:
         return None
 
     suffix = ",no-resolve" if (no_resolve and rule_type in _IP_RULE_TYPES) else ""
@@ -652,7 +645,7 @@ def build_surge_config(
             node=None if source_profile is not None else _node_to_surge_line,
             group=_group_to_surge_line,
             rule=_rule_to_surge_line,
-            rule_types=_SURGE_RULE_TYPES,
+            rule_types=SURGE_IOS_RULE_TYPES,
             general="" if source_profile is not None else _general_section(),
             host=(lambda _nodes: None) if source_profile is not None else _host_section,
         ),

@@ -595,6 +595,13 @@ def test_leo_latency_groups_use_a_bounded_lightweight_probe() -> None:
     } == {"自动选择", "香港自动"}
 
 
+def test_leo_latency_groups_use_surge_default_tolerance() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+
+    assert _group(template, "自动选择")["tolerance"] == 100
+    assert _group(template, "香港自动")["tolerance"] == 100
+
+
 def test_leo_keeps_non_ai_services_on_nearby_default_routes() -> None:
     template = load_template(LEO_TEMPLATE_ID)
 

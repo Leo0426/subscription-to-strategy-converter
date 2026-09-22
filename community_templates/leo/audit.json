@@ -1674,7 +1674,7 @@
   "template": {
     "id": "local:community_templates/leo/leo.yaml",
     "source_path": "community_templates/leo/leo.yaml",
-    "sha256": "734420043a17f8c4e7a31ce7741cf959a9033dc5a5eb7410219ad3c368974fa8",
+    "sha256": "ded96fb0469f7c53f9bde0b626599cc02f25ab40258b6d5662ae3bbecb8e16a7",
     "provider_count": 8,
     "rule_count": 146
   }

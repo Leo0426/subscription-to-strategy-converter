@@ -656,7 +656,34 @@ def test_build_surge_config_skips_domain_regex_and_reports_rule_type() -> None:
         {
             "code": "unsupported_rule_types",
             "count": 1,
+            "rule_count": 1,
             "types": ["DOMAIN-REGEX"],
+            "suggestion": "Surge 不支持这些 Mihomo 规则类型，已跳过对应规则",
+        }
+    ]
+
+
+def test_process_name_is_dropped_for_surge_ios_and_counted() -> None:
+    conf, warnings = build_surge_config(
+        [],
+        [],
+        [
+            "PROCESS-NAME,com.ss.android.ugc.aweme,默认代理",
+            "PROCESS-NAME,com.xingin.xhs,社交通讯",
+            "PROCESS-NAME,tv.danmaku.bili,流媒体",
+            "MATCH,DIRECT",
+        ],
+        {},
+    )
+
+    assert "PROCESS-NAME" not in conf
+    assert conf.count("FINAL,") == 1
+    assert warnings == [
+        {
+            "code": "unsupported_rule_types",
+            "count": 1,
+            "rule_count": 3,
+            "types": ["PROCESS-NAME"],
             "suggestion": "Surge 不支持这些 Mihomo 规则类型，已跳过对应规则",
         }
     ]

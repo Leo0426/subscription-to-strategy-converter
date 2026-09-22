@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+from app.core.template_policy_transform import analyze_claude_template
 from app.main import app
 
 
@@ -30,6 +31,22 @@ proxies:
 SHARED_AI_TEMPLATE = "local:community_templates/leo/leo.yaml"
 DEDICATED_TEMPLATE = SHARED_AI_TEMPLATE
 MRS_TEMPLATE = SHARED_AI_TEMPLATE
+
+
+def test_claude_capability_rejects_mac_only_process_rules_for_surge_ios() -> None:
+    config = {
+        "proxy-groups": [{"name": "Claude", "type": "select", "proxies": ["DIRECT"]}],
+        "rule-providers": {},
+        "rules": ["PROCESS-NAME,Claude,Claude"],
+    }
+
+    capability = analyze_claude_template(config)
+
+    assert capability.surge_compatible is False
+    assert any(
+        "PROCESS-NAME" in reason
+        for reason in capability.surge_incompatibility_reasons
+    )
 
 
 def test_claude_template_catalog_exposes_only_existing_policies_and_surge_gate() -> None:

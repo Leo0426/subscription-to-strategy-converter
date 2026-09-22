@@ -244,6 +244,7 @@ def build_ini_config(
             {
                 "code": "unsupported_rule_types",
                 "count": len(unique_types),
+                "rule_count": len(unsupported_rule_types),
                 "types": unique_types,
                 "suggestion": f"{dialect.name} 不支持这些 Mihomo 规则类型，已跳过对应规则",
             }

@@ -93,7 +93,7 @@ proxy-groups:
   max-failed-times: 2
   lazy: true
   interval: 600
-  tolerance: 150
+  tolerance: 100
 - name: 手动选择
   type: select
   include-all: true
@@ -107,7 +107,7 @@ proxy-groups:
   max-failed-times: 2
   lazy: true
   interval: 600
-  tolerance: 150
+  tolerance: 100
 - name: AI 服务
   # 固定出口优先；通用探针可达不代表 AI 服务可用，不能按延迟跨地区切换。
   # 没有美国节点时在“手动选择”中明确选定可用节点。

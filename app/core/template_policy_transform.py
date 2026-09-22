@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 
 from app.ir import ProxyNode
 from app.models.strategy import ClaudePolicy, ServiceRoute
+from app.core.platforms.surge_capabilities import SURGE_IOS_RULE_TYPES
 from app.core.service_catalog import service_catalog, service_rules
 
 
@@ -18,13 +19,6 @@ class TemplatePolicyTransformError(ValueError):
 
 _CLAUDE_RE = re.compile(r"claude|anthropic", re.IGNORECASE)
 _SURGE_RULE_EXTENSIONS = {".list", ".txt", ".conf"}
-_SURGE_RULE_TYPES = {
-    "DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD",
-    "IP-CIDR", "IP-CIDR6", "GEOIP", "PROCESS-NAME", "USER-AGENT",
-    "URL-REGEX", "DEST-PORT", "RULE-SET", "MATCH", "FINAL",
-}
-
-
 def transform_service_routes(
     config: dict[str, Any],
     nodes: list[ProxyNode],
@@ -169,7 +163,7 @@ def analyze_claude_template(config: dict[str, Any]) -> ClaudeTemplateCapability:
         dict.fromkeys(
             parts[0].upper()
             for parts in (_parse_rule(rule) for rule in rules if isinstance(rule, str))
-            if parts and parts[0].upper() not in _SURGE_RULE_TYPES
+            if parts and parts[0].upper() not in SURGE_IOS_RULE_TYPES
         )
     )
     if unsupported_rule_types:
