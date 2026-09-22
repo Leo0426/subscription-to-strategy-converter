@@ -86,7 +86,10 @@ def test_failover_requires_named_backup_and_fixed_cannot_delegate_to_an_auto_gro
 
 
 def test_legacy_upgrade_is_preview_only_and_preserves_link_on_explicit_save(client):
-    old = client.post('/profiles', json=request(selected_policy={'mode':'merge','proxy_groups':[{'name':'OpenAI','type':'select','proxies':['TW01','DIRECT']}],'rules':['DOMAIN-SUFFIX,chatgpt.com,OpenAI']})).json()
+    old = client.post('/profiles', json=request(
+        surge_preferences={'auto_test_protocols':['anytls']},
+        selected_policy={'mode':'merge','proxy_groups':[{'name':'OpenAI','type':'select','proxies':['TW01','DIRECT']}],'rules':['DOMAIN-SUFFIX,chatgpt.com,OpenAI']},
+    )).json()
     path = '/profiles/'+old['id']
     params = {'token':old['token']}
     upgrade = client.post(path+'/upgrade-preview', params=params)
@@ -94,6 +97,7 @@ def test_legacy_upgrade_is_preview_only_and_preserves_link_on_explicit_save(clie
     candidate = upgrade.json()['request']
     assert candidate['selected_policy'] is None
     assert candidate['service_routes'][0]['egress']=='TW01'
+    assert candidate['surge_preferences']=={'auto_test_protocols':['anytls']}
     assert upgrade.json()['changes']['added_rules']
     assert client.get(path+'/draft', params=params).json()['request']['selected_policy'] is not None
     result = client.put(path, params=params, json=candidate)

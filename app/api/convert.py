@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import asyncio
 from functools import lru_cache
 import json
@@ -55,6 +55,7 @@ from app.core.template_engine import (
     LEO_TEMPLATE_ID,
     TemplateError,
     apply_template,
+    filter_auto_test_protocols,
     list_templates,
     load_any_template,
     load_template,
@@ -62,6 +63,7 @@ from app.core.template_engine import (
 from app.ir import PolicyWorkspace, ProxyNode
 from app.models.powerfullz import PowerfullzOptions
 from app.models.request import ConvertRequest
+from app.models.surge import SurgePreferences
 from app.models.strategy import ClaudePolicy, CustomStrategy, SelectedPolicy, ServiceRoute
 
 router = APIRouter()
@@ -257,6 +259,7 @@ class RenderInputs:
     powerfullz: PowerfullzOptions | None = None
     claude_policy: ClaudePolicy | None = None
     service_routes: list[ServiceRoute] | None = None
+    surge_preferences: SurgePreferences = field(default_factory=SurgePreferences)
 
     @classmethod
     def from_request(
@@ -274,10 +277,19 @@ class RenderInputs:
             selected_policy=request.selected_policy,
             claude_policy=request.claude_policy,
             service_routes=request.service_routes,
+            surge_preferences=request.surge_preferences,
         )
 
 
-async def _build_config(inputs: RenderInputs) -> tuple[list[ProxyNode], dict, dict]:
+@dataclass(slots=True)
+class BuildResult:
+    nodes: list[ProxyNode]
+    config: dict
+    source_config: dict
+    warnings: list[dict]
+
+
+async def _build_config(inputs: RenderInputs) -> BuildResult:
     _require_leo_template(inputs.template_name)
     _require_supported_target(inputs.target)
 
@@ -307,7 +319,22 @@ async def _build_config(inputs: RenderInputs) -> tuple[list[ProxyNode], dict, di
     except (TemplateError, TemplatePolicyTransformError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    return nodes, config, raw_config
+    warnings: list[dict] = []
+    if inputs.target == "surge":
+        warnings.extend(
+            filter_auto_test_protocols(
+                config,
+                nodes,
+                inputs.surge_preferences.auto_test_protocols,
+            )
+        )
+
+    return BuildResult(
+        nodes=nodes,
+        config=config,
+        source_config=raw_config,
+        warnings=warnings,
+    )
 
 
 def _serialize_nodes(nodes: list[ProxyNode]) -> list[dict]:
@@ -372,8 +399,14 @@ def _service_output_errors(nodes: list[ProxyNode], routes: list[ServiceRoute], w
 
 
 async def _render_config(inputs: RenderInputs) -> tuple[int, str, list[dict]]:
-    nodes, config, source_config = await _build_config(inputs)
-    output, warnings = _render_output(inputs.target, nodes, config, source_config=source_config)
+    result = await _build_config(inputs)
+    output, compiler_warnings = _render_output(
+        inputs.target,
+        result.nodes,
+        result.config,
+        source_config=result.source_config,
+    )
+    warnings = result.warnings + compiler_warnings
     routes = inputs.service_routes or (
         [
             ServiceRoute(
@@ -386,7 +419,7 @@ async def _render_config(inputs: RenderInputs) -> tuple[int, str, list[dict]]:
         if inputs.claude_policy is not None
         else []
     )
-    errors = _service_output_errors(nodes, routes, warnings)
+    errors = _service_output_errors(result.nodes, routes, warnings)
     if errors:
         raise HTTPException(status_code=400, detail="; ".join(errors))
     has_claude_route = any(route.enabled and route.service == "claude" and route.mode == "legacy" for route in routes)
@@ -402,7 +435,7 @@ async def _render_config(inputs: RenderInputs) -> tuple[int, str, list[dict]]:
             )
         if any(warning.get("code") == "unsupported_node_options" for warning in warnings):
             raise HTTPException(status_code=400, detail="Surge Claude generation has unsupported node options")
-    return len(nodes), output, warnings
+    return len(result.nodes), output, warnings
 
 
 @router.post("/preview")
@@ -424,12 +457,16 @@ async def preview_subscription(request: ConvertRequest) -> dict:
 @router.post("/workspace/preview")
 async def workspace_preview(request: ConvertRequest) -> dict:
     request = _resolve_product_request(request)
-    nodes, config, source_config = await _build_config(RenderInputs.from_request(request))
+    result = await _build_config(RenderInputs.from_request(request))
+    nodes = result.nodes
+    config = result.config
+    source_config = result.source_config
     materialized_mihomo = request.target in {"mihomo", "clash"} and "_surge_source" not in source_config
-    compile_warnings = []
+    compile_warnings = list(result.warnings)
     if materialized_mihomo:
         try:
-            config, compile_warnings = build_mihomo_config(nodes, config, source_config=source_config)
+            config, compiler_warnings = build_mihomo_config(nodes, config, source_config=source_config)
+            compile_warnings.extend(compiler_warnings)
         except NativeMihomoProfileError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
     else:
@@ -545,31 +582,46 @@ async def _check_request(request: ConvertRequest) -> dict:
     request = _resolve_product_request(request)
     targets = request.publication_targets or [request.target]
     base_target = request.target if _TARGET_ALIASES.get(request.target, request.target) in targets else targets[0]
-    nodes, config, source_config = await _build_config(RenderInputs.from_request(request, target=base_target))
-    findings = workspace_to_dict(analyze_workspace(config_to_workspace(config, nodes)))
+    base_result = await _build_config(RenderInputs.from_request(request, target=base_target))
+    findings = workspace_to_dict(
+        analyze_workspace(config_to_workspace(base_result.config, base_result.nodes))
+    )
     clients = []
     for target in targets:
-        warnings = []
+        warnings: list[dict] = []
         errors = []
         try:
-            target_nodes, target_config, target_source = nodes, config, source_config
-            if (target in {"shadowrocket", "shadowrocket-config"}) != (base_target in {"shadowrocket", "shadowrocket-config"}):
-                target_nodes, target_config, target_source = await _build_config(RenderInputs.from_request(request, target=target))
-            output, warnings = _render_output(target, target_nodes, target_config, source_config=target_source)
+            result = (
+                base_result
+                if target == base_target
+                else await _build_config(RenderInputs.from_request(request, target=target))
+            )
+            _, compiler_warnings = _render_output(
+                target,
+                result.nodes,
+                result.config,
+                source_config=result.source_config,
+            )
+            warnings = result.warnings + compiler_warnings
             if target == "shadowrocket":
-                _, policy_warnings = _render_output("shadowrocket-config", target_nodes, target_config, source_config=target_source)
+                _, policy_warnings = _render_output(
+                    "shadowrocket-config",
+                    result.nodes,
+                    result.config,
+                    source_config=result.source_config,
+                )
                 warnings += policy_warnings
-            supported = {node.name for node in target_nodes} - incompatible_node_names(target_nodes, warnings)
+            supported = {node.name for node in result.nodes} - incompatible_node_names(result.nodes, warnings)
             if not supported:
                 errors.append("该客户端没有可用节点（协议或参数不兼容）")
-            errors.extend(_service_output_errors(target_nodes, request.service_routes, warnings))
+            errors.extend(_service_output_errors(result.nodes, request.service_routes, warnings))
         except (HTTPException, ValueError) as exc:
             errors.append(str(exc.detail if isinstance(exc, HTTPException) else exc))
         clients.append({"target": target, "status": "error" if errors else ("warning" if warnings else "passed"),
                         "warnings": warnings, "errors": errors})
     return {"can_publish": not any(f["severity"] == "error" for f in findings) and not any(c["errors"] for c in clients),
-            "node_count": len(nodes), "findings": findings, "clients": clients,
-            "services": service_report(config, nodes), "revision": catalog_revision(),
+            "node_count": len(base_result.nodes), "findings": findings, "clients": clients,
+            "services": service_report(base_result.config, base_result.nodes), "revision": catalog_revision(),
             "runtime": {"status": "not_tested", "actual_node": None,
                         "message": "尚未连接客户端；配置检查不代表实际访问、登录或对话已通过。"}}
 
@@ -584,8 +636,8 @@ async def diagnose(request: DiagnoseRequest) -> dict:
     service = next((s for s in service_catalog() if s["id"] == request.service), None)
     if service is None:
         raise HTTPException(status_code=400, detail="unknown service")
-    nodes, config, _ = await _build_config(RenderInputs.from_request(_resolve_product_request(request.request)))
-    report = service_report(config, nodes, request.service)[0]
+    result = await _build_config(RenderInputs.from_request(_resolve_product_request(request.request)))
+    report = service_report(result.config, result.nodes, request.service)[0]
     runtime = {"status":"not_tested", "actual_node":None, "message":"尚未请求客户端实测。"}
     if request.runtime:
         expected = report["domains"][0]["target"]
@@ -685,7 +737,9 @@ async def upgrade_profile_preview(profile_id: str, token: str = Query(...)) -> d
     if profile is None:
         raise HTTPException(status_code=404, detail="profile not found")
     original = ConvertRequest.model_validate(profile.request)
-    old_nodes, old_config, _ = await _build_config(RenderInputs.from_request(original))
+    old_result = await _build_config(RenderInputs.from_request(original))
+    old_nodes = old_result.nodes
+    old_config = old_result.config
     old_groups = {g["name"]: g for g in (original.selected_policy.proxy_groups if original.selected_policy else [])}
     routes = [route.model_dump() for route in original.service_routes if route.mode != "legacy"]
     preserved = []
@@ -706,7 +760,8 @@ async def upgrade_profile_preview(profile_id: str, token: str = Query(...)) -> d
     routes = [r for r in routes if r['egress'] in available]
     candidate = ConvertRequest(subscription_url=original.subscription_url, target=original.target,
                                profile_name=original.profile_name, service_routes=routes,
-                               publication_targets=original.publication_targets or ["mihomo", "surge"])
+                               publication_targets=original.publication_targets or ["mihomo", "surge"],
+                               surge_preferences=original.surge_preferences)
     fresh = transform_service_routes(fresh, old_nodes, candidate.service_routes)
     old_rules = set(map(str, old_config.get("rules", [])))
     new_rules = set(map(str, fresh.get("rules", [])))

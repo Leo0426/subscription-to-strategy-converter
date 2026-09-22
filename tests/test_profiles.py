@@ -327,6 +327,69 @@ def test_profile_draft_can_be_read_and_updated_with_its_token(tmp_path, monkeypa
     assert refreshed.json()["request"]["template"] == LEO_TEMPLATE
 
 
+def test_profile_persists_surge_preferences_across_draft_update_and_refresh(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    async def fake_fetch_subscription(url: str) -> str:
+        return """
+proxies:
+  - {name: TW01, type: ss, server: tw.example.com, port: 443, cipher: aes-128-gcm, password: test}
+  - {name: US-AnyTLS, type: anytls, server: us.example.com, port: 443, password: test}
+"""
+
+    monkeypatch.setenv("SUBFLOW_DB_PATH", str(tmp_path / "subflow.db"))
+    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
+    client = TestClient(app)
+    original = {
+        "subscription_url": "https://example.com/sub",
+        "target": "surge",
+        "publication_targets": ["surge"],
+        "surge_preferences": {"auto_test_protocols": ["anytls"]},
+    }
+
+    created_response = client.post("/profiles", json=original)
+    assert created_response.status_code == 201, created_response.text
+    created = created_response.json()
+    path = f"/profiles/{created['id']}"
+    params = {"token": created["token"]}
+    draft = client.get(path + "/draft", params=params).json()["request"]
+    assert draft["surge_preferences"] == {"auto_test_protocols": ["anytls"]}
+
+    edited = {**original, "profile_name": "NR AnyTLS"}
+    assert client.put(path, params=params, json=edited).status_code == 200
+    updated = client.get(path + "/draft", params=params).json()["request"]
+    assert updated["surge_preferences"] == {"auto_test_protocols": ["anytls"]}
+    refreshed = client.get(created["subscribe_urls"]["surge"] + "&force_refresh=true")
+    assert refreshed.status_code == 200
+
+
+def test_legacy_request_without_surge_preferences_keeps_all_auto_members(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    async def fake_fetch_subscription(url: str) -> str:
+        return """
+proxies:
+  - {name: TW01, type: ss, server: tw.example.com, port: 443, cipher: aes-128-gcm, password: test}
+  - {name: US01, type: ss, server: us.example.com, port: 443, cipher: aes-128-gcm, password: test}
+"""
+
+    monkeypatch.setenv("SUBFLOW_DB_PATH", str(tmp_path / "subflow.db"))
+    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
+    response = TestClient(app).post(
+        "/render",
+        json={"subscription_url": "https://example.com/sub", "target": "surge"},
+    )
+
+    assert response.status_code == 200
+    auto = next(
+        line for line in response.text.splitlines() if line.startswith("自动选择 =")
+    )
+    assert "TW01" in auto
+    assert "US01" in auto
+
+
 def test_public_base_url_pins_the_published_address(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("SUBFLOW_DB_PATH", str(tmp_path / "subflow.db"))
     monkeypatch.setenv("SUBFLOW_PUBLIC_BASE_URL", "http://192.168.1.10:8000/")

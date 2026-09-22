@@ -1,3 +1,7 @@
+from fastapi.testclient import TestClient
+from ruamel.yaml import YAML
+
+from app.core.parsers.clash import ir_to_clash_dict
 from app.core.template_engine import (
     LEO_TEMPLATE_ID,
     apply_template,
@@ -5,6 +9,7 @@ from app.core.template_engine import (
     load_template,
 )
 from app.ir import ProxyNode
+from app.main import app
 from app.models.request import ConvertRequest
 
 
@@ -129,3 +134,95 @@ def test_empty_filtered_group_is_closed_without_direct_synthesis() -> None:
         "DIRECT" not in item.get("proxies", [])
         for item in config["proxy-groups"]
     )
+
+
+def _surge_group_members(conf: str, name: str) -> list[str]:
+    line = next(item for item in conf.splitlines() if item.startswith(f"{name} ="))
+    fields = [field.strip() for field in line.split("=", 1)[1].split(",")]
+    return [field for field in fields[1:] if "=" not in field]
+
+
+def test_render_applies_protocol_filter_only_to_surge_target(monkeypatch) -> None:
+    nodes = mixed_nodes()
+
+    async def fake_load_subscription(url: str, *, target: str):
+        return nodes, {"proxies": [ir_to_clash_dict(item) for item in nodes]}
+
+    monkeypatch.setattr("app.api.convert.load_subscription", fake_load_subscription)
+    client = TestClient(app)
+    payload = {
+        "subscription_url": "https://example.com/sub",
+        "publication_targets": ["mihomo", "surge"],
+        "target": "mihomo",
+        "surge_preferences": {"auto_test_protocols": ["anytls"]},
+    }
+
+    mihomo = client.post("/render", json=payload)
+    surge = client.post("/render", json={**payload, "target": "surge"})
+
+    assert mihomo.status_code == 200, mihomo.text
+    assert surge.status_code == 200, surge.text
+    mihomo_config = YAML(typ="safe").load(mihomo.text)
+    assert len(group(mihomo_config, "自动选择")["proxies"]) == 144
+    assert len(_surge_group_members(surge.text, "自动选择")) == 61
+    assert len(_surge_group_members(surge.text, "香港自动")) == 16
+    assert len(_surge_group_members(surge.text, "手动选择")) == 144
+
+
+def test_multi_target_check_reports_filter_diagnostics_only_for_surge(monkeypatch) -> None:
+    nodes = mixed_nodes()
+
+    async def fake_load_subscription(url: str, *, target: str):
+        return nodes, {"proxies": [ir_to_clash_dict(item) for item in nodes]}
+
+    monkeypatch.setattr("app.api.convert.load_subscription", fake_load_subscription)
+    client = TestClient(app)
+    response = client.post(
+        "/check",
+        json={
+            "subscription_url": "https://example.com/sub",
+            "publication_targets": ["mihomo", "surge"],
+            "target": "mihomo",
+            "surge_preferences": {"auto_test_protocols": ["anytls"]},
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    clients = {item["target"]: item for item in response.json()["clients"]}
+    assert not any(
+        warning["code"] == "auto_test_protocol_filter"
+        for warning in clients["mihomo"]["warnings"]
+    )
+    filter_warnings = [
+        warning
+        for warning in clients["surge"]["warnings"]
+        if warning["code"] == "auto_test_protocol_filter"
+    ]
+    assert [(item["group"], item["before"], item["after"]) for item in filter_warnings] == [
+        ("自动选择", 144, 61),
+        ("香港自动", 31, 16),
+    ]
+
+
+def test_surge_workspace_preview_exposes_policy_diagnostics(monkeypatch) -> None:
+    nodes = mixed_nodes()
+
+    async def fake_load_subscription(url: str, *, target: str):
+        return nodes, {"proxies": [ir_to_clash_dict(item) for item in nodes]}
+
+    monkeypatch.setattr("app.api.convert.load_subscription", fake_load_subscription)
+    response = TestClient(app).post(
+        "/workspace/preview",
+        json={
+            "subscription_url": "https://example.com/sub",
+            "target": "surge",
+            "surge_preferences": {"auto_test_protocols": ["anytls"]},
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    warnings = response.json()["workspace"]["compile_warnings"]
+    assert [item["code"] for item in warnings] == [
+        "auto_test_protocol_filter",
+        "auto_test_protocol_filter",
+    ]
