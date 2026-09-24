@@ -110,29 +110,42 @@ def _blackmatrix7_surge_list_name(category: str, clash_name: str) -> str | None:
     return clash_name.removesuffix("_No_Resolve")
 
 
-def _resolve_blackmatrix7_url(url: str) -> str | None:
-    """Return the Surge `.list` URL for a blackmatrix7 Clash YAML URL.
+def _resolve_blackmatrix7_url(url: str) -> ResolvedRuleSet | None:
+    """Return the Surge rule set for a blackmatrix7 Clash YAML URL.
 
     Returns None when the URL is not a blackmatrix7 Clash YAML rule set.
     """
     canonical = _BLACKMATRIX7_CANONICAL_CLASH_YAML.match(url)
     if canonical is not None:
         ref = canonical["raw_ref"] or canonical["cdn_ref"]
-        name = _blackmatrix7_surge_list_name(canonical["category"], canonical["name"])
+        category = canonical["category"]
+        if (category, canonical["name"]) == ("China", "China_Classical_No_Resolve"):
+            # The full Surge China list also includes broad USER-AGENT rules.
+            # Its domain-only sibling preserves named-service rule precedence.
+            return ResolvedRuleSet(
+                "DOMAIN-SET",
+                "https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@"
+                f"{ref}/rule/Surge/China/China_Domain.list",
+            )
+        name = _blackmatrix7_surge_list_name(category, canonical["name"])
         if name is None:
             return None
-        return (
+        return ResolvedRuleSet("RULE-SET", (
             "https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@"
-            f"{ref}/rule/Surge/{canonical['category']}/{name}.list"
-        )
+            f"{ref}/rule/Surge/{category}/{name}.list"
+        ))
 
     match = _BLACKMATRIX7_CLASH_YAML.match(url)
     if match is None:
         return None
+    if (match["category"], match["name"]) == ("China", "China_Classical_No_Resolve"):
+        return ResolvedRuleSet(
+            "DOMAIN-SET", f"{match['prefix']}/rule/Surge/China/China_Domain.list"
+        )
     name = _blackmatrix7_surge_list_name(match["category"], match["name"])
     if name is None:
         return None
-    return f"{match['prefix']}/rule/Surge/{match['category']}/{name}.list"
+    return ResolvedRuleSet("RULE-SET", f"{match['prefix']}/rule/Surge/{match['category']}/{name}.list")
 
 
 # ── skk.moe (Sukka) Clash → Surge-native substitution ──────────────────────
@@ -177,8 +190,7 @@ def _resolve_surge_ruleset(url: str, behavior: str) -> ResolvedRuleSet:
     """
     surge_list = _resolve_blackmatrix7_url(url)
     if surge_list is not None:
-        # blackmatrix7 `.list` files are classical Surge rules.
-        return ResolvedRuleSet("RULE-SET", surge_list)
+        return surge_list
 
     skk = _resolve_skk_ruleset(url)
     if skk is not None:

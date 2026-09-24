@@ -767,6 +767,19 @@ def test_b7_classical_maps_to_complete_surge_variant() -> None:
     assert line == f"RULE-SET,{_B7_CDN_BASE}/rule/Surge/Global/Global_All.list,Proxy"
 
 
+def test_b7_china_classical_uses_domain_only_surge_fallback() -> None:
+    providers = {
+        "China": {
+            "behavior": "classical",
+            "url": f"{_B7_RAW_BASE}/rule/Clash/China/China_Classical_No_Resolve.yaml",
+        }
+    }
+
+    assert _rule_to_surge_line("RULE-SET,China,DIRECT", providers) == (
+        f"DOMAIN-SET,{_B7_CDN_BASE}/rule/Surge/China/China_Domain.list,DIRECT"
+    )
+
+
 def test_b7_unverified_classical_variant_fails_closed() -> None:
     with pytest.raises(UnsupportedRuleTypeError):
         _rule_to_surge_line("RULE-SET,netflix-classical,Proxy", _B7_PROVIDERS)
@@ -894,6 +907,32 @@ def test_leo_surge_keeps_domestic_douyin_and_fanqie_domain_routes() -> None:
 
     assert "USER-AGENT,TikTok*,DIRECT" not in conf
     assert "PROCESS-NAME,com.zhiliaoapp.musically,DIRECT" not in conf
+
+
+def test_leo_surge_has_domestic_domain_fallback_before_default_proxy() -> None:
+    node = _ss()
+    config = apply_template(load_template(LEO_TEMPLATE_ID), [node])
+
+    conf, warnings = build_surge_config(
+        [node],
+        config["proxy-groups"],
+        config["rules"],
+        config["rule-providers"],
+    )
+
+    domestic = (
+        "DOMAIN-SET,https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@"
+        "8818705adee20571a856daf11c9fc69c4929109a/"
+        "rule/Surge/China/China_Domain.list,DIRECT"
+    )
+    assert domestic in conf
+    assert conf.index("/rule/Surge/Telegram/Telegram.list") < conf.index(domestic)
+    assert conf.index(domestic) < conf.index("FINAL,默认代理")
+    assert not any(
+        warning["code"] == "unsupported_rule_sets"
+        and "China_Classical_No_Resolve.yaml" in str(warning)
+        for warning in warnings
+    )
 
 
 def test_leo_surge_keeps_the_ai_region_pools_manual() -> None:

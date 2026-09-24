@@ -18,6 +18,7 @@ _LEO_AUDIT_PATH = _LEO_TEMPLATE_PATH.with_name("audit.json")
 _CORE_PROVIDER_NAMES = {
     "ai-4",
     "Claude",
+    "China",
     "GitHub-5",
     "Apple-4",
     "Google-2",
@@ -77,7 +78,7 @@ def test_leo_lightweight_shape_and_generated_footprint() -> None:
     rules = compiled["rules"]
 
     assert _LEO_TEMPLATE_PATH.stat().st_size <= 15 * 1024
-    assert len(template["rule-providers"]) == 8
+    assert len(template["rule-providers"]) == 9
     assert len(template["proxy-groups"]) == 15
     assert len(template["rules"]) <= 185
     assert len(groups) == 15
@@ -99,7 +100,7 @@ def test_leo_lightweight_shape_and_generated_footprint() -> None:
         for rule in rules
         if isinstance(rule, str) and rule.startswith("RULE-SET,")
     ]
-    assert len(provider_rules) == 8
+    assert len(provider_rules) == 9
     referenced_providers = {rule.split(",", 2)[1].strip() for rule in provider_rules}
     assert referenced_providers == set(compiled["rule-providers"])
 
@@ -243,7 +244,7 @@ def test_leo_routes_core_providers_and_builtin_services_to_expected_targets() ->
         for rule in rules
         if isinstance(rule, str) and rule.startswith("RULE-SET,")
     ]
-    assert len(provider_rules) == 8
+    assert len(provider_rules) == 9
     provider_targets = {
         parts[1]: parts[2]
         for rule in provider_rules
@@ -258,6 +259,7 @@ def test_leo_routes_core_providers_and_builtin_services_to_expected_targets() ->
         "Microsoft-6": "Microsoft",
         "YouTube-6": "流媒体",
         "Telegram": "社交通讯",
+        "China": "DIRECT",
     }
 
     assert {

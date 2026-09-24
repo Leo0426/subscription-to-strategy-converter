@@ -85,7 +85,7 @@ def test_rule_catalog_uses_the_consolidated_template(client: TestClient) -> None
     )
 
     assert leo["extraction"] == "yaml"
-    assert leo["provider_count"] == 8
+    assert leo["provider_count"] == 9
     assert {provider["name"] for provider in leo["providers"]} == {
         "ai-4",
         "Claude",
@@ -95,6 +95,7 @@ def test_rule_catalog_uses_the_consolidated_template(client: TestClient) -> None
         "Microsoft-6",
         "YouTube-6",
         "Telegram",
+        "China",
     }
     assert "GEOSITE,category-ads-all,REJECT" in leo["rules"]
 

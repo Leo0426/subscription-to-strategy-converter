@@ -1,36 +1,75 @@
 {
-  "generated_at": "2026-09-22T15:28:39.811711+00:00",
+  "generated_at": "2026-09-24T03:06:48.406819+00:00",
   "summary": {
-    "total": 8,
-    "valid": 8,
+    "total": 9,
+    "valid": 9,
     "invalid": 0,
     "failed": 0
   },
   "duplicate_content_groups": [],
   "high_overlap_pairs": [],
   "entry_target_conflicts": {
-    "indexed_entry_count": 3388,
-    "conflict_entry_count": 5,
+    "indexed_entry_count": 7085,
+    "conflict_entry_count": 28,
     "affected_providers": [
       "Apple-4",
+      "China",
       "Google-2",
       "Microsoft-6",
       "YouTube-6"
     ],
     "target_pairs": {
+      "Apple <> DIRECT": 5,
       "Apple <> Google": 1,
       "Apple <> Microsoft": 1,
+      "DIRECT <> Microsoft": 20,
       "Google <> 流媒体": 3
     },
     "examples": [
+      {
+        "entry": "domain-keyword,microsoft",
+        "targets": {
+          "DIRECT": [
+            "China"
+          ],
+          "Microsoft": [
+            "Microsoft-6"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,aaplimg.com",
+        "targets": {
+          "Apple": [
+            "Apple-4"
+          ],
+          "DIRECT": [
+            "China"
+          ]
+        }
+      },
       {
         "entry": "domain-suffix,akadns.net",
         "targets": {
           "Apple": [
             "Apple-4"
           ],
+          "DIRECT": [
+            "China"
+          ],
           "Microsoft": [
             "Microsoft-6"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,beatsbydre.com",
+        "targets": {
+          "Apple": [
+            "Apple-4"
+          ],
+          "DIRECT": [
+            "China"
           ]
         }
       },
@@ -42,6 +81,226 @@
           ],
           "Google": [
             "Google-2"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,hotmail.com",
+        "targets": {
+          "DIRECT": [
+            "China"
+          ],
+          "Microsoft": [
+            "Microsoft-6"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,me.com",
+        "targets": {
+          "Apple": [
+            "Apple-4"
+          ],
+          "DIRECT": [
+            "China"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,microsoftonline.com",
+        "targets": {
+          "DIRECT": [
+            "China"
+          ],
+          "Microsoft": [
+            "Microsoft-6"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,msauth.net",
+        "targets": {
+          "DIRECT": [
+            "China"
+          ],
+          "Microsoft": [
+            "Microsoft-6"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,msecnd.net",
+        "targets": {
+          "DIRECT": [
+            "China"
+          ],
+          "Microsoft": [
+            "Microsoft-6"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,msocdn.com",
+        "targets": {
+          "DIRECT": [
+            "China"
+          ],
+          "Microsoft": [
+            "Microsoft-6"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,mzstatic.com",
+        "targets": {
+          "Apple": [
+            "Apple-4"
+          ],
+          "DIRECT": [
+            "China"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,office.com",
+        "targets": {
+          "DIRECT": [
+            "China"
+          ],
+          "Microsoft": [
+            "Microsoft-6"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,office.net",
+        "targets": {
+          "DIRECT": [
+            "China"
+          ],
+          "Microsoft": [
+            "Microsoft-6"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,office365.com",
+        "targets": {
+          "DIRECT": [
+            "China"
+          ],
+          "Microsoft": [
+            "Microsoft-6"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,onenote.net",
+        "targets": {
+          "DIRECT": [
+            "China"
+          ],
+          "Microsoft": [
+            "Microsoft-6"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,outlook.com",
+        "targets": {
+          "DIRECT": [
+            "China"
+          ],
+          "Microsoft": [
+            "Microsoft-6"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,s-microsoft.com",
+        "targets": {
+          "DIRECT": [
+            "China"
+          ],
+          "Microsoft": [
+            "Microsoft-6"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,sharepoint.com",
+        "targets": {
+          "DIRECT": [
+            "China"
+          ],
+          "Microsoft": [
+            "Microsoft-6"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,visualstudio.com",
+        "targets": {
+          "DIRECT": [
+            "China"
+          ],
+          "Microsoft": [
+            "Microsoft-6"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,windows.com",
+        "targets": {
+          "DIRECT": [
+            "China"
+          ],
+          "Microsoft": [
+            "Microsoft-6"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,windows.net",
+        "targets": {
+          "DIRECT": [
+            "China"
+          ],
+          "Microsoft": [
+            "Microsoft-6"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,windowsupdate.com",
+        "targets": {
+          "DIRECT": [
+            "China"
+          ],
+          "Microsoft": [
+            "Microsoft-6"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,xbox.com",
+        "targets": {
+          "DIRECT": [
+            "China"
+          ],
+          "Microsoft": [
+            "Microsoft-6"
+          ]
+        }
+      },
+      {
+        "entry": "domain-suffix,xboxlive.com",
+        "targets": {
+          "DIRECT": [
+            "China"
+          ],
+          "Microsoft": [
+            "Microsoft-6"
           ]
         }
       },
@@ -81,27 +340,28 @@
     ]
   },
   "ordered_entry_conflicts": {
-    "indexed_entry_count": 3388,
-    "ordered_conflict_entry_count": 184,
+    "indexed_entry_count": 7085,
+    "ordered_conflict_entry_count": 207,
     "affected_providers": [
       "Apple-4",
+      "China",
       "Google-2",
       "Microsoft-6",
       "YouTube-6"
     ],
     "transition_pairs": {
       "AI 服务 -> Google": 1,
-      "Apple -> DIRECT": 61,
+      "Apple -> DIRECT": 66,
       "Apple -> Microsoft": 1,
       "Google -> Apple": 1,
       "Google -> DIRECT": 7,
       "Google -> 流媒体": 1,
-      "Microsoft -> DIRECT": 108,
+      "Microsoft -> DIRECT": 127,
       "流媒体 -> DIRECT": 1,
       "流媒体 -> Google": 3
     },
     "risk_directions": {
-      "earlier_target_overrides_later": 184
+      "earlier_target_overrides_later": 208
     },
     "transition_examples": {
       "AI 服务 -> Google": [
@@ -125,41 +385,33 @@
       ],
       "Apple -> DIRECT": [
         {
+          "entry": "domain-suffix,aaplimg.com",
+          "winner": {
+            "provider": "Apple-4",
+            "target": "Apple",
+            "rule_index": 72
+          },
+          "shadowed": {
+            "provider": "China",
+            "target": "DIRECT",
+            "rule_index": 169
+          }
+        },
+        {
+          "entry": "domain-suffix,akadns.net",
+          "winner": {
+            "provider": "Apple-4",
+            "target": "Apple",
+            "rule_index": 72
+          },
+          "shadowed": {
+            "provider": "China",
+            "target": "DIRECT",
+            "rule_index": 169
+          }
+        },
+        {
           "entry": "domain-suffix,apple-appstore.cn",
-          "winner": {
-            "provider": "Apple-4",
-            "target": "Apple",
-            "rule_index": 72
-          },
-          "shadowed": {
-            "provider": "<inline-rule>",
-            "source": "inline",
-            "rule": "DOMAIN-SUFFIX,cn,DIRECT",
-            "rule_type": "DOMAIN-SUFFIX",
-            "value": "cn",
-            "target": "DIRECT",
-            "rule_index": 168
-          }
-        },
-        {
-          "entry": "domain-suffix,apple-dns.cn",
-          "winner": {
-            "provider": "Apple-4",
-            "target": "Apple",
-            "rule_index": 72
-          },
-          "shadowed": {
-            "provider": "<inline-rule>",
-            "source": "inline",
-            "rule": "DOMAIN-SUFFIX,cn,DIRECT",
-            "rule_type": "DOMAIN-SUFFIX",
-            "value": "cn",
-            "target": "DIRECT",
-            "rule_index": 168
-          }
-        },
-        {
-          "entry": "domain-suffix,apple-dns.com.cn",
           "winner": {
             "provider": "Apple-4",
             "target": "Apple",
@@ -284,6 +536,19 @@
       ],
       "Microsoft -> DIRECT": [
         {
+          "entry": "domain-keyword,microsoft",
+          "winner": {
+            "provider": "Microsoft-6",
+            "target": "Microsoft",
+            "rule_index": 77
+          },
+          "shadowed": {
+            "provider": "China",
+            "target": "DIRECT",
+            "rule_index": 169
+          }
+        },
+        {
           "entry": "domain-suffix,aadrm.cn",
           "winner": {
             "provider": "Microsoft-6",
@@ -302,23 +567,6 @@
         },
         {
           "entry": "domain-suffix,apihub-internal.cn",
-          "winner": {
-            "provider": "Microsoft-6",
-            "target": "Microsoft",
-            "rule_index": 77
-          },
-          "shadowed": {
-            "provider": "<inline-rule>",
-            "source": "inline",
-            "rule": "DOMAIN-SUFFIX,cn,DIRECT",
-            "rule_type": "DOMAIN-SUFFIX",
-            "value": "cn",
-            "target": "DIRECT",
-            "rule_index": 168
-          }
-        },
-        {
-          "entry": "domain-suffix,appserviceenvironment.cn",
           "winner": {
             "provider": "Microsoft-6",
             "target": "Microsoft",
@@ -398,6 +646,21 @@
     },
     "examples": [
       {
+        "entry": "domain-keyword,microsoft",
+        "winner": {
+          "provider": "Microsoft-6",
+          "target": "Microsoft",
+          "rule_index": 77
+        },
+        "shadowed": [
+          {
+            "provider": "China",
+            "target": "DIRECT",
+            "rule_index": 169
+          }
+        ]
+      },
+      {
         "entry": "domain-suffix,aadrm.cn",
         "winner": {
           "provider": "Microsoft-6",
@@ -417,6 +680,21 @@
         ]
       },
       {
+        "entry": "domain-suffix,aaplimg.com",
+        "winner": {
+          "provider": "Apple-4",
+          "target": "Apple",
+          "rule_index": 72
+        },
+        "shadowed": [
+          {
+            "provider": "China",
+            "target": "DIRECT",
+            "rule_index": 169
+          }
+        ]
+      },
+      {
         "entry": "domain-suffix,akadns.net",
         "winner": {
           "provider": "Apple-4",
@@ -428,6 +706,11 @@
             "provider": "Microsoft-6",
             "target": "Microsoft",
             "rule_index": 77
+          },
+          {
+            "provider": "China",
+            "target": "DIRECT",
+            "rule_index": 169
           }
         ]
       },
@@ -1304,44 +1587,6 @@
             "rule_index": 168
           }
         ]
-      },
-      {
-        "entry": "domain-suffix,azurehdinsight.cn",
-        "winner": {
-          "provider": "Microsoft-6",
-          "target": "Microsoft",
-          "rule_index": 77
-        },
-        "shadowed": [
-          {
-            "provider": "<inline-rule>",
-            "source": "inline",
-            "rule": "DOMAIN-SUFFIX,cn,DIRECT",
-            "rule_type": "DOMAIN-SUFFIX",
-            "value": "cn",
-            "target": "DIRECT",
-            "rule_index": 168
-          }
-        ]
-      },
-      {
-        "entry": "domain-suffix,azureiotsuite.cn",
-        "winner": {
-          "provider": "Microsoft-6",
-          "target": "Microsoft",
-          "rule_index": 77
-        },
-        "shadowed": [
-          {
-            "provider": "<inline-rule>",
-            "source": "inline",
-            "rule": "DOMAIN-SUFFIX,cn,DIRECT",
-            "rule_type": "DOMAIN-SUFFIX",
-            "value": "cn",
-            "target": "DIRECT",
-            "rule_index": 168
-          }
-        ]
       }
     ]
   },
@@ -1383,7 +1628,45 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Apple/Apple_Classical_No_Resolve.yaml",
-      "elapsed_ms": 1101
+      "elapsed_ms": 651
+    },
+    {
+      "name": "China",
+      "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/China/China_Classical_No_Resolve.yaml",
+      "behavior": "classical",
+      "declared_format": "yaml",
+      "targets": [
+        "DIRECT"
+      ],
+      "routes": [
+        {
+          "index": 169,
+          "target": "DIRECT"
+        }
+      ],
+      "upstream": "github:blackmatrix7",
+      "pinned": true,
+      "via_intermediary": false,
+      "detected_format": "yaml-payload",
+      "content_type": "text/plain; charset=utf-8",
+      "byte_count": 114789,
+      "entry_count": 3721,
+      "sha256": "ddd523c756f661659507ad94ad2ab78500e7f2347efde0d843ae8a57a384deee",
+      "valid": true,
+      "unique_entry_count": 3721,
+      "normalized_sha256": "8191ac73edbab43e1570a36efaace0d86f160f231d780e50ac50a2a6b3d44944",
+      "rule_type_counts": {
+        "DOMAIN": 17,
+        "DOMAIN-KEYWORD": 9,
+        "DOMAIN-SUFFIX": 3674,
+        "IP-CIDR": 17,
+        "IP-CIDR6": 4
+      },
+      "resolving_ip_rule_count": 0,
+      "status": "valid",
+      "status_code": 200,
+      "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/China/China_Classical_No_Resolve.yaml",
+      "elapsed_ms": 728
     },
     {
       "name": "Claude",
@@ -1418,7 +1701,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Claude/Claude_No_Resolve.yaml",
-      "elapsed_ms": 1100
+      "elapsed_ms": 883
     },
     {
       "name": "GitHub-5",
@@ -1453,7 +1736,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/GitHub/GitHub_No_Resolve.yaml",
-      "elapsed_ms": 1300
+      "elapsed_ms": 597
     },
     {
       "name": "Google-2",
@@ -1492,7 +1775,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Google/Google_No_Resolve.yaml",
-      "elapsed_ms": 1002
+      "elapsed_ms": 619
     },
     {
       "name": "Microsoft-6",
@@ -1529,7 +1812,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Microsoft/Microsoft_No_Resolve.yaml",
-      "elapsed_ms": 1054
+      "elapsed_ms": 541
     },
     {
       "name": "Telegram",
@@ -1569,7 +1852,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Telegram/Telegram_No_Resolve.yaml",
-      "elapsed_ms": 1097
+      "elapsed_ms": 602
     },
     {
       "name": "YouTube-6",
@@ -1606,7 +1889,7 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/YouTube/YouTube_No_Resolve.yaml",
-      "elapsed_ms": 1086
+      "elapsed_ms": 531
     },
     {
       "name": "ai-4",
@@ -1641,18 +1924,18 @@
       "status": "valid",
       "status_code": 200,
       "final_url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-ai-!cn.list",
-      "elapsed_ms": 1095
+      "elapsed_ms": 518
     }
   ],
   "quality_score": {
     "kind": "structural-v2",
-    "total": 99.99,
+    "total": 99.96,
     "grade": "A",
     "dimensions": {
       "availability": 40.0,
       "content_validity": 10.0,
       "content_uniqueness": 15.0,
-      "target_consistency": 9.99,
+      "target_consistency": 9.96,
       "supply_chain": 15.0,
       "cold_start_cost": 10.0
     },
@@ -1660,7 +1943,7 @@
       "upstream_count": 2,
       "via_intermediary_count": 0,
       "unpinned_count": 0,
-      "total_bytes": 115603,
+      "total_bytes": 230392,
       "provider_count_budget": 200,
       "cold_start_byte_budget": 16777216
     },
@@ -1674,8 +1957,8 @@
   "template": {
     "id": "local:community_templates/leo/leo.yaml",
     "source_path": "community_templates/leo/leo.yaml",
-    "sha256": "a52a6236d240bad068e352b4163569177a1bf9f20f90671d71a7e5b712cd46dc",
-    "provider_count": 8,
-    "rule_count": 183
+    "sha256": "e8f122218fc9ce2efc4b075cf9a48260080a290bf49bfa96f304f986722bf339",
+    "provider_count": 9,
+    "rule_count": 184
   }
 }

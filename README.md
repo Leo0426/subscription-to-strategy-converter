@@ -1,8 +1,8 @@
-# Subflow 6.6 · 策略订阅工作台
+# Subflow 6.7 · 策略订阅工作台
 
 把一条已授权的通用、Clash/Mihomo、Surge 或 Shadowrocket 订阅，结合分流规则发布为 **Clash / OpenClash、Surge 和 Shadowrocket 的长期策略订阅**。基于 [Leo 策略](community_templates/leo/leo.yaml)，在同一页完成节点读取、服务出口设置、兼容检查和订阅更新。
 
-[快速开始](#快速开始) · [使用流程](#使用流程) · [客户端兼容](#客户端兼容) · [常见问题](#常见问题) · [6.6 升级说明](docs/releases/6.6.md)
+[快速开始](#快速开始) · [使用流程](#使用流程) · [客户端兼容](#客户端兼容) · [常见问题](#常见问题) · [6.7 升级说明](docs/releases/6.7.md)
 
 ## 能做什么
 
@@ -45,13 +45,13 @@ uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
 ### 指定架构打包
 
 ```sh
-./scripts/docker-build.sh amd64 6.6
-./scripts/docker-export.sh amd64 6.6
+./scripts/docker-build.sh amd64 6.7
+./scripts/docker-export.sh amd64 6.7
 ```
 
-生成本地镜像 `subflow:6.6-amd64`（`linux/amd64`），并导出到 `dist/docker/subflow-6.6-linux-amd64.tar.gz`。需要 ARM64 时，将两条命令的 `amd64` 改为 `arm64`。
+生成本地镜像 `subflow:6.7-amd64`（`linux/amd64`），并导出到 `dist/docker/subflow-6.7-linux-amd64.tar.gz`。需要 ARM64 时，将两条命令的 `amd64` 改为 `arm64`。
 
-镜像标签用于本地构建或归档导入，不代表已发布到公共镜像仓库。归档加载、已有部署升级与回退步骤见 [6.6 发布说明](docs/releases/6.6.md)。
+镜像标签用于本地构建或归档导入，不代表已发布到公共镜像仓库。归档加载、已有部署升级与回退步骤见 [6.7 发布说明](docs/releases/6.7.md)。
 
 ## 使用流程
 
@@ -84,7 +84,7 @@ uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
 
 Shadowrocket 需要同步刷新两个链接，以保持节点名称和策略组引用一致。节点订阅原文直接传递，包括未知参数、原始名称、Base64 编码、流量和备注信息；不经过节点序列化器。清单解析只读取规则引用需要的名称、协议和地址，不能识别或存在歧义时明确报错。
 
-当前 `surge` 目标明确表示 Surge iOS 兼容输出。跨格式输出会跳过不支持的协议并显示提示；仅支持 Surge Mac 的 `PROCESS-NAME` 规则也会在 iOS 输出中跳过，并报告规则类型及跳过条数。Surge 和 Shadowrocket 的分流输出会提示其他不支持的规则；MRS、GEOSITE 和逻辑规则不保证等价转换。Shadowrocket 原生节点不按我们的转换器协议列表过滤。旧 Clash 内核不在完整 Leo 配置的兼容范围内。
+当前 `surge` 目标明确表示 Surge iOS 兼容输出。跨格式输出会跳过不支持的协议并显示提示；仅支持 Surge Mac 的 `PROCESS-NAME` 规则也会在 iOS 输出中跳过，并报告规则类型及跳过条数。Surge iOS 的 Leo 产物另有固定版本 China 域名集作国内直连兜底，位于具名服务规则之后；仍被错误代理时，可在「最近请求」中查看实际命中规则。Surge 和 Shadowrocket 的分流输出会提示其他不支持的规则；MRS、GEOSITE 和逻辑规则不保证等价转换。Shadowrocket 原生节点不按我们的转换器协议列表过滤。旧 Clash 内核不在完整 Leo 配置的兼容范围内。
 
 **三个客户端统一遵循“机场负责连接配置，Subflow 负责分流”。** Leo 提供规则和必要策略组；不再默认接管机场的 DNS、Hosts、监听端口、TUN 等公共设置。源配置未设置的项继续采用客户端默认值。
 
@@ -168,7 +168,8 @@ uv run python scripts/sync-service-rules.py --check
 - [项目上下文与模块职责](CONTEXT.md)
 - [订阅刷新、稳定性与设备排查](docs/subscription-refresh.md)
 - [服务偏好与客户端验证决策](docs/adr/0014-intent-workbench-and-client-validation.md)
-- [6.6 发布说明](docs/releases/6.6.md)
+- [6.7 发布说明](docs/releases/6.7.md)
+- [6.6 历史发布记录](docs/releases/6.6.md)
 - [6.5 历史发布记录](docs/releases/6.5.md)
 - [6.2 发布说明](docs/releases/6.2.md)
 - [6.1 历史发布记录](docs/releases/6.1.md)
@@ -177,4 +178,4 @@ uv run python scripts/sync-service-rules.py --check
 - [5.0 发布与验收记录](docs/releases/5.0.md)
 - 本地交互式 API 文档：启动后访问 `/docs`；健康检查：`/health`。
 
-6.6 的验收范围见发布说明，实际镜像和归档验证结果记录在随包提供的 `subflow-6.6-build.json` 中。测试覆盖生成内容和接口行为；真实客户端导入、ChatGPT / Claude 登录与对话需在使用环境中验收。历史版本的验收见对应发布记录。
+6.7 的验收范围见发布说明，实际镜像和归档验证结果记录在随包提供的 `subflow-6.7-build.json` 中。测试覆盖生成内容和接口行为；真实客户端导入及规则命中需在使用环境中验收。历史版本的验收见对应发布记录。
