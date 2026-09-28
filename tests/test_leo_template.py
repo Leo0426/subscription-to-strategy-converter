@@ -36,9 +36,10 @@ def _group(config: dict, name: str) -> dict:
 
 
 def _fixed_144_nodes() -> list[ProxyNode]:
-    # Keep the 144-node stress scale with both SG nodes and a conservative
-    # 23-member US AI pool, without depending on the live subscription shape.
-    regions = (("香港", 31), ("美国", 23), ("新加坡", 23), ("其他", 67))
+    # Keep the 144-node stress scale with both SG nodes, a conservative
+    # 23-member US AI pool and a Taiwan pool, without depending on the live
+    # subscription shape.
+    regions = (("香港", 31), ("美国", 23), ("新加坡", 23), ("台湾", 10), ("其他", 57))
     nodes: list[ProxyNode] = []
     for region, count in regions:
         for index in range(1, count + 1):
@@ -78,16 +79,16 @@ def test_leo_lightweight_shape_and_generated_footprint() -> None:
 
     assert _LEO_TEMPLATE_PATH.stat().st_size <= 15 * 1024
     assert len(template["rule-providers"]) == 8
-    assert len(template["proxy-groups"]) == 15
+    assert len(template["proxy-groups"]) == 16
     assert len(template["rules"]) <= 185
-    assert len(groups) == 15
+    assert len(groups) == 16
     assert sum(group["type"] == "url-test" for group in groups) == 2
-    assert sum(len(group.get("proxies", [])) for group in groups) <= 405
+    assert sum(len(group.get("proxies", [])) for group in groups) <= 415
     assert sum(
         len(group.get("proxies", []))
         for group in groups
         if group.get("url")
-    ) <= 225
+    ) <= 235
     # Preserve the global automatic fallback: removing it would save roughly
     # 1.5 KiB, but would trade away useful cross-region recovery for a cosmetic
     # size target.  The previous 144-node artifact was over 84 KiB.
@@ -816,7 +817,7 @@ def test_leo_routes_domestic_douyin_and_fanqie_domains_direct() -> None:
 def test_leo_domestic_bytedance_rules_follow_tiktok_and_precede_china_fallbacks() -> None:
     rules = load_template(LEO_TEMPLATE_ID)["rules"]
 
-    tiktok = rules.index("GEOSITE,tiktok,流媒体")
+    tiktok = rules.index("GEOSITE,tiktok,美国节点")
     first_domestic = rules.index("DOMAIN-SUFFIX,douyin.com,DIRECT")
     last_domestic = rules.index("DOMAIN-SUFFIX,fqnovelvod.com,DIRECT")
     china_fallback = rules.index("DOMAIN-SUFFIX,cn,DIRECT")
@@ -847,3 +848,81 @@ def test_leo_generic_port_and_inbound_routes_do_not_bypass_direct_catchalls() ->
         if parts[0] in {"DST-PORT", "IN-NAME"} and parts[2] == "默认代理":
             assert index > last_direct_catchall, f"direct catchall bypassed: {rule}"
     assert rules[-1] == "MATCH,默认代理"
+
+
+def test_leo_keeps_domestic_infrastructure_off_the_proxy() -> None:
+    rules = load_template(LEO_TEMPLATE_ID)["rules"]
+
+    # Domestic news, HTTPDNS and handset connectivity probes must not follow
+    # the Hong Kong default: they either skew CDN answers or report false
+    # offline states when the proxy is slow.
+    assert not any(rule.startswith("GEOSITE,category-media-cn,") for rule in rules)
+    assert "GEOSITE,category-httpdns-cn,REJECT" in rules
+    assert "GEOSITE,connectivity-check,DIRECT" in rules
+    assert "GEOSITE,bilibili,DIRECT" in rules
+    assert "PROCESS-NAME,tv.danmaku.bili,DIRECT" in rules
+
+
+def test_leo_pikpak_downloads_precede_the_overseas_catchall() -> None:
+    rules = load_template(LEO_TEMPLATE_ID)["rules"]
+    overseas = rules.index("GEOSITE,geolocation-!cn,默认代理")
+
+    for rule in (
+        "DOMAIN-KEYWORD,dl-a10b-,DIRECT",
+        "DOMAIN-KEYWORD,dl-z01a-,DIRECT",
+        r"DOMAIN-REGEX,^dl-[A-Za-z0-9-]+\.mypikpak\.com$,DIRECT",
+    ):
+        assert rules.index(rule) < overseas, rule
+
+
+def test_leo_drops_rules_shadowed_by_earlier_matches() -> None:
+    rules = load_template(LEO_TEMPLATE_ID)["rules"]
+
+    # googlefcm is included by GEOSITE,google; AliDNS addresses are CN IPs.
+    assert "GEOSITE,googlefcm,Google" not in rules
+    assert not any(rule.startswith("IP-CIDR,223.") for rule in rules)
+
+
+def test_leo_routes_region_locked_services_away_from_hong_kong() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+    rules = template["rules"]
+
+    assert "GEOSITE,tiktok,美国节点" in rules
+    assert "GEOSITE,bahamut,台湾节点" in rules
+    for rule in (
+        "DOMAIN-KEYWORD,sci-hub,默认代理",
+        "DOMAIN-SUFFIX,lingq.com,默认代理",
+        "DOMAIN-SUFFIX,youglish.com,默认代理",
+    ):
+        assert rule in rules
+
+    config = apply_template(
+        template,
+        [_node("台湾 01"), _node("TW-02"), _node("Taiwan 03"), _node("香港 01")],
+    )
+    assert _group(config, "台湾节点")["proxies"] == ["台湾 01", "TW-02", "Taiwan 03"]
+    assert _group(config, "台湾节点")["type"] == "select"
+
+
+def test_leo_taiwan_rules_fall_back_when_no_taiwan_nodes() -> None:
+    nodes = [_node("香港 01"), _node("美国 01")]
+    config = compile_mihomo_config(
+        apply_template(load_template(LEO_TEMPLATE_ID), nodes), nodes
+    )
+
+    assert "台湾节点" not in {group["name"] for group in config["proxy-groups"]}
+    assert "GEOSITE,bahamut,默认代理" in config["rules"]
+
+
+def test_leo_excludes_subscription_info_entries_from_global_pools() -> None:
+    nodes = [
+        _node("剩余流量：120 GB"),
+        _node("套餐到期：2026-12-31"),
+        _node("官网 example.com"),
+        _node("香港 01"),
+        _node("美国 01"),
+    ]
+    config = apply_template(load_template(LEO_TEMPLATE_ID), nodes)
+
+    assert _group(config, "自动选择")["proxies"] == ["香港 01", "美国 01"]
+    assert _group(config, "手动选择")["proxies"] == ["香港 01", "美国 01"]

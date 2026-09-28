@@ -30,6 +30,8 @@ All eight provider URLs remain pinned and unchanged; the live audit is regenerat
 
 The domestic ByteDance amendment keeps the same eight providers and remote download total. It raises inline rules from 149 to 183, source bytes from 13,152 to 14,718, and the fixed 144-node rendered Mihomo artifact from 34,956 to 36,317 bytes. The added entries are explicit domain rules that Surge iOS can execute; no process, user-agent, IP, or broad China rule was added.
 
+The region-lock amendment (2026-09-28) adds one manual `台湾节点` selector because Bahamut Anime Crazy only serves Taiwan IPs and TikTok does not operate in Hong Kong, so neither can follow the Hong Kong-first `默认代理`. TikTok routes to the existing `美国节点`; a pruned region group falls back to `默认代理`. The same pass removes shadowed rules (`googlefcm` inside `google`, AliDNS CIDRs inside `GEOIP,cn`), moves PikPak download rules ahead of `geolocation-!cn`, sends domestic HTTPDNS to `REJECT`, connectivity probes and Bilibili to `DIRECT`, drops the mis-mapped domestic news set `category-media-cn`, and stops using `AI 服务` as a generic US exit for non-AI sites. Inline rules fall from 183 to 179; ProxyGroups rise from 15 to 16 and the 144-node fixture (now with 10 Taiwan nodes) budgets rise to 415 member edges and 235 probe memberships. Providers and cold-start downloads are unchanged.
+
 ## Verification and limits
 
 Regression tests exercise Profile publication, catalog RulePacks, fixed and legacy Claude routes, and Mihomo/Surge/Shadowrocket output. Inline rules must precede providers and ad filtering. Client-side cached selections and legacy saved PolicySnapshots require an explicit refresh/upgrade. Tests establish emitted routing, not real-node login, regional eligibility or full streaming-session success.

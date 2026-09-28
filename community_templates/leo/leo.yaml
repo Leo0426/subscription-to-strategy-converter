@@ -87,6 +87,8 @@ proxy-groups:
 - name: 自动选择
   type: url-test
   include-all: true
+  # 排除流量、到期、官网等订阅信息条目。
+  exclude-filter: &info_nodes (?i)(剩余|剩餘|到期|过期|過期|流量|官网|官網|套餐|重置|expire|traffic)
   url: https://cp.cloudflare.com/generate_204
   expected-status: 204
   timeout: 5000
@@ -97,6 +99,7 @@ proxy-groups:
 - name: 手动选择
   type: select
   include-all: true
+  exclude-filter: *info_nodes
 - name: 香港自动
   type: url-test
   include-all: true
@@ -131,6 +134,16 @@ proxy-groups:
   type: select
   include-all: true
   filter: (?i)(新加坡|🇸🇬|Singapore|(^|[^A-Za-z])SG([^A-Za-z]|$))
+  url: https://cp.cloudflare.com/generate_204
+  expected-status: 204
+  timeout: 5000
+  lazy: true
+  interval: 600
+- name: 台湾节点
+  # 巴哈姆特仅限台湾 IP；无匹配节点时裁剪并回落默认代理。
+  type: select
+  include-all: true
+  filter: (?i)(台湾|台灣|🇹🇼|Taiwan|(^|[^A-Za-z])(TW|TWN|TPE)([^A-Za-z]|$))
   url: https://cp.cloudflare.com/generate_204
   expected-status: 204
   timeout: 5000
@@ -342,11 +355,11 @@ rules:
 - DOMAIN,access.mypikpak.net,REJECT
 - DOMAIN,access.pikpak.me,REJECT
 - GEOSITE,openai,AI 服务
-- DOMAIN-SUFFIX,lingq.com,AI 服务
-- DOMAIN-SUFFIX,youglish.com,AI 服务
+- DOMAIN-SUFFIX,lingq.com,默认代理
+- DOMAIN-SUFFIX,youglish.com,默认代理
 - DOMAIN-SUFFIX,deepl.com,AI 服务
 - DOMAIN-SUFFIX,grammarly.com,AI 服务
-- DOMAIN-KEYWORD,sci-hub,AI 服务
+- DOMAIN-KEYWORD,sci-hub,默认代理
 - GEOSITE,apple,Apple
 - GEOSITE,apple-tvplus,Apple
 - GEOSITE,apple-cn,Apple
@@ -359,16 +372,16 @@ rules:
 - GEOSITE,disney,流媒体
 - GEOSITE,hbo,流媒体
 - GEOSITE,spotify,流媒体
-- GEOSITE,tiktok,流媒体
-- GEOSITE,category-media-cn,流媒体
+# TikTok 不在香港提供服务。
+- GEOSITE,tiktok,美国节点
 - DOMAIN-KEYWORD,speedtest,默认代理
 - DOMAIN-SUFFIX,3gppnetwork.org,默认代理
 - GEOSITE,microsoft,Microsoft
-- DOMAIN-KEYWORD,hk.tv.global.mi.com,默认代理
+- DOMAIN-SUFFIX,hk.tv.global.mi.com,默认代理
 - DOMAIN-SUFFIX,mytv.com.hk,默认代理
 - GEOSITE,facebook,社交通讯
-- GEOSITE,bahamut,流媒体
-- GEOSITE,bilibili,流媒体
+- GEOSITE,bahamut,台湾节点
+- GEOSITE,bilibili,DIRECT
 - DOMAIN-SUFFIX,edclub.com,默认代理
 - DOMAIN-KEYWORD,typingclub,默认代理
 - GEOSITE,category-games@cn,DIRECT
@@ -379,9 +392,10 @@ rules:
 - GEOSITE,category-scholar-!cn,默认代理
 - GEOSITE,pixiv,默认代理
 - AND,((NOT,((OR,((PROCESS-NAME,mihomo),(PROCESS-NAME,ClashMeta))))),(DST-PORT,853)),默认代理
-- GEOSITE,category-httpdns-cn,默认代理
-- GEOSITE,connectivity-check,默认代理
-- GEOSITE,googlefcm,Google
+# 国内 HTTPDNS 经代理会拿到境外 CDN；拒绝后回落系统 DNS。
+- GEOSITE,category-httpdns-cn,REJECT
+# 联网探测直连，代理异常时不误报断网。
+- GEOSITE,connectivity-check,DIRECT
 # 国内字节系域名必须在 TikTok/海外服务之后直连。此处从固定提交的
 # ByteDance/DouYin 规则中只保留抖音、红果/番茄及其专属 CDN；显式排除
 # USER-AGENT,TikTok* 与 TikTok 进程规则，避免把国际版按应用身份直连。
@@ -419,6 +433,10 @@ rules:
 - DOMAIN-SUFFIX,fqnovelpic.com,DIRECT
 - DOMAIN-SUFFIX,fqnovelstatic.com,DIRECT
 - DOMAIN-SUFFIX,fqnovelvod.com,DIRECT
+# PikPak 下载直连须先于包含它的 geolocation-!cn。
+- DOMAIN-KEYWORD,dl-a10b-,DIRECT
+- DOMAIN-KEYWORD,dl-z01a-,DIRECT
+- DOMAIN-REGEX,^dl-[A-Za-z0-9-]+\.mypikpak\.com$,DIRECT
 # 专用服务先于广谱代理。
 - GEOSITE,gfw,默认代理
 - GEOSITE,geolocation-!cn,默认代理
@@ -430,15 +448,10 @@ rules:
 - DOMAIN-SUFFIX,cn,DIRECT
 - GEOSITE,cn,DIRECT
 - GEOIP,cn,DIRECT,no-resolve
-- IP-CIDR,223.5.5.5/32,DIRECT,no-resolve
-- IP-CIDR,223.6.6.6/32,DIRECT,no-resolve
 - DST-PORT,123,DIRECT
-- DOMAIN-KEYWORD,dl-a10b-,DIRECT
-- DOMAIN-KEYWORD,dl-z01a-,DIRECT
-- DOMAIN-REGEX,^dl-[A-Za-z0-9-]+\.mypikpak\.com$,DIRECT
 - PROCESS-NAME,com.ss.android.ugc.aweme,默认代理
 - PROCESS-NAME,com.xingin.xhs,社交通讯
-- PROCESS-NAME,tv.danmaku.bili,流媒体
+- PROCESS-NAME,tv.danmaku.bili,DIRECT
 - DOMAIN-KEYWORD,bittorrent,默认代理
 - DOMAIN-KEYWORD,tracker,默认代理
 # 兜底不抢国内/私网直连。
