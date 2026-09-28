@@ -156,3 +156,19 @@ def test_shadowrocket_pair_refreshes_nodes_and_service_members_without_new_urls(
         assert "美国 02" in refreshed.text
         assert "美国 01" not in refreshed.text
         assert "X-Subflow-Stale" not in refreshed.headers
+
+
+def test_shadowrocket_china_geoip_resolves_when_geosite_cn_is_dropped() -> None:
+    nodes = [clash_to_ir({
+        "name": "香港 01", "type": "ss", "server": "hk.example.com", "port": 443,
+        "cipher": "aes-128-gcm", "password": "x",
+    })]
+    config, _ = build_shadowrocket_config(
+        nodes,
+        [],
+        ["GEOSITE,cn,DIRECT", "GEOIP,cn,DIRECT,no-resolve", "MATCH,DIRECT"],
+        {},
+    )
+
+    assert "GEOIP,cn,DIRECT\n" in config
+    assert "GEOIP,cn,DIRECT,no-resolve" not in config

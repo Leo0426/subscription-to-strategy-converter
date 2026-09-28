@@ -1041,3 +1041,46 @@ def test_build_surge_config_skips_non_b7_clash_yaml() -> None:
     assert warnings[0]["examples"] == [
         "https://raw.githubusercontent.com/ameyukisora/Clash-Rule/abc/provider/fakeip-filter.yaml"
     ]
+
+
+def _rule_section(conf: str) -> list[str]:
+    return conf.split("[Rule]", 1)[1].split("\n[", 1)[0].strip().splitlines()
+
+
+def test_china_geoip_resolves_when_geosite_cn_is_dropped() -> None:
+    conf, _ = build_surge_config(
+        [],
+        [],
+        ["GEOSITE,cn,DIRECT", "GEOIP,cn,DIRECT,no-resolve", "MATCH,默认代理"],
+        {},
+    )
+
+    # Without GEOSITE,cn a no-resolve GEOIP rule never sees domestic .com
+    # domains, so they would all fall through to the proxied FINAL policy.
+    assert _rule_section(conf) == ["GEOIP,cn,DIRECT", "FINAL,默认代理"]
+
+
+def test_china_geoip_keeps_no_resolve_without_a_dropped_geosite_cn() -> None:
+    conf, _ = build_surge_config(
+        [],
+        [],
+        ["GEOIP,cn,DIRECT,no-resolve", "GEOIP,cn,默认代理,no-resolve", "MATCH,DIRECT"],
+        {},
+    )
+
+    assert "GEOIP,cn,DIRECT,no-resolve" in _rule_section(conf)
+    assert "GEOIP,cn,默认代理,no-resolve" in _rule_section(conf)
+
+
+def test_leo_surge_routes_domestic_domains_direct() -> None:
+    nodes = [ProxyNode(name="香港 01", protocol="ss", server="hk.example.com", port=443,
+                       extra={"cipher": "aes-128-gcm", "password": "x"})]
+    config = apply_template(load_template(LEO_TEMPLATE_ID), nodes)
+    conf, _ = build_surge_config(
+        nodes, config["proxy-groups"], config["rules"], config["rule-providers"]
+    )
+    rules = _rule_section(conf)
+
+    assert "GEOIP,cn,DIRECT" in rules
+    assert "GEOIP,cn,DIRECT,no-resolve" not in rules
+    assert rules.index("GEOIP,cn,DIRECT") < rules.index("FINAL,默认代理")

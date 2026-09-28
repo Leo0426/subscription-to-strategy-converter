@@ -926,3 +926,37 @@ def test_leo_excludes_subscription_info_entries_from_global_pools() -> None:
 
     assert _group(config, "自动选择")["proxies"] == ["香港 01", "美国 01"]
     assert _group(config, "手动选择")["proxies"] == ["香港 01", "美国 01"]
+
+
+def test_leo_proxies_only_overseas_dns_and_dot() -> None:
+    rules = load_template(LEO_TEMPLATE_ID)["rules"]
+    china_ip = rules.index("GEOIP,cn,DIRECT,no-resolve")
+
+    # Apps querying AliDNS/114 directly must stay domestic; proxying them
+    # would return Hong Kong CDN answers for domestic services.
+    for rule in rules:
+        if rule.startswith("AND,") and ("DST-PORT,53)" in rule or "DST-PORT,853)" in rule):
+            assert rules.index(rule) > china_ip, rule
+
+
+def test_leo_does_not_proxy_the_douyin_android_package() -> None:
+    rules = load_template(LEO_TEMPLATE_ID)["rules"]
+
+    assert not any("com.ss.android.ugc.aweme" in rule for rule in rules)
+
+
+def test_leo_keeps_bittorrent_off_the_airport() -> None:
+    rules = load_template(LEO_TEMPLATE_ID)["rules"]
+
+    assert "DST-PORT,6881-6999,DIRECT" in rules
+    assert "DOMAIN-KEYWORD,bittorrent,DIRECT" in rules
+    assert "DOMAIN-KEYWORD,tracker,DIRECT" in rules
+
+
+def test_leo_local_defaults_are_loopback_and_fake_ip_safe() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+
+    assert template["allow-lan"] is False
+    fake_ip_filter = template["dns"]["fake-ip-filter"]
+    assert "localhost.*.qq.com" in fake_ip_filter
+    assert "localhost.*.weixin.qq.com" in fake_ip_filter

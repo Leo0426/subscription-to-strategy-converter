@@ -14,7 +14,7 @@
 - Mihomo/OpenClash 保留两套自动健康检查（全局自动、香港自动）和美国、新加坡、台湾三套手动节点组检查。五组都使用 `https://cp.cloudflare.com/generate_204`，要求 HTTP 204，单节点等待上限为 5000 ms；三个地区节点组都是 `select`，健康检查只更新可用性和延迟，绝不会按延迟自动切换。检查周期为 600 秒并保持 lazy：启动时会填充一次结果，之后仅在该组近期使用时继续检查。没有美国或新加坡节点时，对应地区组会被裁剪，AI 服务仍保留其他可用地区组或全局手动选择；指向被裁剪地区组的规则（如巴哈姆特→台湾节点、TikTok→美国节点）回落到 `默认代理`。全局自动与手动组用 `exclude-filter` 排除“剩余流量 / 到期 / 官网”等订阅信息条目。
 - OpenClash 的“URL-Test 地址修改”无需再为 AI 设置特殊地址；建议关闭覆写并直接使用模板的 Cloudflare 204 通用探针。若必须覆写，应保持地址与 HTTP 204 期望状态一致。
 - Surge 兼容基线为 iOS 5.21+：两个自动组显式使用 100 ms 切换容差。Profile 的 `surge_preferences.auto_test_protocols` 可只限制 Surge 自动组的节点协议；手动组始终保留所有兼容节点，偏好为空时保持旧行为。仅支持 Mac 的 `PROCESS-NAME` 会从 iOS 产物跳过并计数提示。原生 Surge 输入保留机场的 `[General] proxy-test-url` 和 `test-timeout`。Apple Provider 使用上游完整的 `Apple_All_No_Resolve.list`，避免基础列表漏掉域名规则。
-- Surge iOS 不支持 `GEOSITE`，也会忽略 Mac 专属的 `PROCESS-NAME`；仅靠 `.cn` 与 `GEOIP,cn,no-resolve` 无法覆盖抖音、红果和番茄小说使用的 `.com` 域名。模板因此内联固定提交 `8818705` 的 [ByteDance](https://github.com/blackmatrix7/ios_rule_script/blob/8818705adee20571a856daf11c9fc69c4929109a/rule/Surge/ByteDance/ByteDance_Resolve.list) / [DouYin](https://github.com/blackmatrix7/ios_rule_script/blob/8818705adee20571a856daf11c9fc69c4929109a/rule/Surge/DouYin/DouYin.list) 规则中与这些国内应用有关的域名子集，并补充实测出现的 `fanqienovel.com`，放在 TikTok/海外服务之后、广谱中国大陆兜底之前直连。上游的 `USER-AGENT,TikTok*` 和 TikTok 进程规则未纳入，`FINAL` 仍为 `默认代理`；没有导入完整 China 规则集。判定依据是 Surge 官方的 [进程规则平台限制](https://manual.nssurge.com/rules/process.html) 与 [规则顺序、DNS/no-resolve 语义](https://manual.nssurge.com/rules/overview.html)。
+- Surge iOS 不支持 `GEOSITE`，也会忽略 Mac 专属的 `PROCESS-NAME`；仅靠 `.cn` 与 `GEOIP,cn,no-resolve` 无法覆盖抖音、红果和番茄小说使用的 `.com` 域名。模板因此内联固定提交 `8818705` 的 [ByteDance](https://github.com/blackmatrix7/ios_rule_script/blob/8818705adee20571a856daf11c9fc69c4929109a/rule/Surge/ByteDance/ByteDance_Resolve.list) / [DouYin](https://github.com/blackmatrix7/ios_rule_script/blob/8818705adee20571a856daf11c9fc69c4929109a/rule/Surge/DouYin/DouYin.list) 规则中与这些国内应用有关的域名子集，并补充实测出现的 `fanqienovel.com`，放在 TikTok/海外服务之后、广谱中国大陆兜底之前直连。上游的 `USER-AGENT,TikTok*` 和 TikTok 进程规则未纳入，`FINAL` 仍为 `默认代理`；没有导入完整 China 规则集。源规则含 `GEOSITE,cn,DIRECT` 而目标客户端不支持 GEOSITE 时，Surge/Shadowrocket 产物去掉 `GEOIP,cn,DIRECT` 的 `no-resolve`，让未命中的国内 `.com` 域名本地解析后直连，代价是其余未命中域名多一次国内 DNS 查询。判定依据是 Surge 官方的 [进程规则平台限制](https://manual.nssurge.com/rules/process.html) 与 [规则顺序、DNS/no-resolve 语义](https://manual.nssurge.com/rules/overview.html)。
 - ChatGPT 的主站、WebSocket、静态资源、上传、`oaistatsig.com`、`cdn.openaimerge.com` 及官方列出的五个 WorkOS 登录/资源主机在模板中固定走 `AI 服务`，先于广义 Provider；依据是 [OpenAI 官方网络要求](https://help.openai.com/en/articles/9247338)（2026-09-12 核对）。WorkOS 与 imgix 仅按具体主机匹配，避免整个共享域名服务改走 AI 出口。2026-09-21 补充官方清单中的 `humb.apple.com`、Intercom、Stripe JS、两个 Sentry 主机、Datadog RUM 和 SendGrid 跟踪子域，防止被 Apple 或广告规则抢先处理。2026-09-22 又把 [Google 官方 OpenID Connect 文档](https://developers.google.com/identity/openid-connect/reference)列出的 `accounts.google.com`、`oauth2.googleapis.com`、`openidconnect.googleapis.com` 三个精确认证主机并入 OpenAI 路由，使第三方登录与 ChatGPT 会话保持同一出口；普通 Google 域名仍走原有 Google 策略。Stripe、Sentry、Datadog、Apple 均只例外匹配列出的主机；这些依赖中部分用于客服/遥测，放行不代表它们是每次对话失败的原因。
 - OpenAI RulePack 与 RouteIntent 同样保留这些资源及 Cloudflare 挑战域名的出口。已有 Profile 若保存了旧的替换式 PolicySnapshot，需要重新从规则包生成并保存策略；只刷新旧快照的订阅不会自动合并新规则。
 - ChatGPT 故障先核对 `AI 服务 → 美国节点 / 新加坡节点` 的实际选择是否与可用原订阅为同一节点；Cloudflare 204 测速通过只说明探针可达，不证明 ChatGPT 可用。客户端保存的选择可能覆盖新配置首选；无地区匹配节点时 `AI 服务` 只连接全局手动组，初始仍是订阅中的首个节点，必须手动选定实际可用节点。上述补全不改变 fake-ip，配置编译和路由回归也不替代同节点真实访问验证。
@@ -28,7 +28,7 @@
 - 建议在工作台分别给 ChatGPT / OpenAI 和 Claude 设置 **固定节点**，用实际可用性选择节点；通用 204 延迟不能识别服务端 403。需要故障切换时，ServiceRoute 使用两个明确的主备节点，通用探针只触发这两个节点之间的切换。默认 `AI 服务` 提供美国、新加坡两个地区手动组和全局手动组，不引入通用延迟自动组。修改全局手动组会影响使用它的服务，固定 ServiceRoute 可避免这种联动。
 - 更新部署后刷新客户端订阅，并核对实际选择；`store-selected` 可能保留旧选择。旧 PolicySnapshot 需在工作台预览升级后保存，现代 ServiceRoute 会读取最新目录。无需清除所有应用数据。
 - 不再把 3478、5349、19302、10000、5350 端口一律直连，防止语音或其他应用绕过分流。具名 STUN 主机例外保留；无域名裸 IP 的语音仍按地理和最终策略处理，不能保证与 AI 域名的固定节点一致。节点不支持 UDP 时，应检查客户端/应用的 TCP 回退。
-- `tun.enable` 默认为 false。终端里的 Claude Code 若未经过透明代理，需要显式连接客户端的 HTTP 代理端口（本机 Mihomo 默认 7890），然后重启该 Claude Code 会话：
+- `allow-lan` 默认为 false，避免笔记本在公共网络上暴露无认证的 7890 代理；路由器/OpenClash 部署需自行开启。`tun.enable` 默认为 false。终端里的 Claude Code 若未经过透明代理，需要显式连接客户端的 HTTP 代理端口（本机 Mihomo 默认 7890），然后重启该 Claude Code 会话：
 
   ```bash
   export HTTPS_PROXY=http://127.0.0.1:7890
@@ -43,7 +43,7 @@
 ## 合并原则
 
 - 扫描完整配置：59 份。
-- 原始规则：2103 条；当前模板为 179 条，其中仅 8 条 `RULE-SET`。OpenAI、Claude 和国内字节系关键域名内联以保证客户端主链路；Telegram 使用一份同时覆盖域名与无域名 IP 流量的 classical 规则源。
+- 原始规则：2103 条；当前模板为 178 条，其中仅 8 条 `RULE-SET`。OpenAI、Claude 和国内字节系关键域名内联以保证客户端主链路；Telegram 使用一份同时覆盖域名与无域名 IP 流量的 classical 规则源。
 - 初始远程规则源 716 个；内容审计先压缩到 161 个，本轮按 ADR 0011 的 intent-based consolidation 只保留 AI/Claude、GitHub、Apple、Google、Microsoft、YouTube 和 Telegram 八个核心来源。长尾服务使用 Mihomo 内置 GEOSITE/GEOIP 或最终默认代理，不再为每个小站点单独下载列表。
 - 同名但定义冲突的社区策略组没有机械拼接，而是映射到统一的地区、服务和兜底策略组。
 - 广告类规则映射到 `REJECT`，国内和网络基础规则映射到 `DIRECT`，其余规则映射到对应服务组。

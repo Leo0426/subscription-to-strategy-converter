@@ -153,6 +153,28 @@ def redirect_unavailable_target(line: str, unavailable_targets: set[str]) -> str
     return ",".join(parts)
 
 
+def _china_fallback_rules(rules: list[Any], rule_types: frozenset[str]) -> list[Any]:
+    """Let GEOIP,cn resolve domains when the target cannot express GEOSITE,cn.
+
+    Without ``GEOSITE,cn`` a ``no-resolve`` China GEOIP rule never sees domain
+    requests, so every domestic ``.com`` site falls through to the proxied
+    FINAL policy. Resolving at that one rule restores direct routing at the
+    cost of a domestic DNS lookup for otherwise unmatched domains.
+    """
+    if "GEOSITE" in rule_types:
+        return rules
+    normalized = [
+        [part.strip().upper() for part in rule.split(",")] if isinstance(rule, str) else []
+        for rule in rules
+    ]
+    if ["GEOSITE", "CN", "DIRECT"] not in normalized:
+        return rules
+    return [
+        ",".join(rule.split(",")[:3]) if parts == ["GEOIP", "CN", "DIRECT", "NO-RESOLVE"] else rule
+        for rule, parts in zip(rules, normalized)
+    ]
+
+
 def build_ini_config(
     nodes: list[ProxyNode],
     proxy_groups: list[Any],
@@ -208,7 +230,7 @@ def build_ini_config(
     unsupported_rule_set_urls: list[str] = []
     unsupported_rule_types: list[str] = []
     has_final = False
-    for rule in (rules if isinstance(rules, list) else []):
+    for rule in _china_fallback_rules(rules if isinstance(rules, list) else [], dialect.rule_types):
         if not isinstance(rule, str):
             continue
         try:

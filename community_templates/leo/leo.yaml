@@ -1,5 +1,6 @@
 mixed-port: 7890
-allow-lan: true
+# 路由器部署自行开启局域网访问。
+allow-lan: false
 mode: rule
 log-level: info
 ipv6: false
@@ -20,8 +21,7 @@ dns:
   nameserver:
   - https://dns.alidns.com/dns-query
   - https://doh.pub/dns-query
-  # 节点域名必须能在代理建立前直连解析，避免境外 DoH 不可达时
-  # 出现“解析节点需要代理、建立代理又需要解析节点”的启动死锁。
+  # 节点域名须直连解析，避免启动死锁。
   proxy-server-nameserver:
   - 223.5.5.5
   - 119.29.29.29
@@ -33,8 +33,10 @@ dns:
   - ntp.*.com
   - +.market.xiaomi.com
   - +.push.apple.com
-  # 系统联网探测与游戏 NAT 打洞域名需要真实 IP,fake-ip 会导致
-  # 断网误判和 NAT 类型劣化。
+  # QQ/微信快捷登录需解析到本机 127.0.0.1。
+  - localhost.*.qq.com
+  - localhost.*.weixin.qq.com
+  # 联网探测与游戏 NAT 打洞需要真实 IP。
   - +.msftconnecttest.com
   - +.msftncsi.com
   - +.srv.nintendo.net
@@ -291,8 +293,7 @@ rules:
 - DOMAIN-SUFFIX,hcaptcha.com,AI 服务
 - DOMAIN-SUFFIX,recaptcha.net,AI 服务
 - DOMAIN-SUFFIX,gvt1.com,Google
-# 仅为具名公共 STUN 主机保留直连；不能把所有 3478/5349 等端口强制直连，
-# 无域名的语音与其他应用流量继续按服务、地理规则和最终出口分流。
+# 仅具名 STUN 主机直连，不按端口放行。
 - DOMAIN,stun1.l.google.com,DIRECT
 - DOMAIN,stun2.l.google.com,DIRECT
 - DOMAIN,stun3.l.google.com,DIRECT
@@ -345,7 +346,8 @@ rules:
 - GEOSITE,google-cn,Google
 - RULE-SET,Microsoft-6,Microsoft
 - RULE-SET,Telegram,社交通讯,no-resolve
-- DST-PORT,6881-6999,REJECT
+# BT 不走机场：tracker 与默认端口统一直连。
+- DST-PORT,6881-6999,DIRECT
 - GEOSITE,category-ads-all,REJECT
 - IP-CIDR,198.18.0.1/16,REJECT,no-resolve
 - IP-CIDR,169.254.169.254/32,REJECT,no-resolve
@@ -388,10 +390,8 @@ rules:
 - GEOSITE,category-games,游戏服务
 - GEOSITE,twitter,社交通讯
 - GEOSITE,category-speedtest,默认代理
-- AND,((DST-PORT,53),(NOT,((IN-TYPE,Inner)))),默认代理
 - GEOSITE,category-scholar-!cn,默认代理
 - GEOSITE,pixiv,默认代理
-- AND,((NOT,((OR,((PROCESS-NAME,mihomo),(PROCESS-NAME,ClashMeta))))),(DST-PORT,853)),默认代理
 # 国内 HTTPDNS 经代理会拿到境外 CDN；拒绝后回落系统 DNS。
 - GEOSITE,category-httpdns-cn,REJECT
 # 联网探测直连，代理异常时不误报断网。
@@ -443,16 +443,17 @@ rules:
 - GEOSITE,private,DIRECT
 - GEOSITE,category-public-tracker,DIRECT
 - GEOIP,private,DIRECT,no-resolve
-# 广谱中国大陆与私网兜底必须排在具名服务规则之后，避免误判命中
-# 抢先覆盖 Netflix、YouTube、Microsoft 等专用出口。
+# 广谱中国大陆兜底排在具名服务之后。
 - DOMAIN-SUFFIX,cn,DIRECT
 - GEOSITE,cn,DIRECT
 - GEOIP,cn,DIRECT,no-resolve
+# 仅境外 DNS/DoT 走代理。
+- AND,((DST-PORT,53),(NOT,((IN-TYPE,Inner)))),默认代理
+- AND,((NOT,((OR,((PROCESS-NAME,mihomo),(PROCESS-NAME,ClashMeta))))),(DST-PORT,853)),默认代理
 - DST-PORT,123,DIRECT
-- PROCESS-NAME,com.ss.android.ugc.aweme,默认代理
 - PROCESS-NAME,com.xingin.xhs,社交通讯
 - PROCESS-NAME,tv.danmaku.bili,DIRECT
-- DOMAIN-KEYWORD,bittorrent,默认代理
-- DOMAIN-KEYWORD,tracker,默认代理
+- DOMAIN-KEYWORD,bittorrent,DIRECT
+- DOMAIN-KEYWORD,tracker,DIRECT
 # 兜底不抢国内/私网直连。
 - MATCH,默认代理
