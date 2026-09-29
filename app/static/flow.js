@@ -296,8 +296,10 @@ async function openProfile() {
 async function previewUpgrade() {
   state.upgrade=await postJson(`/profiles/${encodeURIComponent(state.profile.id)}/upgrade-preview?token=${encodeURIComponent(state.profile.token)}`,{});
   const c=state.upgrade.changes;
+  const ruleChanges=c.added_rules.map(x=>"+ "+x).concat(c.removed_rules.map(x=>"− "+x));
+  if(c.rule_order_changed) ruleChanges.unshift("↕ 共同规则的相对顺序改变，前置规则可能改变实际出口。");
   $("#upgrade-result").hidden=false;
-  $("#upgrade-result").innerHTML=`<p>${escapeHtml(c.message)}</p><p>新增 ${c.added_rules.length} 条 · 移除 ${c.removed_rules.length} 条 · 保留 ${state.upgrade.request.service_routes.length} 个服务出口</p><p>将替换的策略组：${escapeHtml(c.removed_groups.join("、")||"无")}</p><p>无法保留的出口：${escapeHtml(c.discarded_preferences.join("、")||"无")}</p><details><summary>查看规则变化</summary><pre>${escapeHtml(c.added_rules.map(x=>"+ "+x).concat(c.removed_rules.map(x=>"− "+x)).join("\n"))}</pre></details><button id="apply-upgrade-button" class="simple-button secondary" type="button">应用到编辑草稿</button>`;
+  $("#upgrade-result").innerHTML=`<p>${escapeHtml(c.message)}</p><p>新增 ${c.added_rules.length} 条 · 移除 ${c.removed_rules.length} 条${c.rule_order_changed?" · 规则顺序改变":""} · 保留 ${state.upgrade.request.service_routes.length} 个服务出口</p><p>将替换的策略组：${escapeHtml(c.removed_groups.join("、")||"无")}</p><p>无法保留的出口：${escapeHtml(c.discarded_preferences.join("、")||"无")}</p><details><summary>查看规则变化</summary><pre>${escapeHtml(ruleChanges.join("\n"))}</pre></details><button id="apply-upgrade-button" class="simple-button secondary" type="button">应用到编辑草稿</button>`;
 }
 function applyUpgrade() {
   if(!state.upgrade) return;
@@ -361,7 +363,7 @@ async function init() {
   const results=await Promise.allSettled([
     jsonRequest(`/templates/detail?template=${encodeURIComponent(LEO_TEMPLATE)}`).then(body=>{state.leoGroups=body.proxy_groups||[];state.leoSummary=body.summary;state.publicData=body.public_data||[];}),
     jsonRequest("/templates/audit").then(body=>{state.leoAudit=body;}),
-    jsonRequest("/services").then(body=>{state.servicePacks=body.services;restoreChoices();$("#diagnose-service").innerHTML=body.services.map(s=>`<option value="${escapeHtml(s.id)}"${s.id==="openai"?" selected":""}>${escapeHtml(s.label)}</option>`).join("");}),
+    jsonRequest("/services").then(body=>{state.servicePacks=body.services;for(const service of body.services) state.serviceChoices[service.id]??={mode:"default",egress:"",fallback:""};$("#diagnose-service").innerHTML=body.services.map(s=>`<option value="${escapeHtml(s.id)}"${s.id==="openai"?" selected":""}>${escapeHtml(s.label)}</option>`).join("");}),
     jsonRequest("/runtime/capabilities").then(body=>{const names=Object.keys(body).filter(k=>body[k]);$("#runtime-state").textContent=names.length?`已配置：${names.join(" / ")} · 尚未发起客户端实测`:"未连接客户端 · 可进行静态分流检查";}),loadHealth(),
   ]);
   if(results.slice(0,3).some(r=>r.status==="rejected")) setNotice("部分策略数据加载失败，请刷新页面后重试。");

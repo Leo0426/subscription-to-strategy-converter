@@ -25,20 +25,16 @@ def _jsonable(value: Any) -> Any:
 
 def _rule_parts(rule: Any) -> tuple[str, str, str, list[str]]:
     if isinstance(rule, str):
-        parts = [part.strip() for part in rule.split(",")]
+        parts = [part.strip() for part in _split_rule(rule)]
         rule_type = parts[0].upper() if parts else ""
-        match = parts[1] if len(parts) > 1 else ""
-        options: list[str] = []
-        target = ""
-        if len(parts) >= 4 and parts[-1].lower() == "no-resolve":
-            target = parts[-2]
-            options = parts[3:]
-        elif len(parts) > 2:
-            target = parts[-1]
-            options = parts[3:]
-        elif len(parts) == 2 and rule_type == "MATCH":
-            target = parts[1]
+        if rule_type in {"MATCH", "FINAL"}:
             match = ""
+            target = parts[1] if len(parts) > 1 else ""
+            options = parts[2:]
+        else:
+            match = parts[1] if len(parts) > 1 else ""
+            target = parts[2] if len(parts) > 2 else ""
+            options = parts[3:]
         return rule_type, match, target, options
 
     if isinstance(rule, dict):
@@ -51,6 +47,34 @@ def _rule_parts(rule: Any) -> tuple[str, str, str, list[str]]:
         return rule_type, match, target, options
 
     return type(rule).__name__.upper(), "", "", []
+
+
+def _split_rule(rule: str) -> list[str]:
+    """Split top-level rule fields without splitting nested logical expressions."""
+    parts: list[str] = []
+    start = 0
+    depth = 0
+    quote = ""
+    escaped = False
+    for index, char in enumerate(rule):
+        if escaped:
+            escaped = False
+        elif char == "\\" and quote:
+            escaped = True
+        elif quote:
+            if char == quote:
+                quote = ""
+        elif char in {'"', "'"}:
+            quote = char
+        elif char == "(":
+            depth += 1
+        elif char == ")":
+            depth = max(0, depth - 1)
+        elif char == "," and depth == 0:
+            parts.append(rule[start:index])
+            start = index + 1
+    parts.append(rule[start:])
+    return parts
 
 
 def parse_policy_rule(rule: Any, index: int) -> PolicyRule:
@@ -147,21 +171,7 @@ def workspace_from_dict(data: dict[str, Any]) -> PolicyWorkspace:
         if isinstance(group, dict)
     ]
 
-    rules = [
-        PolicyRule(
-            id=str(rule.get("id") or f"rule:{index}"),
-            index=int(rule.get("index", index)),
-            type=str(rule.get("type") or "").upper(),
-            match=str(rule.get("match") or ""),
-            target=str(rule.get("target") or ""),
-            provider=str(rule.get("provider") or ""),
-            options=[str(item) for item in rule.get("options", [])],
-            raw=rule.get("raw"),
-        )
-        if isinstance(rule, dict) and "raw" in rule
-        else parse_policy_rule(rule, index)
-        for index, rule in enumerate(data.get("rules", []))
-    ]
+    rules = [_rule_from_workspace_dict(rule, index) for index, rule in enumerate(data.get("rules", []))]
 
     providers = [
         RuleProvider(
@@ -183,6 +193,40 @@ def workspace_from_dict(data: dict[str, Any]) -> PolicyWorkspace:
         rule_providers=providers,
         settings=dict(data.get("settings") or {}),
     )
+
+
+def _rule_from_workspace_dict(value: Any, index: int) -> PolicyRule:
+    if not isinstance(value, dict) or "raw" not in value:
+        return parse_policy_rule(value, index)
+    rule = PolicyRule(
+        id=str(value.get("id") or f"rule:{index}"),
+        index=int(value.get("index", index)),
+        type=str(value.get("type") or "").upper(),
+        match=str(value.get("match") or ""),
+        target=str(value.get("target") or ""),
+        provider=str(value.get("provider") or ""),
+        options=[str(item) for item in value.get("options", [])],
+        raw=value.get("raw"),
+    )
+    if rule.type == "RULE-SET":
+        _sync_rule_provider(rule)
+    return rule
+
+
+def _sync_rule_provider(rule: PolicyRule) -> None:
+    """Keep RULE-SET's provider alias and match field in agreement."""
+    if not rule.provider:
+        rule.provider = rule.match
+    elif not rule.match:
+        rule.match = rule.provider
+    elif rule.match != rule.provider:
+        _, raw_match, _, _ = _rule_parts(rule.raw)
+        if rule.match == raw_match:
+            rule.match = rule.provider
+        elif rule.provider == raw_match:
+            rule.provider = rule.match
+        else:
+            raise ValueError("RULE-SET rule match and provider disagree")
 
 
 def _proxy_from_workspace_dict(proxy: dict[str, Any]) -> ProxyNode:
@@ -231,8 +275,88 @@ def workspace_to_mihomo_config(workspace: PolicyWorkspace) -> dict[str, Any]:
         provider.name: dict(provider.raw)
         for provider in workspace.rule_providers
     }
-    config["rules"] = [rule.raw for rule in workspace.rules]
+    config["rules"] = [_compiled_rule(rule) for rule in workspace.rules]
     return config
+
+
+def _compiled_rule(rule: PolicyRule) -> Any:
+    """Keep source syntax unless edited structured fields need materializing."""
+    raw = rule.raw
+    if isinstance(raw, dict):
+        raw_type, raw_match, raw_target, raw_options = _rule_parts(raw)
+        changes = _rule_changes(rule, raw_type, raw_match, raw_target, raw_options)
+        if not changes:
+            return raw
+        compiled = dict(raw)
+        if "type" in changes:
+            key = _first_rule_key(raw, ("type", "rule"), "type")
+            compiled[key] = rule.type
+        if "match" in changes:
+            key = _first_rule_key(raw, ("match", "value", "domain", "ip", "rule-set", "provider"), "match")
+            compiled[key] = rule.match
+        if "target" in changes:
+            key = _first_rule_key(raw, ("proxy", "policy", "target"), "target")
+            compiled[key] = rule.target
+        if "options" in changes:
+            compiled["options"] = list(rule.options)
+        return compiled
+
+    if raw is None:
+        return _render_rule_fields(rule)
+    if not isinstance(raw, str):
+        return raw
+    raw_type, raw_match, raw_target, raw_options = _rule_parts(raw)
+    changes = _rule_changes(rule, raw_type, raw_match, raw_target, raw_options)
+    if not changes:
+        return raw
+    if (raw_type in {"MATCH", "FINAL"}) != (rule.type in {"MATCH", "FINAL"}):
+        return _render_rule_fields(rule)
+
+    parts = _split_rule(raw)
+    target_index = 1 if raw_type in {"MATCH", "FINAL"} else 2
+    while len(parts) <= target_index:
+        parts.append("")
+    for field, index, value in (("type", 0, rule.type), ("match", 1, rule.match), ("target", target_index, rule.target)):
+        if field in changes and not (field == "match" and target_index == 1):
+            parts[index] = _replace_rule_segment(parts[index], value)
+    if "options" in changes:
+        parts = parts[:target_index + 1] + list(rule.options)
+    return ",".join(parts)
+
+
+def _rule_changes(rule: PolicyRule, raw_type: str, raw_match: str, raw_target: str, raw_options: list[str]) -> set[str]:
+    changes: set[str] = set()
+    if rule.type != raw_type:
+        changes.add("type")
+    if rule.match != raw_match:
+        changes.add("match")
+    if rule.target != raw_target:
+        changes.add("target")
+    if rule.options != raw_options:
+        changes.add("options")
+    return changes
+
+
+def _first_rule_key(raw: dict[str, Any], keys: tuple[str, ...], fallback: str) -> str:
+    for key in keys:
+        if raw.get(key):
+            return key
+    for key in keys:
+        if key in raw:
+            return key
+    return fallback
+
+
+def _replace_rule_segment(segment: str, value: str) -> str:
+    leading = segment[:len(segment) - len(segment.lstrip())]
+    trailing = segment[len(segment.rstrip()):]
+    return f"{leading}{value}{trailing}"
+
+
+def _render_rule_fields(rule: PolicyRule) -> str:
+    if rule.type in {"MATCH", "FINAL"}:
+        return ",".join((rule.type, rule.target, *rule.options))
+    return ",".join((rule.type, rule.match, rule.target, *rule.options))
 
 
 def compile_mihomo_config(config: dict[str, Any], nodes: list[ProxyNode]) -> dict[str, Any]:

@@ -18,6 +18,10 @@ class FetchError(ValueError):
     pass
 
 
+class FetchInvalidError(FetchError):
+    """The source URL or response violates an input or safety constraint."""
+
+
 BLOCKED_HOSTS = {"localhost"}
 BLOCKED_NETWORKS = tuple(
     ipaddress.ip_network(network)
@@ -39,15 +43,19 @@ DEFAULT_SUBSCRIPTION_USER_AGENT = "clash.meta/1.19.30 mihomo/1.19.30 subflow/0.1
 
 
 def _validate_url(url: str) -> None:
-    parsed = urlparse(url)
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+    except ValueError as exc:
+        raise FetchInvalidError("subscription_url is invalid") from exc
     if parsed.scheme not in {"http", "https"}:
-        raise FetchError("subscription_url must use http or https")
-    if not parsed.hostname:
-        raise FetchError("subscription_url must include a hostname")
+        raise FetchInvalidError("subscription_url must use http or https")
+    if not hostname:
+        raise FetchInvalidError("subscription_url must include a hostname")
 
-    hostname = parsed.hostname.strip().lower()
+    hostname = hostname.strip().lower()
     if hostname in BLOCKED_HOSTS or hostname.endswith(".localhost"):
-        raise FetchError("local hostnames are not allowed")
+        raise FetchInvalidError("local hostnames are not allowed")
 
     try:
         ip = ipaddress.ip_address(hostname)
@@ -55,7 +63,7 @@ def _validate_url(url: str) -> None:
         ip = None
 
     if ip is not None and _is_blocked_ip(ip):
-        raise FetchError("private or local IP URLs are not allowed")
+        raise FetchInvalidError("private or local IP URLs are not allowed")
 
 
 def _is_blocked_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
@@ -134,7 +142,7 @@ async def _ensure_resolved_host_is_public(hostname: str) -> None:
         if _is_fake_ip(ip):
             fake_ip_hits.append(ip)
         elif _is_blocked_ip(ip):
-            raise FetchError(_blocked_ip_message(ip))
+            raise FetchInvalidError(_blocked_ip_message(ip))
 
     if not fake_ip_hits:
         return
@@ -147,7 +155,7 @@ async def _ensure_resolved_host_is_public(hostname: str) -> None:
                 continue
             for ip in candidates:
                 if _is_blocked_ip(ip):
-                    raise FetchError(_blocked_ip_message(ip))
+                    raise FetchInvalidError(_blocked_ip_message(ip))
             return
     finally:
         for task in tasks:
@@ -155,7 +163,7 @@ async def _ensure_resolved_host_is_public(hostname: str) -> None:
                 task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
 
-    raise FetchError(_blocked_ip_message(fake_ip_hits[0]))
+    raise FetchInvalidError(_blocked_ip_message(fake_ip_hits[0]))
 
 
 async def fetch_subscription(url: str, *, target: str = "mihomo") -> str:
@@ -194,7 +202,7 @@ async def request_text(url: str, *, headers: dict | None = None, params: dict | 
                             if response.is_redirect and redirects:
                                 location = response.headers.get('location')
                                 if not location:
-                                    raise FetchError('subscription redirect response is missing Location')
+                                    raise FetchInvalidError('subscription redirect response is missing Location')
                                 current_url = str(response.url.join(location))
                                 params = None
                                 break
@@ -207,15 +215,17 @@ async def request_text(url: str, *, headers: dict | None = None, params: dict | 
                             limit = max_subscription_bytes()
                             async for chunk in response.aiter_bytes():
                                 if len(content) + len(chunk) > limit:
-                                    raise FetchError('subscription exceeds decoded size limit')
+                                    raise FetchInvalidError('subscription exceeds decoded size limit')
                                 content.extend(chunk)
                             return content.decode(response.encoding or 'utf-8', errors='replace')
                     except httpx.TransportError:
                         if attempt:
                             raise
                         await asyncio.sleep(0.1)
-            raise FetchError('subscription fetch exceeded redirect limit')
+            raise FetchInvalidError('subscription fetch exceeded redirect limit')
     except TimeoutError as exc:
         raise FetchError('subscription refresh deadline exceeded') from exc
+    except httpx.InvalidURL as exc:
+        raise FetchInvalidError('subscription_url is invalid') from exc
     except httpx.HTTPError as exc:
         raise FetchError(f'subscription network failure ({type(exc).__name__})') from exc

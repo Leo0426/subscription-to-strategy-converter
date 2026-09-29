@@ -577,9 +577,10 @@ def _rule_to_surge_line(
 
     rule_type = parts[0].upper()
 
-    if rule_type == "MATCH":
+    if rule_type in {"MATCH", "FINAL"}:
         target = parts[1].strip() if len(parts) > 1 else "DIRECT"
-        return f"FINAL,{target}"
+        dns_failed = rule_type == "FINAL" and "dns-failed" in (part.lower() for part in parts[2:])
+        return f"FINAL,{target}{',dns-failed' if dns_failed else ''}"
 
     if len(parts) < 3:
         return None

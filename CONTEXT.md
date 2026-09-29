@@ -10,7 +10,7 @@ A self-hosted Clash/Mihomo, Surge and Shadowrocket policy release control plane 
 - Protocol parsing and broad format conversion are compatibility inputs, not the product's differentiating capability.
 - Airport subscriptions own connectivity and common settings for all three public clients; Subflow owns routing rules and the policy groups needed to express them. Same-format publication preserves the source envelope; cross-format publication maps equivalent settings and reports compatibility limits (ADR 0016).
 - Clash/Mihomo is the semantic quality target; Surge and Shadowrocket are public compatibility targets with explicit warnings for skipped protocols and rule sets.
-- Business policy is assembled from visible RulePacks; RouteIntent and reusable NodePools optionally override the selected packs' egress behavior.
+- The standard workbench starts from Leo's current routing policy and saves only explicit ServiceRoute preferences. PolicyPreset, RulePackSelection, PolicySnapshot and RouteIntent remain legacy API composition paths (ADR 0014).
 - The initial operator is one advanced user running a private local or self-hosted deployment; public conversion SaaS and multi-tenancy are outside the current scope.
 
 ## 10 Pain Points (Design Compass)
@@ -36,26 +36,26 @@ New issues should state which pain points they address.
 |------|---------|
 | **ProxyNode** | A single proxy server entry (SS, Trojan, VMess, etc.) — the canonical IR type |
 | **NodeSelector** | A stable, named query over the current `ProxyNode` inventory using include/exclude name regexes and optional protocols; referenced as `selector:<id>` by proxy groups |
-| **NodePool** | A product-facing, reusable set of nodes declared by region, protocol, include keywords, and exclude keywords; compiled into a NodeSelector |
-| **RouteIntent** | A product-facing declaration containing NodePools and per-service primary pool, optional fallback pool, and final target |
+| **NodePool** | A legacy RouteIntent node set declared by region, protocol, include keywords, and exclude keywords; compiled into a NodeSelector |
+| **RouteIntent** | A legacy API declaration containing NodePools and per-service pool-based routing overrides for a PolicySnapshot; distinct from modern ServiceRoute preferences |
 | **Leo Template** | The single supported policy source at `community_templates/leo/leo.yaml`; it supplies proxy groups, providers and the full ordered rule graph. Its standalone DNS/TUN defaults do not override subscription connectivity. |
-| **PolicyPreset** | A small product-facing, named starting policy graph that is copied into a Profile and may then be freely composed |
-| **RulePack** | A selectable product module containing one business target group, its dependent groups, and the concrete ordered rules that route to it |
-| **RulePackSelection** | The ordered set of RulePack identifiers chosen by a user and compiled into a PolicySnapshot |
-| **PolicySnapshot** | The complete `SelectedPolicy` stored in a Profile after preset selection or custom composition; later preset changes do not mutate it |
-| **PolicyWorkspace** | Product core for the MVP: an in-memory policy workspace holding nodes, groups, rules, providers, settings, graph data, analyzer findings, simulator traces, and compile output |
+| **PolicyPreset** | A named starting policy graph for legacy API composition; selecting one stores a copy in a Profile |
+| **RulePack** | A selectable legacy policy module containing one business target group, its dependent groups, and the concrete ordered rules that route to it |
+| **RulePackSelection** | A legacy ordered set of RulePack identifiers compiled into a PolicySnapshot |
+| **PolicySnapshot** | The complete legacy `SelectedPolicy` stored in a Profile after preset selection or custom composition; later preset changes do not mutate it |
+| **PolicyWorkspace** | An in-memory policy IR containing nodes, groups, rules, providers and settings; graph, analyzer findings, simulation traces and compile output are derived from it |
 | **PolicyWorkbench** | The single-page product surface for source connection, fine-grained ServiceRoute overrides, validation, Profile publication, and public Leo audit evidence |
-| **Profile** | A mutable policy intent containing one authorized source, ServiceRoutes, and target-specific publication choices; its generation identifies the current saved edit, without retaining edit history |
+| **Profile** | A mutable policy intent containing one authorized source, modern ServiceRoute preferences or a legacy PolicySnapshot, and target-specific publication choices; its generation identifies the current saved edit, without retaining edit history |
 | **SurgePreferences** | Explicit Profile intent for Surge-only publication behavior; `auto_test_protocols` restricts node members of automatic test groups without removing nodes from manual selectors |
-| **ServiceRoute** | One entry in a RouteIntent that maps a catalog service to a primary NodePool, optional fallback NodePool, and final target |
+| **ServiceRoute** | A saved override for one catalog service: fixed node or DIRECT/REJECT, manual node/group choice, or two explicit failover nodes; an absent route follows Leo. This is separate from RouteIntent's pool-based entries |
 | **RuleSource** | A policy-rule input identified by its origin, format, version, and content digest |
 | **ProxyGroup** | A named group of nodes or groups with a dispatch strategy (select / url-test / fallback / load-balance) |
 | **RuleProvider** | An external rule-set URL referenced by name in rules (Clash: `rule-providers`) |
 | **TemplatePolicyTransform** | A structure-aware operation that preserves a selected template and changes only a recognized service-policy subgraph |
 | **Claude Egress** | The explicit node or policy group placed first in the template's dedicated Claude policy group |
-| **Legacy Template** | A community or historical full YAML skeleton retained as an import and API compatibility source, not a primary product choice |
-| **Compiler** | A platform-specific module (`surge.py`, `singbox.py`) that takes (nodes, groups, rules, providers) → formatted config string |
-| **Subscription URL** | The stable `/subscribe?...` endpoint URL users paste into their proxy client |
+| **Legacy Template** | A historical full YAML skeleton retained as internal compatibility and legacy PolicyPreset/RulePack source material; Leo-backed interfaces accept only Leo |
+| **Compiler** | A target-specific publication module for Mihomo, Surge or Shadowrocket that combines generated routing with source connectivity where available; sing-box remains experimental |
+| **Subscription URL** | A stable, token-protected `/subscribe/{profile_id}?...` URL pasted into a proxy client; the direct `/subscribe?...` query API remains for legacy callers |
 | **MATCH / FINAL** | Catch-all rule — Clash calls it `MATCH`, Surge calls it `FINAL` |
 | **MRS** | Mihomo binary rule-set format; must be substituted with `.txt` URLs for Surge |
 
@@ -63,17 +63,18 @@ New issues should state which pain points they address.
 
 ```
 Authorized Subscription
-    ↓ protocol compatibility boundary
-ProxyNode inventory
-    ↓ Leo Template + optional RulePackSelection
-PolicySnapshot
-    ↓ optional RouteIntent egress overrides
-PolicyWorkspace
-    ↓ analyze + simulate + target validation
-Clash/Mihomo artifact + Surge artifact + Shadowrocket nodes and policy
+    ↓ target-specific fetch and protocol compatibility boundary
+Native source envelope (connectivity) + ProxyNode inventory
+    ↓ Leo Template + current service catalog + saved ServiceRoutes
+Effective routing policy
+    ↓ PolicyWorkspace analysis/simulation + selected-client validation
+Target-specific publication: source connectivity + generated routing
+    ↓ Clash/Mihomo, Surge, or paired Shadowrocket artifacts
     ↓ persisted as the Profile's last-successful artifact (ADR 0002)
 Token-protected Subscription URLs
 ```
+
+Legacy API composition may instead resolve a PolicyPreset or RulePackSelection into a PolicySnapshot, accept an explicit `SelectedPolicy`, and optionally apply RouteIntent pool-based overrides. Legacy Claude transforms remain compatible. The native source envelope stays separate from PolicyWorkspace so target publication can preserve source-owned connectivity (ADR 0016).
 
 ## Module Map
 
@@ -86,7 +87,7 @@ Token-protected Subscription URLs
 | `app/core/parsers/shadowrocket.py` | Reads native URI/Base64/INI policy inventory and retains the complete native profile; opaque nodes must never be serialized as converted connections |
 | `app/core/normalizer.py` | Post-parse dedup and normalization for `ProxyNode` lists |
 | `app/core/fetcher.py` | HTTP fetching with SSRF safety checks |
-| `app/core/subscription.py` | `load_subscription()` — end-to-end: URL → Clash YAML or Surge config → normalized `ProxyNode` list |
+| `app/core/subscription.py` | `load_subscription()` — target-specific source fetch and parsing into a normalized `ProxyNode` inventory plus native source envelope |
 | `app/core/subconverter.py` | Optional compatibility Adapter: unsupported subscription URL → node-only Clash YAML through an operator-configured Subconverter |
 | `app/core/template_engine.py` | Built-in preset definitions, local template loader, `apply_template()`, `list_templates()`, and target-local automatic-test protocol filtering |
 | `app/core/powerfullz.py` | Fetches powerfullz static YAML from jsDelivr CDN |
@@ -95,11 +96,17 @@ Token-protected Subscription URLs
 | `app/core/policy_analyzer.py` | `analyze_workspace()` → `list[AnalyzerFinding]` |
 | `app/core/policy_simulator.py` | `simulate_destination()` → `SimulationTrace` |
 | `app/core/policy_catalog.py` | Extracts and deduplicates policy entries across community templates |
-| `app/core/rule_packs.py` | Exposes concrete business rule cards and assembles a RulePackSelection into a PolicySnapshot |
-| `app/core/policy_resolution.py` | Applies the PolicyPreset/RulePackSelection/RouteIntent precedence to a ConvertRequest; raises `PolicyResolutionError` |
-| `app/core/intent_compiler.py` | Compiles product-facing NodePools and ServiceRoutes into NodeSelectors, ProxyGroups, and ordered rules |
-| `app/core/template_policy_transform.py` | ServiceRoute transformation boundary with Claude template analysis and compatibility adapters |
+| `app/core/policy_presets.py` | Defines named PolicyPresets for legacy API composition |
+| `app/core/rule_packs.py` | Exposes legacy RulePacks and assembles a RulePackSelection into a PolicySnapshot |
+| `app/core/policy_resolution.py` | Resolves legacy PolicyPreset/RulePackSelection/RouteIntent precedence in a ConvertRequest; raises `PolicyResolutionError` |
+| `app/core/intent_compiler.py` | Compiles legacy RouteIntent NodePools and pool-based routing entries into NodeSelectors, ProxyGroups and ordered rules |
+| `app/core/service_catalog.py` | Serves the shared service catalog and catalog revision used by current ServiceRoutes |
+| `app/core/template_policy_transform.py` | Applies current ServiceRoute preferences to Leo and preserves the legacy Claude transform |
+| `app/core/workbench.py` | Builds service routing reports and distinguishes modern from legacy Profile intent |
+| `app/core/runtime_diagnostics.py` | Read-only, operator-configured Mihomo/Surge runtime diagnosis |
 | `app/core/profiles.py` | Persistent Profile store with token authorization and last-successful artifact caching |
+| `app/core/publication.py` | Publication revision, artifact freshness and response metadata |
+| `app/core/inflight.py` | Bounds and coalesces concurrent publication refreshes for the same Profile generation and target |
 | `app/core/provider_egress.py` | Decides which RuleProviders must download through a ProxyGroup instead of the direct route |
 | `app/core/rule_source_audit.py` | RuleSource availability/content/supply-chain audit, structural-v2 quality score, and the published `audit.json` snapshot |
 | `app/core/renderer.py` | `render_yaml()` — serializes a dict to YAML string |
@@ -112,9 +119,9 @@ Token-protected Subscription URLs
 | `app/core/platforms/shadowrocket.py` | Public Shadowrocket node subscription and companion native policy compiler |
 | `app/core/platforms/ini.py` | Shared INI artifact assembly, compatibility warnings and target-group closure |
 | `app/core/platforms/singbox.py` | Experimental sing-box compiler |
-| `app/core/sessions.py` | In-memory session store for large policy payloads (avoids huge query strings in `/subscribe`) |
+| `app/core/sessions.py` | Bounded, expiring in-memory session store for legacy direct `/subscribe` policy payloads |
 | `app/core/config_tree.py` | Preview tree builder for raw Clash config |
-| `app/api/convert.py` | Main API router — workspace, convert, subscribe, simulate, compile endpoints |
+| `app/api/convert.py` | Main API router — workbench checks, Profile publication, direct render, workspace, simulation and compilation endpoints |
 | `app/api/community.py` | Community template catalog API |
 | `app/api/health.py` | Health check |
 | `app/api/system.py` | Lightweight application and Profile database status API |
@@ -134,7 +141,7 @@ The only public template is `local:community_templates/leo/leo.yaml`. Historical
 | `full` | AI + Developer + Streaming + geo groups (HK / SG / JP / US) |
 | `powerfullz` | powerfullz/override-rules static YAML, fetched from jsDelivr at request time |
 
-The community catalog, policy catalog, page and conversion/Profile interfaces are all pinned to `community_templates/leo/leo.yaml`.
+The public community template browser, page and conversion/Profile interfaces are pinned to `community_templates/leo/leo.yaml`. `/policy-catalog` remains a broader read-only index across `community_templates/`.
 
 ## API Endpoints
 
@@ -146,31 +153,37 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 | GET | `/templates/detail` | Leo template structure and YAML preview; other template IDs are rejected |
 | GET | `/templates/source` | Return the complete public Leo YAML source |
 | GET | `/templates/audit` | Return the versioned RuleSource audit snapshot and publication metadata |
+| GET | `/community/templates` | List the supported community Leo template |
+| GET | `/community/templates/preview` | Preview the Leo community template structure |
 | GET | `/community/rules` | Return every top-level rule and RuleProvider source from Leo |
 | GET | `/policy-catalog` | Extracted rule providers across community templates |
-| GET | `/rule-packs` | List selectable RulePacks, concrete rules, dependencies, categories, and preset defaults |
-| GET | `/intent/catalog` | List supported service and region choices for RouteIntent editors |
+| GET | `/presets` | List legacy PolicyPresets and their copied policy graphs |
+| GET | `/rule-packs` | List legacy RulePacks, rules, dependencies, categories and preset defaults |
+| GET | `/intent/catalog` | List service and region choices for legacy RouteIntent callers |
+| GET | `/services` | Return the current service catalog and revision for ServiceRoute editing |
+| GET | `/runtime/capabilities` | Report configured read-only client diagnosis capabilities |
 | POST | `/preview` | Parse subscription → node list + config tree |
-| POST | `/convert` | Full conversion → rendered config string |
 | POST | `/workspace/preview` | Build workspace + graph + analyzer findings |
 | POST | `/render` | Render one target from a structured ConvertRequest body without query-string size limits |
 | GET | `/claude/templates` | List templates containing Claude policy with target-specific compatibility metadata |
-| POST | `/analyze` | Re-analyze an existing workspace dict |
+| POST | `/check` | Validate requested publication targets and report service routing, findings and compatibility warnings |
+| POST | `/diagnose` | Report one service route and optionally probe a configured client without changing its selection |
 | POST | `/simulate` | Simulate a destination through workspace rules |
-| POST | `/compile/mihomo` | Compile workspace dict → Mihomo YAML |
+| POST | `/compile` | Compile a workspace for a supported target when its source context is sufficient |
 | POST | `/session` | Store large policy payload, return session ID |
 | POST | `/profiles` | Persist one Leo-based Profile and return token-protected Clash, Surge and Shadowrocket Subscription URLs plus the Shadowrocket policy URL |
 | GET | `/profiles` | List redacted local Profile summaries without token or source subscription URL |
 | GET | `/profiles/{profile_id}/draft` | Read an editable Profile conversion intent with token authorization |
+| POST | `/profiles/{profile_id}/upgrade-preview` | Preview a legacy Profile's migration to current Leo/ServiceRoute intent without saving |
 | PUT | `/profiles/{profile_id}` | Replace a Profile conversion intent with token authorization and invalidate old artifacts |
 | GET | `/subscribe/{profile_id}` | Compile a persisted Profile for `target=clash|mihomo|surge|shadowrocket|shadowrocket-config` or return its target-specific stale artifact |
-| GET | `/subscribe` | Stable URL for proxy clients — returns config directly |
+| GET | `/subscribe` | Legacy direct query API for rendering a client config; accepts a short-lived `/session` reference for large policy payloads |
 
 ## Platform Support
 
 | Platform | Priority | Compiler |
 |----------|----------|---------|
-| Mihomo / Clash | Product semantic quality bar | `app/core/policy_workspace.py` → `workspace_to_mihomo_config()` + `app/core/renderer.py` |
+| Mihomo / Clash | Product semantic quality bar | `app/core/policy_workspace.py` → `compile_mihomo_config()`; `app/core/platforms/mihomo.py` preserves the native source envelope |
 | Surge 5.21+ | Public compatibility target; unsupported protocols and MRS sources are skipped with warnings | `app/core/platforms/surge.py` |
 | Shadowrocket | Original native subscription plus policy overlay / native config with replaced routing | `app/core/platforms/shadowrocket.py` |
 | sing-box | Internal experimental compiler; rejected by Leo-backed product interfaces | `app/core/platforms/singbox.py` |
@@ -193,18 +206,19 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - Every URL forwarded to an external fetcher (subscription source, Subconverter) must pass the same DNS-rebinding check as `fetch_subscription()`; a hostname that resolves to a private/loopback IP is rejected before the request is made
 - Shadowsocks transport options required for connectivity, including Surge `obfs` and `obfs-host`, must survive input normalization and map to the equivalent target-client syntax
 - Cross-format Mihomo HTTP simple-obfs output removes a hostname's trailing empty-port colon (`host:`): Mihomo appends the node port, producing a rejected `host::port` header otherwise. Native Mihomo node fields remain unchanged. This conversion-only normalization must not mutate shared ProxyNode data or alter other plugins, TLS obfs, explicit ports, or IPv6 literals.
-- Mihomo output from `/convert` and `/subscribe` must compile through `PolicyWorkspace` via `compile_mihomo_config()`
+- Mihomo publication from `/render` and both `/subscribe` paths compiles through `PolicyWorkspace` via `compile_mihomo_config()`. `/workspace/preview` materializes native Mihomo output once; same-target `/compile` serializes that compiled workspace without reapplying provider egress.
+- A Surge source previewed for Mihomo carries its cross-format source-settings warning into `/compile`; PolicyWorkspace still excludes the native Surge envelope and source credentials.
 - Mihomo health probes use HTTP `HEAD`; every probe URL and `expected-status` pair must be validated with `HEAD`. AI traffic uses a manual US-only Selector whose Cloudflare 204 health check updates connectivity and latency but never authorizes automatic node switching; absent US nodes, AI delegates only to manual selection, never a global latency group (ADR 0015)
 - ServiceRoute fallback requires two explicit node names. Its generic connectivity probe may switch only between those nodes and never proves that an AI service accepts either exit.
-- Mihomo is the first quality-bar compiler; other compilers remain experimental until semantic parity is explicit
+- Mihomo is the semantic quality bar; Surge and Shadowrocket are public compatibility targets with explicit limits, while sing-box remains experimental
 - Experimental compilers should report unsupported protocols without breaking the workspace loop
 - `RULE-SET` in Surge uses a direct URL (not provider name); the compiler resolves the name via `rule_providers` dict
 - Surge 5.21+ is the compatibility baseline; audited blackmatrix7 Classical providers use complete `_All` variants, while unknown Classical mappings fail closed instead of guessing a partial or nonexistent list
 - Every `RULE-SET` reference, including references nested inside logical `AND` / `OR` / `NOT` rules, must resolve to a declared RuleProvider before publication
 - Surge does not accept Mihomo-only rule types such as `DOMAIN-REGEX`, `PROCESS-NAME-REGEX`, and `IN-NAME`; the compatibility compiler must skip and report them rather than emit an invalid `.conf` line
 - Community templates live under `community_templates/` (scanned root); the deduplicated community template is `community_templates/leo/leo.yaml`
-- All template IDs from the community are prefixed `local:` (e.g. `local:community_templates/leo/leo.yaml`)
-- Sessions in `app/core/sessions.py` are in-memory only; they do not persist across restarts
+- Leo-backed conversion and Profile requests use `local:community_templates/leo/leo.yaml`; the read-only `/community/*` browser uses `community:leo/leo.yaml` for the same file
+- Sessions in `app/core/sessions.py` are in-memory only, expire after 24 hours, hold at most 64 entries of at most 1 MiB each, and do not persist across restarts. An expired or evicted `session_id` supplied to `/subscribe` returns 410 instead of silently dropping the requested policy.
 - Profiles persist in SQLite; access requires both the profile ID and an independent token whose hash is stored in the database
 - A Profile has one source subscription, service preferences (or a legacy PolicySnapshot), and target-specific Clash/Mihomo, Surge and paired Shadowrocket publications
 - Shadowrocket node subscriptions and companion policy configs have distinct artifact keys. Both share the same Profile/token; users update both resources to keep node names and policy-group references synchronized (ADR 0013).
@@ -212,6 +226,8 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - A Profile may serve a stale artifact only for an external source dependency failure, with the same saved generation and target, and must mark it with `X-Subflow-Stale: true`. An older policy/compiler identity is allowed in this failure case only, retaining its true identity and generation time; malformed source or compile failures cannot fall back.
 - Updating a Profile invalidates all previously compiled artifacts before the new intent can be served; an older in-flight request cannot write artifacts into the new generation
 - Legacy Claude transforms preserve provider URLs, rule order, DNS/TUN settings, and every non-Claude policy edge. Modern service transforms prepend catalog rules and retarget only that service's owned provider/GEOSITE references while preserving DNS/TUN and unrelated routes (ADR 0014).
+- Combining modern ServiceRoutes keeps explicit domains and narrower suffixes ahead of an overridden broad service suffix, independent of the ServiceRoute list order; a more specific Leo rule under that suffix remains ahead of it.
+- PolicyWorkspace keeps an unchanged rule's raw syntax. When its structured rule fields are edited, compilation uses those fields; for `RULE-SET`, `match` and `provider` must identify the same provider. `MATCH` and `FINAL` are both terminal rules in simulation.
 - Legacy Claude customization requires a recognizable Claude rule/provider in the selected template. Modern ServiceRoute modes use the shared service catalog (ADR 0014).
 - Surge direct service transforms fail closed when they require incompatible template semantics; normal Profile compilation is best-effort and reports skipped protocols and MRS rule sets through warnings
 - Protocol and client breadth must not bypass `PolicyWorkspace` or duplicate a mature conversion engine without a demonstrated semantic requirement
@@ -219,7 +235,7 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - `SelectedPolicy.mode=merge` is additive for legacy callers; the structured composer uses `replace` to own proxy groups, rule providers, and ordered rules as one validated policy graph
 - New product Profiles and public conversion interfaces use exactly `local:community_templates/leo/leo.yaml`; other template IDs fail validation
 - Modern workbench Profiles save ServiceRoute preferences, not copied rule graphs. RulePackSelection and PolicyPreset remain legacy API composition boundaries (ADR 0014).
-- RouteIntent is an optional egress override for selected RulePacks; its NodePools compile into NodeSelectors and its ServiceRoutes replace the corresponding target-group members
+- In the legacy API path, RouteIntent optionally overrides the selected RulePacks or PolicyPreset; its NodePools compile into NodeSelectors and its pool-based routing entries replace the corresponding target-group members
 - Expert composition replaces the complete PolicySnapshot and does not combine implicitly with RouteIntent changes
 - PolicyWorkbench keeps creation, stable-link editing, client validation, explicit legacy upgrades and optional service diagnosis on one page and exposes only fine-grained ServiceRoute overrides; template structure and RuleSource evidence remain queryable through the public ledger
 - A stored PolicySnapshot does not automatically merge later PolicyPreset changes; updating from a preset is an explicit reset operation
@@ -228,6 +244,7 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 - Leo's named service GEOSITEs and domestic game exceptions precede broad `gfw` / `geolocation-!cn` routes; generic default-proxy port or inbound-name rules must not preempt China/private direct catchalls. Unclassified traffic uses the final `MATCH`.
 - A structurally valid artifact is not necessarily a runnable one; the analyzer reports target-client runtime feasibility (RuleProvider reachability, cold-start provider budget, core version requirements) as warnings that never block publication
 - New RuleSources must pass the admission checklist in `community_templates/leo/README.md` (trusted upstream, no third-party proxy fronts, pin when possible, cost-proportional, no high overlap, no target conflicts); the structural-v2 score and the analyzer share one provider-count budget
+- The RuleSource structural audit counts fetched text/YAML content as valid only when its entries have recognizable rule syntax and its detected format matches a declared format. A successful HTTP response carrying an error body is not evidence that clients can load the source.
 - Leo is intentionally a lightweight runtime policy: its regression budget is at most 8 RuleProviders, 185 rules, 16 KiB of source YAML, 17 ProxyGroups, 6 health-check groups, 425 total group-member edges, 235 potential probe memberships, and 37 KiB of rendered YAML for the fixed 144-node SS fixture; exceeding one budget requires an explicit architecture decision and cold-start evidence
 - IP-layer RULE-SETs may route to a service group only for services with genuine domainless direct-IP traffic (Telegram, Discord voice) and must carry `no-resolve`; shared-infrastructure services (AI, Google, streaming) get no IP-layer routing at all, because their front IPs carry unrelated services and a resolving IP rule splits one page across two egresses — geo/private fallbacks targeting DIRECT legitimately resolve
 - Known debt against that boundary: the pinned Google and YouTube classical sources still contain 5 and 3 IP entries. Both source entries and outer references are `no-resolve`, and the public audit exposes their types and resolving count; this containment is not compliance and must not be used as precedent for a new RuleSource
@@ -239,8 +256,9 @@ The community catalog, policy catalog, page and conversion/Profile interfaces ar
 
 - `community_templates/leo/services.json` owns service labels, domain rules, dedicated provider/GEOSITE references and allowed probe URLs; `app/core/service_catalog.py` serves it and `scripts/sync-service-rules.py --check` detects standalone Leo drift.
 - `ServiceRoute.mode` is `fixed`, `manual`, `fallback`, or legacy. No route means follow Leo. Fixed means exactly one node; fallback requires two explicit nodes and generic connectivity health checks, which cannot establish service acceptance.
-- `publication_targets` opts new workbench writes into compile checks for every selected client. Hard failures block creation/update. Legacy API writes keep their previous validation behavior.
-- `/services`, `/check`, `/diagnose`, `/runtime/capabilities`, and token-protected `/profiles/{id}/upgrade-preview` support the single page. Upgrade preview makes no database mutation; PUT keeps ID/token/URLs stable.
+- `publication_targets` opts new workbench writes into compile checks for every selected client. Hard failures block creation/update. Modern ServiceRoute writes without that field check the local policy-group graph for cycles without fetching upstream; rendering also rejects cycles in older saved Profiles. Legacy API writes keep their previous validation behavior.
+- A Profile with `publication_targets` saves a default target covered by those checks; an explicitly selected `shadowrocket-config` uses the checked Shadowrocket companion config. A targetless Profile Subscription URL uses that checked default, including when reading an older Profile whose saved target is outside its publication targets.
+- `/services`, `/check`, `/diagnose`, `/runtime/capabilities`, and token-protected `/profiles/{id}/upgrade-preview` support the single page. Upgrade preview reports changes in the relative order of shared rules as well as added/removed rules; it makes no database mutation, and PUT keeps ID/token/URLs stable.
 - Modern preferences consume current Leo/catalog on each compilation; `policy_revision` identifies the base/catalog at last save, not a full historical revision. Legacy snapshots need explicit upgrade to adopt current service rules.
 - Runtime adapters in `app/core/runtime_diagnostics.py` only use operator-configured controller/CLI locations, never browser-provided endpoints or credentials. Mihomo reads group selection (not observed domain matching); Surge reads a live rule explanation. Both probe an observed node without changing client selections. No success claim extends to full browser login/chat.
 
@@ -251,14 +269,15 @@ Current (accepted, authoritative for their area):
 - [ADR 0002: Persistent profiles and stale fallback](docs/adr/0002-persistent-profiles-and-stale-fallback.md)
 - [ADR 0004: Template-driven Claude policy transforms](docs/adr/0004-template-driven-claude-policy-transforms.md)
 - [ADR 0006: Policy release control plane over protocol conversion](docs/adr/0006-policy-release-control-plane-over-protocol-conversion.md)
-- [ADR 0007: One canonical base with composable policy presets](docs/adr/0007-one-canonical-base-with-composable-policy-presets.md)
-- [ADR 0009: Rule packs as the default assembly boundary](docs/adr/0009-rule-packs-as-default-assembly-boundary.md)
+- [ADR 0007: One canonical base with composable policy presets](docs/adr/0007-one-canonical-base-with-composable-policy-presets.md) — template DNS/TUN precedence refined by ADR 0016
+- [ADR 0009: Rule packs as the default assembly boundary](docs/adr/0009-rule-packs-as-default-assembly-boundary.md) — default superseded by ADR 0014; RulePack composition remains a legacy API path
 - [ADR 0010: Single-page policy workbench](docs/adr/0010-single-page-policy-workbench.md)
 - [ADR 0011: Service-level rule source consolidation](docs/adr/0011-service-level-rule-source-consolidation.md)
 - [ADR 0012: No Release/ProfileRevision rollback history](docs/adr/0012-no-release-rollback-history.md)
 - [ADR 0013: Shadowrocket paired policy publication](docs/adr/0013-shadowrocket-paired-policy-publication.md)
 - [ADR 0014: Service intent workbench and explicit client validation](docs/adr/0014-intent-workbench-and-client-validation.md) — supersedes ADR 0009's default snapshot assembly; legacy boundaries remain
 - [ADR 0015: AI session routing and inline rule budget](docs/adr/0015-ai-session-routing-and-inline-budget.md)
+- [ADR 0016: Airport subscriptions own connectivity across public clients](docs/adr/0016-source-owned-connectivity.md) — source settings and native publication take precedence over template defaults and reconstructed client settings
 
 Superseded (kept only as decision history; do not treat as current guidance):
 

@@ -8,7 +8,7 @@ import os
 from app.core.inflight import SingleFlight, BusyError
 from app.core.network import fetch_timeout
 
-from app.core.fetcher import FetchError, fetch_subscription
+from app.core.fetcher import FetchError, FetchInvalidError, fetch_subscription
 from app.core.normalizer import normalize_nodes, normalize_nodes_with_source_names
 from app.core.parsers.clash import AnyTLSOptionError, clash_to_ir, ir_to_clash_dict
 from app.core.parsers.surge import SurgeParseError, looks_like_surge_config, parse_surge_nodes
@@ -16,6 +16,7 @@ from app.core.parsers.shadowrocket import ShadowrocketParseError, parse_shadowro
 from app.core.parser import ParseError, parse_clash_yaml_full
 from app.core.subconverter import (
     SubconverterError,
+    SubconverterInvalidError,
     convert_subscription_to_clash,
     is_subconverter_configured,
 )
@@ -30,7 +31,37 @@ class SubscriptionUnavailableError(SubscriptionError):
     """External source failure eligible for a generation-matched stale artifact."""
 
 
+class SubscriptionBusyError(SubscriptionError):
+    """Local refresh capacity is exhausted; the source has not failed."""
+
+
 _loads = SingleFlight()
+
+
+def _has_recursive_alias(value: object) -> bool:
+    """Detect container cycles while allowing ordinary shared YAML anchors."""
+    active: set[int] = set()
+    complete: set[int] = set()
+    stack: list[tuple[object, bool]] = [(value, False)]
+    while stack:
+        item, leaving = stack.pop()
+        if isinstance(item, dict):
+            children = item.values()
+        elif isinstance(item, (list, tuple, set)):
+            children = item
+        else:
+            continue
+        identity = id(item)
+        if leaving:
+            active.remove(identity)
+            complete.add(identity)
+        elif identity in active:
+            return True
+        elif identity not in complete:
+            active.add(identity)
+            stack.append((item, True))
+            stack.extend((child, False) for child in children)
+    return False
 
 
 def _clash_nodes(raw_proxies: list[dict]) -> list[ProxyNode]:
@@ -38,6 +69,8 @@ def _clash_nodes(raw_proxies: list[dict]) -> list[ProxyNode]:
         return normalize_nodes([clash_to_ir(proxy) for proxy in raw_proxies])
     except AnyTLSOptionError as exc:
         raise SubscriptionError(str(exc)) from exc
+    except (ValueError, TypeError, AttributeError, OverflowError, RecursionError):
+        raise SubscriptionError("Clash subscription contains invalid proxy node fields") from None
 
 
 async def load_subscription(url: str, *, target: str = "mihomo") -> tuple[list[ProxyNode], dict]:
@@ -49,7 +82,7 @@ async def load_subscription(url: str, *, target: str = "mihomo") -> tuple[list[P
         async with asyncio.timeout(fetch_timeout()):
             result = await _loads.run(key, lambda: _load_subscription(url, target=target))
     except BusyError as exc:
-        raise SubscriptionUnavailableError(str(exc)) from exc
+        raise SubscriptionBusyError(str(exc)) from exc
     except TimeoutError as exc:
         raise SubscriptionUnavailableError('subscription refresh deadline exceeded') from exc
     # Each target owns its nodes; compilers cannot mutate peers.
@@ -60,7 +93,7 @@ def _shadowrocket_source(content: str) -> tuple[list[ProxyNode], dict]:
     """Keep the received native text; parse only an inventory for policy names."""
     profile = None
     try:
-        proxies, _ = parse_clash_yaml_full(content)
+        proxies, raw_config = parse_clash_yaml_full(content)
     except ParseError:
         try:
             original, profile = parse_shadowrocket_source(content)
@@ -68,6 +101,8 @@ def _shadowrocket_source(content: str) -> tuple[list[ProxyNode], dict]:
             raise SubscriptionError(str(exc)) from exc
         source_format = "ini" if profile is not None else "uris"
     else:
+        if _has_recursive_alias(raw_config):
+            raise SubscriptionError("Shadowrocket 原生 YAML 包含循环别名")
         try:
             original = [clash_to_ir(proxy) for proxy in proxies]
         except (ValueError, TypeError, AttributeError, OverflowError):
@@ -94,6 +129,8 @@ async def _load_subscription(url: str, *, target: str = "mihomo") -> tuple[list[
     """
     try:
         content = await fetch_subscription(url, target=target) if target == "shadowrocket" else await fetch_subscription(url)
+    except FetchInvalidError as exc:
+        raise SubscriptionError(str(exc)) from exc
     except FetchError as exc:
         raise SubscriptionUnavailableError(str(exc)) from exc
 
@@ -116,6 +153,12 @@ async def _load_subscription(url: str, *, target: str = "mihomo") -> tuple[list[
             try:
                 converted = await convert_subscription_to_clash(url)
                 raw_proxies, raw_config = parse_clash_yaml_full(converted)
+                if _has_recursive_alias(raw_config):
+                    raise SubscriptionError("Clash subscription contains recursive YAML aliases")
+            except SubconverterInvalidError as adapter_exc:
+                raise SubscriptionError(
+                    f"subscription compatibility conversion failed: {adapter_exc}"
+                ) from adapter_exc
             except SubconverterError as adapter_exc:
                 raise SubscriptionUnavailableError(f'subscription compatibility conversion failed: {adapter_exc}') from adapter_exc
             except ParseError as adapter_exc:
@@ -138,6 +181,9 @@ async def _load_subscription(url: str, *, target: str = "mihomo") -> tuple[list[
             "_surge_source": content,
             "proxies": [ir_to_clash_dict(node) for node in normalized],
         }
+
+    if _has_recursive_alias(raw_config):
+        raise SubscriptionError("Clash subscription contains recursive YAML aliases")
 
     # Native source metadata is created only by our Surge parser, never by YAML.
     for key in ("_surge_source", "_shadowrocket_source", "_shadowrocket_format", "_shadowrocket_names", "_shadowrocket_profile"):

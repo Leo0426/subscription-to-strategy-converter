@@ -3,13 +3,22 @@ import socket
 import pytest
 import httpx
 
+import app.core.fetcher as fetcher
 from app.core.fetcher import FetchError, fetch_subscription
 
 
 @pytest.mark.asyncio
 async def test_private_ip_url_is_rejected_before_fetch() -> None:
-    with pytest.raises(FetchError, match="private or local IP"):
+    with pytest.raises(FetchError, match="private or local IP") as error:
         await fetch_subscription("http://192.168.1.1/sub")
+    assert type(error.value) is fetcher.FetchInvalidError
+
+
+@pytest.mark.asyncio
+async def test_malformed_url_is_an_invalid_source() -> None:
+    with pytest.raises(FetchError) as error:
+        await fetch_subscription("http://[::1")
+    assert type(error.value) is fetcher.FetchInvalidError
 
 
 @pytest.mark.asyncio

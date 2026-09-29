@@ -202,6 +202,26 @@ def test_surge_diagnostics_compare_mobile_domains_and_redact_rule_urls(client, m
     assert 'secret=private' not in response.text
 
 
+def test_surge_probe_requires_successful_cli_exit_even_with_http_status_in_output(client, monkeypatch):
+    monkeypatch.setenv('SUBFLOW_SURGE_CLI', __file__)
+
+    async def command(*args):
+        if args[:2] == ('http', 'probe'):
+            return 1, 'Status: 200\nDuration: 12\nprobe failed\n'
+        return 0, 'Final policy: US01 (Shadowsocks)\n'
+
+    monkeypatch.setattr('app.core.runtime_diagnostics._cli', command)
+    response = client.post('/diagnose', json={
+        'request': request(), 'service': 'openai', 'runtime': True, 'client': 'surge',
+    })
+
+    assert response.status_code == 200, response.text
+    probes = response.json()['runtime']['probes']
+    assert probes
+    assert all(probe['status'] == 'failed' for probe in probes)
+    assert all(probe['http_status'] is None and probe['latency_ms'] is None for probe in probes)
+
+
 def test_incompatible_fixed_node_cannot_publish_even_with_another_supported_node(client, monkeypatch):
     async def fetch(_url):
         return SOURCE+'  - {name: US-VLESS, type: vless, server: v.example.com, port: 443, uuid: test}\n'

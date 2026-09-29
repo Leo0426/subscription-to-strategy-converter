@@ -1,10 +1,12 @@
 import asyncio
+from contextlib import asynccontextmanager
 import json
 
 import httpx
 import pytest
 
 from app.core.fetcher import FetchError
+from app.core.inflight import BusyError
 from app.main import app
 
 
@@ -112,6 +114,274 @@ async def test_malformed_new_source_never_falls_back_or_keeps_a_fresh_cache(tmp_
         assert invalid.status_code == 400
         assert 'x-subflow-stale' not in invalid.headers
         assert (await client.get(url)).status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_invalid_clash_node_port_does_not_keep_a_fresh_artifact(tmp_path, monkeypatch):
+    monkeypatch.setenv('SUBFLOW_DB_PATH', str(tmp_path / 'profiles.db'))
+    source = [SOURCE]
+
+    async def fetch(_url):
+        return source[0]
+
+    monkeypatch.setattr('app.core.subscription.fetch_subscription', fetch)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app, raise_app_exceptions=False),
+                                 base_url='http://test') as client:
+        saved = (await client.post('/profiles', json=intent())).json()
+        url = saved['subscribe_urls']['surge']
+        assert (await client.get(url)).status_code == 200
+
+        source[0] = SOURCE.replace('"port": 443', '"port": "oops"', 1)
+        invalid = await client.get(url + '&force_refresh=true')
+        assert invalid.status_code == 400
+        assert 'x-subflow-stale' not in invalid.headers
+        assert (await client.get(url)).status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_recursive_clash_alias_does_not_keep_a_fresh_artifact(tmp_path, monkeypatch):
+    monkeypatch.setenv('SUBFLOW_DB_PATH', str(tmp_path / 'profiles.db'))
+    source = [SOURCE]
+
+    async def fetch(_url):
+        return source[0]
+
+    monkeypatch.setattr('app.core.subscription.fetch_subscription', fetch)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app, raise_app_exceptions=False),
+                                 base_url='http://test') as client:
+        saved = (await client.post('/profiles', json=intent())).json()
+        url = saved['subscribe_urls']['surge']
+        assert (await client.get(url)).status_code == 200
+
+        source[0] = '''proxies:
+  - &node
+    name: US01
+    type: ss
+    server: us01.example.com
+    port: 443
+    cipher: aes-128-gcm
+    password: synthetic
+    plugin: obfs
+    plugin-opts: *node
+'''
+        invalid = await client.get(url + '&force_refresh=true')
+        assert invalid.status_code == 400
+        assert 'recursive YAML aliases' in invalid.json()['detail']
+        assert 'x-subflow-stale' not in invalid.headers
+        assert (await client.get(url)).status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_recursive_clash_dns_alias_does_not_keep_a_fresh_artifact(tmp_path, monkeypatch):
+    monkeypatch.setenv('SUBFLOW_DB_PATH', str(tmp_path / 'profiles.db'))
+    source = [SOURCE]
+
+    async def fetch(_url):
+        return source[0]
+
+    monkeypatch.setattr('app.core.subscription.fetch_subscription', fetch)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app, raise_app_exceptions=False),
+                                 base_url='http://test') as client:
+        saved = (await client.post('/profiles', json={
+            'subscription_url': 'https://example.com/synthetic', 'target': 'mihomo',
+        })).json()
+        url = saved['subscribe_urls']['clash']
+        assert (await client.get(url)).status_code == 200
+
+        source[0] = '''dns: &dns
+  nameserver: *dns
+proxies:
+  - {name: US01, type: ss, server: us01.example.com, port: 443, cipher: aes-128-gcm, password: synthetic}
+'''
+        invalid = await client.get(url + '&force_refresh=true')
+        assert invalid.status_code == 400
+        assert 'recursive YAML aliases' in invalid.json()['detail']
+        assert 'x-subflow-stale' not in invalid.headers
+        assert (await client.get(url)).status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_shared_nonrecursive_clash_alias_remains_valid(monkeypatch):
+    source = '''proxies:
+  - name: US01
+    type: ss
+    server: us01.example.com
+    port: 443
+    cipher: aes-128-gcm
+    password: synthetic
+    plugin: obfs
+    plugin-opts: &shared {mode: http, host: cdn.example.com}
+  - name: US02
+    type: ss
+    server: us02.example.com
+    port: 443
+    cipher: aes-128-gcm
+    password: synthetic
+    plugin: obfs
+    plugin-opts: *shared
+'''
+
+    async def fetch(_url):
+        return source
+
+    monkeypatch.setattr('app.core.subscription.fetch_subscription', fetch)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+        response = await client.post('/render', json={
+            'subscription_url': 'https://example.com/synthetic', 'target': 'mihomo',
+        })
+
+    assert response.status_code == 200, response.text
+    assert 'name: US01' in response.text
+    assert 'name: US02' in response.text
+
+
+@pytest.mark.asyncio
+async def test_recursive_clash_alias_is_rejected_for_shadowrocket_yaml(monkeypatch):
+    source = '''proxies:
+  - &node
+    name: US01
+    type: ss
+    server: us01.example.com
+    port: 443
+    cipher: aes-128-gcm
+    password: synthetic
+    plugin: obfs
+    plugin-opts: *node
+'''
+
+    async def fetch(_url, **_kwargs):
+        return source
+
+    monkeypatch.setattr('app.core.subscription.fetch_subscription', fetch)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app, raise_app_exceptions=False),
+                                 base_url='http://test') as client:
+        response = await client.post('/render', json={
+            'subscription_url': 'https://example.com/synthetic', 'target': 'shadowrocket-config',
+        })
+
+    assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_oversized_source_does_not_fall_back_to_stale_artifact(tmp_path, monkeypatch):
+    monkeypatch.setenv('SUBFLOW_DB_PATH', str(tmp_path / 'profiles.db'))
+    monkeypatch.setenv('SUBFLOW_MAX_SUBSCRIPTION_BYTES', '1024')
+    source = [SOURCE]
+
+    async def resolve(_hostname):
+        return None
+
+    @asynccontextmanager
+    async def outbound():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(
+            lambda _request: httpx.Response(200, text=source[0])
+        )) as client:
+            yield client
+
+    monkeypatch.setattr('app.core.fetcher._ensure_resolved_host_is_public', resolve)
+    monkeypatch.setattr('app.core.fetcher.outbound_client', outbound)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+        saved = (await client.post('/profiles', json=intent())).json()
+        url = saved['subscribe_urls']['surge']
+        assert (await client.get(url)).headers['x-subflow-cache'] == 'fresh'
+        source[0] = 'x' * 2048
+        invalid = await client.get(url + '&force_refresh=true')
+        assert invalid.status_code == 400
+        assert 'x-subflow-stale' not in invalid.headers
+
+
+@pytest.mark.asyncio
+async def test_invalid_subconverter_configuration_does_not_serve_stale_artifact(tmp_path, monkeypatch):
+    monkeypatch.setenv('SUBFLOW_DB_PATH', str(tmp_path / 'profiles.db'))
+    monkeypatch.setenv('SUBFLOW_SUBCONVERTER_URL', 'invalid-url')
+    source = [SOURCE]
+
+    async def fetch(_url):
+        return source[0]
+
+    async def resolve(_hostname):
+        return None
+
+    monkeypatch.setattr('app.core.subscription.fetch_subscription', fetch)
+    monkeypatch.setattr('app.core.subconverter._ensure_resolved_host_is_public', resolve)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+        saved = (await client.post('/profiles', json=intent())).json()
+        url = saved['subscribe_urls']['surge']
+        assert (await client.get(url)).headers['x-subflow-cache'] == 'fresh'
+        source[0] = 'opaque format requiring compatibility conversion'
+        invalid = await client.get(url + '&force_refresh=true')
+        assert invalid.status_code == 400
+        assert 'x-subflow-stale' not in invalid.headers
+
+
+@pytest.mark.asyncio
+async def test_internal_fetch_queue_saturation_does_not_serve_stale_artifact(tmp_path, monkeypatch):
+    monkeypatch.setenv('SUBFLOW_DB_PATH', str(tmp_path / 'profiles.db'))
+
+    async def fetch(_url):
+        return SOURCE
+
+    monkeypatch.setattr('app.core.subscription.fetch_subscription', fetch)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+        saved = (await client.post('/profiles', json=intent())).json()
+        url = saved['subscribe_urls']['surge']
+        first = await client.get(url)
+        assert first.status_code == 200
+
+        async def busy(_key, _factory):
+            raise BusyError('refresh queue full')
+
+        monkeypatch.setattr('app.core.subscription._loads.run', busy)
+        blocked = await client.get(url + '&force_refresh=true')
+        assert blocked.status_code == 503
+        assert 'x-subflow-stale' not in blocked.headers
+        draft = await client.get('/profiles/' + saved['id'] + '/draft', params={'token': saved['token']})
+        assert 'surge' in draft.json()['publications']
+
+
+@pytest.mark.asyncio
+async def test_preview_reports_internal_fetch_queue_saturation_as_503(monkeypatch):
+    async def busy(_key, _factory):
+        raise BusyError('refresh queue full')
+
+    monkeypatch.setattr('app.core.subscription._loads.run', busy)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+        response = await client.post('/preview', json=intent())
+    assert response.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_post_fetch_work_can_outlive_fetch_timeout_without_stale_fallback(tmp_path, monkeypatch):
+    from app.api import convert as convert_api
+
+    monkeypatch.setenv('SUBFLOW_DB_PATH', str(tmp_path / 'profiles.db'))
+
+    async def fetch(_url):
+        return SOURCE
+
+    monkeypatch.setattr('app.core.subscription.fetch_subscription', fetch)
+    original_build = convert_api._build_config
+    slow = False
+
+    async def build_then_wait(inputs):
+        result = await original_build(inputs)
+        if slow:
+            await asyncio.sleep(0.1)
+        return result
+
+    monkeypatch.setattr(convert_api, '_build_config', build_then_wait)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+        saved = (await client.post('/profiles', json=intent())).json()
+        url = saved['subscribe_urls']['surge']
+        first = await client.get(url)
+        assert first.headers['x-subflow-cache'] == 'fresh'
+        slow = True
+        monkeypatch.setattr('app.core.subscription.fetch_timeout', lambda: 1.0)
+        monkeypatch.setenv('SUBFLOW_FETCH_TIMEOUT', '0.05')
+        refreshed = await client.get(url + '&force_refresh=true')
+        assert refreshed.status_code == 200
+        assert refreshed.headers['x-subflow-cache'] == 'fresh'
+        assert 'x-subflow-stale' not in refreshed.headers
 
 
 

@@ -2,6 +2,7 @@ import asyncio
 import httpx
 import pytest
 
+import app.core.fetcher as fetcher
 from app.core.fetcher import FetchError, fetch_subscription
 
 
@@ -23,8 +24,9 @@ async def test_fetch_has_an_end_to_end_deadline(mock_network, monkeypatch):
         await asyncio.sleep(0.2)
         return httpx.Response(200, text='too late')
     mock_network(handler)
-    with pytest.raises(FetchError, match='deadline'):
+    with pytest.raises(FetchError, match='deadline') as error:
         await fetch_subscription('https://example.com/private-token')
+    assert type(error.value) is FetchError
 
 
 @pytest.mark.asyncio
@@ -35,8 +37,17 @@ async def test_streamed_decoded_body_is_bounded(mock_network, monkeypatch):
             for _ in range(10):
                 yield b'x' * 512
     mock_network(lambda request: httpx.Response(200, stream=Body()))
-    with pytest.raises(FetchError, match='size limit'):
+    with pytest.raises(FetchError, match='size limit') as error:
         await fetch_subscription('https://example.com/private-token')
+    assert type(error.value) is fetcher.FetchInvalidError
+
+
+@pytest.mark.asyncio
+async def test_missing_redirect_location_is_invalid_source(mock_network):
+    mock_network(lambda request: httpx.Response(302))
+    with pytest.raises(FetchError, match='missing Location') as error:
+        await fetch_subscription('https://example.com/source')
+    assert type(error.value) is fetcher.FetchInvalidError
 
 
 @pytest.mark.asyncio

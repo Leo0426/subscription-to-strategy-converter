@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-import asyncio
 from functools import lru_cache
 import json
 import os
@@ -32,7 +31,6 @@ from app.core.intent_compiler import intent_catalog
 from app.core.profiles import ProfileStore
 from app.core.inflight import SingleFlight, BusyError
 from app.core import publication
-from app.core.network import fetch_timeout
 from app.core.policy_simulator import simulate_destination
 from app.core.policy_workspace import (
     POLICY_SECTIONS,
@@ -43,14 +41,14 @@ from app.core.policy_workspace import (
 )
 from app.core.renderer import render_yaml
 from app.core.policy_catalog import load_policy_catalog, selected_policy_from_ids
-from app.core.sessions import create_session, get_session
+from app.core.sessions import SessionPayloadTooLargeError, create_session, get_session
 from app.core.template_policy_transform import (
     TemplatePolicyTransformError,
     analyze_claude_template,
     transform_claude_policy,
     transform_service_routes,
 )
-from app.core.subscription import SubscriptionError, SubscriptionUnavailableError, load_subscription
+from app.core.subscription import SubscriptionBusyError, SubscriptionError, SubscriptionUnavailableError, load_subscription
 from app.core.template_engine import (
     LEO_TEMPLATE_ID,
     TemplateError,
@@ -300,6 +298,8 @@ async def _build_config(inputs: RenderInputs) -> BuildResult:
 
     try:
         nodes, raw_config = await load_subscription(validated_url, target=inputs.target)
+    except SubscriptionBusyError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except SubscriptionError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -400,6 +400,10 @@ def _service_output_errors(nodes: list[ProxyNode], routes: list[ServiceRoute], w
 
 async def _render_config(inputs: RenderInputs) -> tuple[int, str, list[dict]]:
     result = await _build_config(inputs)
+    if inputs.service_routes and any(route.enabled and route.mode != "legacy" for route in inputs.service_routes):
+        cycles = _group_cycle_messages(result.config, result.nodes)
+        if cycles:
+            raise HTTPException(status_code=400, detail="; ".join(cycles))
     output, compiler_warnings = _render_output(
         inputs.target,
         result.nodes,
@@ -442,6 +446,8 @@ async def _render_config(inputs: RenderInputs) -> tuple[int, str, list[dict]]:
 async def preview_subscription(request: ConvertRequest) -> dict:
     try:
         nodes, raw_config = await load_subscription(str(request.subscription_url), target=request.target)
+    except SubscriptionBusyError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except SubscriptionError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -470,6 +476,12 @@ async def workspace_preview(request: ConvertRequest) -> dict:
         except NativeMihomoProfileError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
     else:
+        if request.target in {"mihomo", "clash"} and "_surge_source" in source_config:
+            try:
+                _, compiler_warnings = build_mihomo_config(nodes, config, source_config=source_config)
+                compile_warnings.extend(compiler_warnings)
+            except NativeMihomoProfileError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
         # This remains a policy preview. Show only source-owned common settings;
         # native INI envelopes cannot be represented by these YAML settings.
         config = {key: value for key, value in config.items() if key in POLICY_SECTIONS}
@@ -528,6 +540,8 @@ def _request_workspace(body: dict) -> PolicyWorkspace:
         return workspace_from_dict(body.get("workspace", body))
     except AnyTLSOptionError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except (ValueError, TypeError, AttributeError, OverflowError) as exc:
+        raise HTTPException(status_code=422, detail="invalid workspace data") from exc
 
 
 @router.post("/simulate")
@@ -567,6 +581,13 @@ async def compile_workspace(body: dict) -> Response:
     else:
         output, warnings = _render_output(target, workspace.proxies, config,
                                           source_config=config if native_mihomo else None)
+        if target == "mihomo" and body.get("workspace", body).get("native_source_format") == "surge":
+            saved_warnings = body.get("workspace", body).get("compile_warnings", [])
+            if isinstance(saved_warnings, list):
+                warnings.extend(
+                    warning for warning in saved_warnings
+                    if isinstance(warning, dict) and warning.get("code") == "cross_format_source_settings"
+                )
     if target == "singbox":
         return JSONResponse(json.loads(output))
     headers = {"X-Compile-Warnings": json.dumps(warnings, ensure_ascii=True)} if warnings else {}
@@ -578,10 +599,18 @@ async def services() -> dict:
     return {"revision": catalog_revision(), "services": service_catalog()}
 
 
+def _default_publication_target(request: ConvertRequest) -> str:
+    targets = request.publication_targets or [request.target]
+    if request.target == "shadowrocket-config" and "shadowrocket" in targets:
+        return request.target
+    return request.target if _TARGET_ALIASES.get(request.target, request.target) in targets else targets[0]
+
+
 async def _check_request(request: ConvertRequest) -> dict:
     request = _resolve_product_request(request)
     targets = request.publication_targets or [request.target]
-    base_target = request.target if _TARGET_ALIASES.get(request.target, request.target) in targets else targets[0]
+    default_target = _default_publication_target(request)
+    base_target = "shadowrocket" if default_target == "shadowrocket-config" else default_target
     base_result = await _build_config(RenderInputs.from_request(request, target=base_target))
     findings = workspace_to_dict(
         analyze_workspace(config_to_workspace(base_result.config, base_result.nodes))
@@ -655,14 +684,20 @@ async def _validate_publication(request: ConvertRequest) -> ConvertRequest:
         report = await _check_request(request)
         if not report["can_publish"]:
             raise HTTPException(status_code=400, detail={"message": "目标客户端检查未通过", "checks": report})
-        request = request.model_copy(update={"policy_revision": catalog_revision()})
+        request = request.model_copy(update={
+            "policy_revision": catalog_revision(),
+            "target": _default_publication_target(request),
+        })
     return request
 
 
 @router.post("/session")
 async def create_policy_session(body: dict) -> dict[str, str]:
     """Store a large policy payload server-side and return a short session ID."""
-    return {"session_id": create_session(body)}
+    try:
+        return {"session_id": create_session(body)}
+    except SessionPayloadTooLargeError as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
 
 
 def _profile_store() -> ProfileStore:
@@ -763,10 +798,15 @@ async def upgrade_profile_preview(profile_id: str, token: str = Query(...)) -> d
                                publication_targets=original.publication_targets or ["mihomo", "surge"],
                                surge_preferences=original.surge_preferences)
     fresh = transform_service_routes(fresh, old_nodes, candidate.service_routes)
-    old_rules = set(map(str, old_config.get("rules", [])))
-    new_rules = set(map(str, fresh.get("rules", [])))
+    old_rule_sequence = list(map(str, old_config.get("rules", [])))
+    new_rule_sequence = list(map(str, fresh.get("rules", [])))
+    old_rules = set(old_rule_sequence)
+    new_rules = set(new_rule_sequence)
+    old_common = [rule for rule in old_rule_sequence if rule in new_rules]
+    new_common = [rule for rule in new_rule_sequence if rule in old_rules]
     return {"request":candidate.model_dump(mode="json"), "changes": {
         "added_rules":sorted(new_rules-old_rules), "removed_rules":sorted(old_rules-new_rules),
+        "rule_order_changed": old_common != new_common,
         "preserved_services":[s["label"] for s in service_catalog() if any(r["service"] == s["id"] for r in routes)], "discarded_preferences":discarded, "removed_groups":sorted(set(old_groups)-{s["group"] for s in service_catalog() if any(r["service"] == s["id"] for r in routes)}),
         "message":"仅保留可识别的首选出口；其他自定义规则与候选将由当前 Leo 替换。尚未保存，应用前请检查。"}}
 
@@ -799,15 +839,6 @@ def _published_response(config: str, target: str, metadata: dict, state: str) ->
     return PlainTextResponse(config, media_type=_target_media_type(target), headers=headers)
 
 
-async def _publication_before(deadline: float, key: tuple, factory):
-    try:
-        async with asyncio.timeout_at(deadline):
-            return await _publications.run(key, factory)
-    except TimeoutError:
-        cause = SubscriptionUnavailableError('subscription refresh deadline exceeded')
-        raise HTTPException(status_code=400, detail=str(cause)) from cause
-
-
 @router.get("/subscribe/{profile_id}", response_class=PlainTextResponse)
 async def subscribe_profile(
     profile_id: str,
@@ -816,13 +847,13 @@ async def subscribe_profile(
     force_refresh: bool = Query(default=False),
 ) -> PlainTextResponse:
     store = _profile_store()
-    deadline = asyncio.get_running_loop().time() + fetch_timeout()
     for _ in range(3):
         profile = store.get(profile_id, token)
         if profile is None:
             raise HTTPException(status_code=404, detail="profile not found")
         request = ConvertRequest.model_validate(profile.request)
-        render_target = _TARGET_ALIASES.get(target or request.target, target or request.target)
+        selected_target = target or _default_publication_target(request)
+        render_target = _TARGET_ALIASES.get(selected_target, selected_target)
         _require_supported_target(render_target)
         revision = publication.publication_revision()
         metadata = profile.artifact_metadata.get(render_target, {})
@@ -835,7 +866,7 @@ async def subscribe_profile(
             return publication.stamp(config, generation, revision, warnings, annotate=render_target != "shadowrocket")
 
         try:
-            config, metadata = await _publication_before(deadline,
+            config, metadata = await _publications.run(
                 (str(store.database.resolve()), profile.id, profile.generation, render_target, revision), compile_publication)
         except BusyError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -845,6 +876,8 @@ async def subscribe_profile(
                 raise HTTPException(status_code=404, detail="profile not found")
             if current.generation != profile.generation or publication.publication_revision() != revision:
                 continue
+            if isinstance(exc.__cause__, SubscriptionBusyError):
+                raise
             artifact = current.artifacts.get(render_target)
             if not isinstance(exc.__cause__, SubscriptionUnavailableError):
                 if not store.discard_artifact(profile.id, render_target, expected_generation=profile.generation):
@@ -896,6 +929,30 @@ def _validate_profile_service_routes(request: ConvertRequest) -> None:
             status_code=400,
             detail="unsupported service route: " + ", ".join(unsupported),
         )
+    # A Profile without publication targets still defers fetching its source
+    # until subscription time. Use placeholder nodes for explicit node names
+    # while applying routes in their real order, then check the group graph.
+    modern = [route for route in enabled if route.mode != "legacy"]
+    if modern and request.publication_targets is None:
+        config = load_template(LEO_TEMPLATE_ID)
+        service_groups = {service["id"]: service["group"] for service in service_catalog()}
+        groups = {group["name"] for group in config.get("proxy-groups", [])}
+        generated_groups = {service_groups[route.service] for route in modern}
+        if any(route.service == "claude" and route.mode == "legacy" for route in enabled):
+            generated_groups.add("Claude")
+        node_names = {
+            name for route in enabled for name in (route.egress, route.fallback)
+            if name and name not in groups and name not in generated_groups
+        }
+        nodes = [ProxyNode(name=name, protocol="ss", server="offline.invalid", port=1)
+                 for name in sorted(node_names)]
+        try:
+            config = transform_service_routes(config, nodes, request.service_routes)
+        except TemplatePolicyTransformError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        cycles = _group_cycle_messages(config)
+        if cycles:
+            raise HTTPException(status_code=400, detail="; ".join(cycles))
     if any(route.service == "claude" and route.mode == "legacy" for route in enabled):
         if request.selected_policy is not None:
             group_names = {
@@ -914,6 +971,11 @@ def _validate_profile_service_routes(request: ConvertRequest) -> None:
                 )
         else:
             _validate_profile_claude_templates(request)
+
+
+def _group_cycle_messages(config: dict, nodes: list[ProxyNode] | None = None) -> list[str]:
+    findings = analyze_workspace(config_to_workspace(config, nodes))
+    return [finding.message for finding in findings if finding.code == "group_cycle"]
 
 
 def _parse_json_query(adapter: TypeAdapter, raw: str | None, label: str) -> Any:
@@ -957,14 +1019,15 @@ async def subscribe(
     _require_supported_target(target)
     if powerfullz:
         raise HTTPException(status_code=400, detail="powerfullz options are not supported with leo.yaml")
-    if session_id:
+    if session_id is not None:
         session_data = get_session(session_id)
-        if session_data:
-            strategy = session_data.get("strategy") or strategy
-            policy = session_data.get("policy") or policy
-            policy_ids = session_data.get("policy_ids") or policy_ids
-            powerfullz = session_data.get("powerfullz") or powerfullz
-            claude = session_data.get("claude") or claude
+        if session_data is None:
+            raise HTTPException(status_code=410, detail="policy session expired or unavailable")
+        strategy = session_data.get("strategy") or strategy
+        policy = session_data.get("policy") or policy
+        policy_ids = session_data.get("policy_ids") or policy_ids
+        powerfullz = session_data.get("powerfullz") or powerfullz
+        claude = session_data.get("claude") or claude
 
     custom_strategy = _parse_json_query(custom_strategy_adapter, strategy, "custom strategy")
 

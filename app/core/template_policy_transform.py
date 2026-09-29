@@ -27,11 +27,13 @@ def transform_service_routes(
     target: str = "clash",
 ) -> dict[str, Any]:
     result = config
+    current_services: set[str] = set()
     for route in routes:
         if not route.enabled:
             continue
         if route.mode != "legacy":
             result = _transform_current_service(result, nodes, route)
+            current_services.add(route.service)
             continue
         if route.service != "claude":
             raise TemplatePolicyTransformError(
@@ -47,7 +49,46 @@ def transform_service_routes(
             ),
             target=target,
         )
+    if current_services:
+        result["rules"] = _prioritize_service_domains(result["rules"], current_services)
     return result
+
+
+def _prioritize_service_domains(rules: list, current_services: set[str]) -> list:
+    """Keep explicit service domains ahead of broader selected service rules."""
+    selected_matches = {
+        rule["match"]
+        for service in service_catalog()
+        if service["id"] in current_services
+        for rule in service["rules"]
+    }
+    selected_suffixes = {
+        match.split(",", 1)[1].lower()
+        for match in selected_matches
+        if match.startswith("DOMAIN-SUFFIX,")
+    }
+    prioritized: list[tuple[str, str, str]] = []
+    remaining: list = []
+    for rule in rules:
+        parts = rule.split(",", 2) if isinstance(rule, str) else []
+        if len(parts) < 3 or parts[0] not in {"DOMAIN", "DOMAIN-SUFFIX"}:
+            remaining.append(rule)
+            continue
+        rule_type, domain = parts[0], parts[1].lower()
+        match = f"{rule_type},{parts[1]}"
+        more_specific = any(
+            domain.endswith(f".{suffix}")
+            or (rule_type == "DOMAIN" and domain == suffix)
+            for suffix in selected_suffixes
+        )
+        if match in selected_matches or more_specific:
+            prioritized.append((rule_type, domain, rule))
+        else:
+            remaining.append(rule)
+    # First-match clients need the narrowest matching domain first. Sorting
+    # only the affected explicit rules preserves all other template ordering.
+    prioritized.sort(key=lambda item: (-len(item[1]), item[0] != "DOMAIN", item[1]))
+    return [rule for _, _, rule in prioritized] + remaining
 
 
 def _transform_current_service(config: dict, nodes: list[ProxyNode], route: ServiceRoute) -> dict:

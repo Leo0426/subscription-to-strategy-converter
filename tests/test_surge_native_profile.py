@@ -254,6 +254,30 @@ def test_native_routing_replacement_handles_commented_headers_and_bom(native_cli
     assert response.text.count("[Proxy Group]") == 1
 
 
+@pytest.mark.parametrize("proxy_header", [
+    "[Proxy] # airport nodes",
+    "[Proxy] ; airport nodes",
+    "[Proxy] // airport nodes",
+    "\ufeff[Proxy] # airport nodes",
+])
+def test_surge_source_accepts_commented_proxy_header_and_bom(native_client, proxy_header):
+    client, state = native_client
+    state["source"] = (
+        f"{proxy_header}\n"
+        "US01 = ss, node.example.com, 443, encrypt-method=aes-128-gcm, password=example\n"
+        "[Proxy Group] # airport groups\nAirport = select, US01\n"
+        "[Rule] // airport routing\nDOMAIN,provider-old-rule.example,Airport\n"
+    )
+
+    response = client.post("/render", json={
+        "subscription_url": "https://example.com/source", "target": "surge",
+    })
+
+    assert response.status_code == 200, response.text
+    assert "US01 = ss, node.example.com, 443" in response.text
+    assert "provider-old-rule.example" not in response.text
+
+
 def test_native_source_keeps_existing_normalized_node_choices_for_other_clients(native_client):
     client, _ = native_client
     response = client.post("/render", json={

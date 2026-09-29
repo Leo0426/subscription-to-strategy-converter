@@ -21,11 +21,11 @@ def _sections(profile: str) -> list[tuple[str, str]]:
     sections: list[tuple[str, str]] = []
     name = ""
     lines: list[str] = []
-    for line in profile.splitlines(keepends=True):
+    for line_number, line in enumerate(profile.splitlines(keepends=True)):
         if _MANAGED.match(line.lstrip("\ufeff")):
             # The input's update URL would replace our rules with the raw source.
             continue
-        match = _SECTION.match(line)
+        match = _SECTION.match(line.lstrip("\ufeff") if line_number == 0 else line)
         if match:
             if lines:
                 sections.append((name, "".join(lines)))

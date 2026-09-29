@@ -1,8 +1,8 @@
-# Subflow 6.6 · 策略订阅工作台
+# Subflow 6.6.1 · 策略订阅工作台
 
 把一条已授权的通用、Clash/Mihomo、Surge 或 Shadowrocket 订阅，结合分流规则发布为 **Clash / OpenClash、Surge 和 Shadowrocket 的长期策略订阅**。基于 [Leo 策略](community_templates/leo/leo.yaml)，在同一页完成节点读取、服务出口设置、兼容检查和订阅更新。
 
-[快速开始](#快速开始) · [使用流程](#使用流程) · [客户端兼容](#客户端兼容) · [常见问题](#常见问题) · [6.6 升级说明](docs/releases/6.6.md)
+[快速开始](#快速开始) · [使用流程](#使用流程) · [客户端兼容](#客户端兼容) · [常见问题](#常见问题) · [6.6.1 发布说明](docs/releases/6.6.1.md)
 
 ## 能做什么
 
@@ -45,13 +45,13 @@ uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
 ### 指定架构打包
 
 ```sh
-./scripts/docker-build.sh amd64 6.6
-./scripts/docker-export.sh amd64 6.6
+./scripts/docker-build.sh amd64 6.6.1
+./scripts/docker-export.sh amd64 6.6.1
 ```
 
-生成本地镜像 `subflow:6.6-amd64`（`linux/amd64`），并导出到 `dist/docker/subflow-6.6-linux-amd64.tar.gz`。需要 ARM64 时，将两条命令的 `amd64` 改为 `arm64`。
+生成本地镜像 `subflow:6.6.1-amd64`（`linux/amd64`），并导出到 `dist/docker/subflow-6.6.1-linux-amd64.tar.gz`。需要 ARM64 时，将两条命令的 `amd64` 改为 `arm64`。
 
-镜像标签用于本地构建或归档导入，不代表已发布到公共镜像仓库。归档加载、已有部署升级与回退步骤见 [6.6 发布说明](docs/releases/6.6.md)。
+镜像标签用于本地构建或归档导入，不代表已发布到公共镜像仓库。已有部署升级与回退步骤见 [6.6.1 发布说明](docs/releases/6.6.1.md)。
 
 ## 使用流程
 
@@ -132,7 +132,7 @@ Docker 部署时将需要的变量添加到服务的 `environment` 中，再重�
 
 Profile 在数据库中保存订阅来源与策略偏好，订阅链接中的 token 也用于授权编辑。公开策略账本仅展示模板与审计信息。请按私有数据管理数据库、备份和带 token 的链接。
 
-已有部署升级时保持原数据挂载和访问地址。本轮会自动补充 Profile 编辑计数和产物元数据列，保留 ID、token 和客户端链接；回退需要旧镜像及升级前数据库备份。缓存、迁移和故障边界见 [订阅刷新与设备排查](docs/subscription-refresh.md)。历史版本步骤见 [升级与回退](docs/releases/5.0.md#已有部署升级与回退)。
+已有部署升级时保持原数据挂载和访问地址。旧数据库若缺少 Profile 编辑计数和产物元数据列，应用会自动补齐；6.6.1 没有新增数据库列，保留 ID、token 和客户端链接。回退需要旧镜像及升级前数据库备份。缓存、迁移和故障边界见 [订阅刷新与设备排查](docs/subscription-refresh.md)。历史版本步骤见 [升级与回退](docs/releases/5.0.md#已有部署升级与回退)。
 
 ## 常见问题
 
@@ -168,7 +168,8 @@ uv run python scripts/sync-service-rules.py --check
 - [项目上下文与模块职责](CONTEXT.md)
 - [订阅刷新、稳定性与设备排查](docs/subscription-refresh.md)
 - [服务偏好与客户端验证决策](docs/adr/0014-intent-workbench-and-client-validation.md)
-- [6.6 发布说明](docs/releases/6.6.md)
+- [6.6.1 发布说明](docs/releases/6.6.1.md)
+- [6.6 历史发布记录](docs/releases/6.6.md)
 - [6.5 历史发布记录](docs/releases/6.5.md)
 - [6.2 发布说明](docs/releases/6.2.md)
 - [6.1 历史发布记录](docs/releases/6.1.md)
@@ -177,4 +178,4 @@ uv run python scripts/sync-service-rules.py --check
 - [5.0 发布与验收记录](docs/releases/5.0.md)
 - 本地交互式 API 文档：启动后访问 `/docs`；健康检查：`/health`。
 
-6.6 的验收范围见发布说明，实际镜像和归档验证结果记录在随包提供的 `subflow-6.6-build.json` 中。测试覆盖生成内容和接口行为；真实客户端导入、ChatGPT / Claude 登录与对话需在使用环境中验收。历史版本的验收见对应发布记录。
+6.6.1 的代码变更与验收范围见发布说明。本次源码推送不包含镜像归档；需要打包时使用上面的命令，并在部署环境完成容器与客户端验收。测试覆盖生成内容和接口行为；真实客户端导入、ChatGPT / Claude 登录与对话需在使用环境中验收。历史版本的验收见对应发布记录。

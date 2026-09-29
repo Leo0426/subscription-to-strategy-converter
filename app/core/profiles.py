@@ -60,10 +60,7 @@ class ProfileStore:
         if row is None or not hmac.compare_digest(row[0], _token_hash(token)):
             return None
         request = json.loads(row[1])
-        artifacts = _artifacts_from_row(row[3])
-        if row[2] is not None and not artifacts:
-            legacy_target = _artifact_target(str(request.get("target", "mihomo")))
-            artifacts[legacy_target] = row[2]
+        artifacts = _profile_artifacts(request, row[2], row[3])
         return StoredProfile(id=profile_id, request=request, artifacts=artifacts, generation=row[4],
                              artifact_metadata=json.loads(row[5]))
 
@@ -72,13 +69,14 @@ class ProfileStore:
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
-                "SELECT artifacts_json, generation, artifact_metadata FROM profiles WHERE id = ?", (profile_id,)
+                "SELECT request_json, artifact, artifacts_json, generation, artifact_metadata FROM profiles WHERE id = ?",
+                (profile_id,),
             ).fetchone()
-            if row is None or row[1] != expected_generation:
+            if row is None or row[3] != expected_generation:
                 return False
-            artifacts = _artifacts_from_row(row[0] if row else None)
+            artifacts = _profile_artifacts(json.loads(row[0]), row[1], row[2])
             artifacts[_artifact_target(target)] = artifact
-            all_metadata = json.loads(row[2])
+            all_metadata = json.loads(row[4])
             all_metadata[_artifact_target(target)] = metadata or {}
             connection.execute(
                 "UPDATE profiles SET artifacts_json = ?, artifact_metadata = ? WHERE id = ?",
@@ -106,16 +104,21 @@ class ProfileStore:
     def discard_artifact(self, profile_id: str, target: str, *, expected_generation: int) -> bool:
         with self._connect() as connection:
             connection.execute('BEGIN IMMEDIATE')
-            row = connection.execute('SELECT generation, artifacts_json, artifact_metadata FROM profiles WHERE id = ?',
+            row = connection.execute('SELECT request_json, artifact, artifacts_json, generation, artifact_metadata FROM profiles WHERE id = ?',
                                      (profile_id,)).fetchone()
-            if row is None or row[0] != expected_generation:
+            if row is None or row[3] != expected_generation:
                 return False
-            artifacts = _artifacts_from_row(row[1])
-            metadata = json.loads(row[2])
+            request = json.loads(row[0])
+            artifacts = _profile_artifacts(request, row[1], row[2])
+            metadata = json.loads(row[4])
             artifacts.pop(_artifact_target(target), None)
             metadata.pop(_artifact_target(target), None)
-            connection.execute('UPDATE profiles SET artifact = NULL, artifacts_json = ?, artifact_metadata = ? WHERE id = ?',
-                               (json.dumps(artifacts), json.dumps(metadata), profile_id))
+            legacy_artifact = (
+                None if _artifact_target(target) == _artifact_target(str(request.get("target", "mihomo")))
+                else row[1]
+            )
+            connection.execute('UPDATE profiles SET artifact = ?, artifacts_json = ?, artifact_metadata = ? WHERE id = ?',
+                               (legacy_artifact, json.dumps(artifacts), json.dumps(metadata), profile_id))
             return True
 
     def list(self) -> list[ProfileSummary]:
@@ -195,6 +198,15 @@ def _artifacts_from_row(value: str | None) -> dict[str, str]:
     if not isinstance(loaded, dict):
         return {}
     return {str(target): str(artifact) for target, artifact in loaded.items() if artifact is not None}
+
+
+def _profile_artifacts(request: dict[str, Any], legacy_artifact: str | None,
+                       artifacts_json: str | None) -> dict[str, str]:
+    artifacts = _artifacts_from_row(artifacts_json)
+    if legacy_artifact is not None:
+        legacy_target = _artifact_target(str(request.get("target", "mihomo")))
+        artifacts.setdefault(legacy_target, legacy_artifact)
+    return artifacts
 
 
 def _artifact_target(target: str) -> str:

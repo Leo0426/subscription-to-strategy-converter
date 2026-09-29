@@ -56,7 +56,7 @@ def _rule_matches(rule: PolicyRule, destination: str) -> bool | None:
         return None
     if rule_type == "RULE-SET":
         return None
-    if rule_type == "MATCH":
+    if rule_type in {"MATCH", "FINAL"}:
         return True
     return False
 
