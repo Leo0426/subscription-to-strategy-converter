@@ -74,6 +74,9 @@ class IniDialect:
     general: str
     host: Callable[[list[ProxyNode]], str | None]
     require_nodes: bool = False
+    # Surge-only: when a China GEOIP rule resolves domains, a failed lookup
+    # must fall through to FINAL instead of failing the request.
+    final_dns_failed: bool = False
 
 
 def close_group_members(
@@ -153,26 +156,28 @@ def redirect_unavailable_target(line: str, unavailable_targets: set[str]) -> str
     return ",".join(parts)
 
 
-def _china_fallback_rules(rules: list[Any], rule_types: frozenset[str]) -> list[Any]:
+def _china_fallback_rules(rules: list[Any], rule_types: frozenset[str]) -> tuple[list[Any], bool]:
     """Let GEOIP,cn resolve domains when the target cannot express GEOSITE,cn.
 
     Without ``GEOSITE,cn`` a ``no-resolve`` China GEOIP rule never sees domain
     requests, so every domestic ``.com`` site falls through to the proxied
     FINAL policy. Resolving at that one rule restores direct routing at the
-    cost of a domestic DNS lookup for otherwise unmatched domains.
+    cost of a domestic DNS lookup for otherwise unmatched domains. The flag
+    reports whether any rule now resolves.
     """
     if "GEOSITE" in rule_types:
-        return rules
+        return rules, False
     normalized = [
         [part.strip().upper() for part in rule.split(",")] if isinstance(rule, str) else []
         for rule in rules
     ]
-    if ["GEOSITE", "CN", "DIRECT"] not in normalized:
-        return rules
+    china_ip = ["GEOIP", "CN", "DIRECT", "NO-RESOLVE"]
+    if ["GEOSITE", "CN", "DIRECT"] not in normalized or china_ip not in normalized:
+        return rules, False
     return [
-        ",".join(rule.split(",")[:3]) if parts == ["GEOIP", "CN", "DIRECT", "NO-RESOLVE"] else rule
+        ",".join(rule.split(",")[:3]) if parts == china_ip else rule
         for rule, parts in zip(rules, normalized)
-    ]
+    ], True
 
 
 def build_ini_config(
@@ -230,7 +235,10 @@ def build_ini_config(
     unsupported_rule_set_urls: list[str] = []
     unsupported_rule_types: list[str] = []
     has_final = False
-    for rule in _china_fallback_rules(rules if isinstance(rules, list) else [], dialect.rule_types):
+    compiled_rules, resolves_china_ip = _china_fallback_rules(
+        rules if isinstance(rules, list) else [], dialect.rule_types,
+    )
+    for rule in compiled_rules:
         if not isinstance(rule, str):
             continue
         try:
@@ -246,10 +254,13 @@ def build_ini_config(
         line = redirect_unavailable_target(line, unavailable_targets)
         if line.startswith("FINAL,"):
             has_final = True
+            if resolves_china_ip and dialect.final_dns_failed and not line.endswith(",dns-failed"):
+                line += ",dns-failed"
         rule_lines.append(line)
 
     if not has_final:
-        rule_lines.append("FINAL,DIRECT")
+        final_suffix = ",dns-failed" if resolves_china_ip and dialect.final_dns_failed else ""
+        rule_lines.append(f"FINAL,DIRECT{final_suffix}")
     if unsupported_rule_set_urls:
         unique_urls = list(dict.fromkeys(unsupported_rule_set_urls))
         warnings.append(

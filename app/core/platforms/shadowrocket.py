@@ -5,7 +5,7 @@ from typing import Any
 
 from app.core.parsers.clash import ir_to_clash_dict
 from app.core.platforms.ini import IniDialect, NoSupportedNodesError, build_ini_config
-from app.core.platforms.surge import _rule_to_surge_line
+from app.core.platforms.surge import _rule_to_surge_line, substitute_ai_provider_rules
 from app.core.platforms.surge_profile import replace_surge_routing
 from app.core.renderer import render_yaml
 from app.ir import ProxyNode
@@ -98,7 +98,7 @@ def build_shadowrocket_config(
     native = (source_config or {}).get("_shadowrocket_source")
     if isinstance(native, str):
         config, warnings = build_ini_config(
-            nodes, proxy_groups, rules, rule_providers,
+            nodes, proxy_groups, substitute_ai_provider_rules(rules, rule_providers), rule_providers,
             dialect=IniDialect(
                 name="Shadowrocket", node=None, group=_group_line,
                 rule=_rule_line, rule_types=_RULE_TYPES,
@@ -111,7 +111,7 @@ def build_shadowrocket_config(
         raise NoSupportedNodesError("Shadowrocket 需要原生来源上下文；请通过 /render 或订阅接口生成")
     accepted, warnings = _compatible_nodes(nodes)
     config, policy_warnings = build_ini_config(
-        accepted, proxy_groups, rules, rule_providers,
+        accepted, proxy_groups, substitute_ai_provider_rules(rules, rule_providers), rule_providers,
         excluded_node_names={node.name for node in nodes} - {node.name for node in accepted},
         dialect=IniDialect(
             name="Shadowrocket", node=None, group=_group_line,

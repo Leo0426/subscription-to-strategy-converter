@@ -509,6 +509,48 @@ _GEOSITE_SURGE_RULE_SETS: dict[str, tuple[str, str]] = {
 }
 
 
+# Mihomo's category-ai-!cn domain list has no Surge-loadable form. The service
+# catalog owns the AI destinations, so Surge-family output substitutes them at
+# the provider's position instead of dropping AI routing to Google or FINAL.
+_CATEGORY_AI_PROVIDER = re.compile(
+    r"/meta-rules-dat[@/][^/]+/geo/geosite/category-ai-!cn\.(?:list|mrs|yaml)$"
+)
+
+
+def _rule_key(rule: str) -> tuple[str, str]:
+    parts = [part.strip() for part in rule.split(",")]
+    return parts[0].upper(), parts[1].lower() if len(parts) > 1 else ""
+
+
+def substitute_ai_provider_rules(rules: list[Any], rule_providers: dict[str, Any]) -> list[Any]:
+    providers = rule_providers if isinstance(rule_providers, dict) else {}
+    ai_providers = {
+        name for name, provider in providers.items()
+        if isinstance(provider, dict) and _CATEGORY_AI_PROVIDER.search(str(provider.get("url") or ""))
+    }
+    if not ai_providers or not isinstance(rules, list):
+        return rules
+    from app.core.service_catalog import service_catalog
+
+    matches = [
+        rule["match"]
+        for service in service_catalog() if service["category"] == "ai"
+        for rule in service["rules"]
+    ]
+    present = {_rule_key(rule) for rule in rules if isinstance(rule, str)}
+    result: list[Any] = []
+    for rule in rules:
+        parts = [part.strip() for part in rule.split(",")] if isinstance(rule, str) else []
+        if len(parts) >= 3 and parts[0].upper() == "RULE-SET" and parts[1] in ai_providers:
+            for match in matches:
+                if _rule_key(match) not in present:
+                    present.add(_rule_key(match))
+                    result.append(f"{match},{parts[2]}")
+            continue
+        result.append(rule)
+    return result
+
+
 def _geosite_to_surge_line(tag: str, target: str) -> str | None:
     mapped = _GEOSITE_SURGE_RULE_SETS.get(tag.lower())
     if mapped is None:
@@ -684,7 +726,7 @@ def build_surge_config(
     A native source owns all non-routing sections, including the proxy entries.
     """
     conf, warnings = build_ini_config(
-        nodes, proxy_groups, rules, rule_providers,
+        nodes, proxy_groups, substitute_ai_provider_rules(rules, rule_providers), rule_providers,
         dialect=IniDialect(
             name="Surge",
             node=None if source_profile is not None else _node_to_surge_line,
@@ -693,6 +735,7 @@ def build_surge_config(
             rule_types=SURGE_IOS_RULE_TYPES,
             general="" if source_profile is not None else _general_section(),
             host=(lambda _nodes: None) if source_profile is not None else _host_section,
+            final_dns_failed=True,
         ),
     )
     skipped_nodes = incompatible_node_names(nodes, warnings)

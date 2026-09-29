@@ -185,3 +185,25 @@ def test_shadowrocket_maps_named_geosite_tags_to_surge_lists() -> None:
 
     assert "/Netflix/Netflix.list,DIRECT,no-resolve" in config
     assert "GEOSITE" not in config
+
+
+def test_shadowrocket_substitutes_ai_catalog_without_surge_only_options() -> None:
+    nodes = [clash_to_ir({
+        "name": "香港 01", "type": "ss", "server": "hk.example.com", "port": 443,
+        "cipher": "aes-128-gcm", "password": "x",
+    })]
+    providers = {"ai-4": {
+        "type": "http", "behavior": "domain", "format": "text",
+        "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/abc/geo/geosite/category-ai-!cn.list",
+    }}
+    config, warnings = build_shadowrocket_config(
+        nodes, [],
+        ["RULE-SET,ai-4,DIRECT", "GEOSITE,cn,DIRECT", "GEOIP,cn,DIRECT,no-resolve", "MATCH,DIRECT"],
+        providers,
+    )
+
+    assert "DOMAIN-SUFFIX,gemini.google.com,DIRECT" in config
+    assert "category-ai-!cn" not in config
+    assert not any(w["code"] == "unsupported_rule_sets" for w in warnings)
+    # dns-failed is a Surge option; keep Shadowrocket output to syntax it parses.
+    assert "dns-failed" not in config

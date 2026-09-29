@@ -56,7 +56,7 @@
 - 结构评分公式 v2（含供应链与冷启动维度）：99.99/100（A）。当前只有 2 个可信上游、0 个第三方代理中转、0 个不可固定版本来源；冷启动规则下载量为 115,603 B，较 161 源快照减少约 96.1%。
 - 轻量回归预算：RuleProvider 不超过 8 个、规则不超过 185 条、模板不超过 16 KiB（调整依据见 [ADR 0015](../../docs/adr/0015-ai-session-routing-and-inline-budget.md)）；固定 144 节点 SS 策略夹具（含 10 个台湾节点）最多 17 个组、2 个自动选择组、1 个香港优先 fallback 组、3 个带连通性测试的手动地区组、425 条组成员边、235 条潜在探针成员边，渲染结果不超过 37 KiB。新增空间只用于 Surge iOS 可执行的国内字节域名规则，仍保留全局自动回退以及美国、新加坡两个 AI 候选池；台湾节点组只服务限台湾 IP 的巴哈姆特；同一夹具在精简前超过 84 KiB。真实节点若带 TLS/transport 等字段，输出字节数会更大，验收以结构预算与真实编译为准。
 - 评分不替代语义准确率、覆盖率、长期新鲜度和内容漂移验证。
-- 当前没有 MRS-only 依赖；7 个 classical YAML 核心来源可转换为 Surge 原生列表，`ai-4` 是 Mihomo 的 domain 裸列表，Surge 会明确跳过并给出 warning。OpenAI 官方网络清单与 Claude 核心域名已内联，Telegram 的原生 Surge 列表覆盖域名与 IP；其他 Mihomo 专属规则仍以生成结果中的 warning 为准，公开接口会把模板标记为非完全兼容。
+- 当前没有 MRS-only 依赖；7 个 classical YAML 核心来源可转换为 Surge 原生列表，`ai-4` 是 Mihomo 的 domain 裸列表，Surge/Shadowrocket 无法加载，改在其原位置展开服务目录中全部 AI 服务域名（Gemini、AI Studio、Perplexity、Cursor、GitHub Copilot 等，已内联的规则不重复），避免 Gemini 被 Google 列表送到香港、Cursor/Perplexity 落入 FINAL。Surge 的国内 GEOIP 回退改为解析域名时，`FINAL` 同时带 `dns-failed`，国内 DNS 解析失败的请求仍走最终代理；Shadowrocket 不输出该选项。OpenAI 官方网络清单与 Claude 核心域名已内联，Telegram 的原生 Surge 列表覆盖域名与 IP；其他 Mihomo 专属规则仍以生成结果中的 warning 为准，公开接口会把模板标记为非完全兼容。
 - 已知边界例外：固定版本的 Google/YouTube classical 上游分别夹带 5/3 条 IP 规则。审计快照会通过 `rule_type_counts` 公开它们；当前来源和外层 `RULE-SET` 均使用 `no-resolve`，可防止为匹配这些规则而主动解析域名，但原始 IP 或已解析请求仍可命中。这是对严格“共享基础设施不做 IP 层服务分流”边界的已知技术债，不是新 RuleSource 的准入先例；彻底移除需要发布经审计的 Mihomo/Surge 等义纯域名双版本。
 
 ## 规则源准入清单

@@ -150,6 +150,9 @@ def _streaming_groups() -> list[dict]:
         {"name": "YouTube", "type": "select", "proxies": ["Streaming", "Proxy", "Auto"]},
         {"name": "Disney", "type": "select", "proxies": ["Streaming", "Proxy", "Auto"]},
         {"name": "Spotify", "type": "select", "proxies": ["Streaming", "Proxy", "Auto"]},
+        {"name": "HBO", "type": "select", "proxies": ["Streaming", "Proxy", "Auto"]},
+        {"name": "TikTok", "type": "select", "proxies": ["Proxy", "Auto", "Fallback"]},
+        {"name": "Bahamut", "type": "select", "proxies": ["Proxy", "Auto", "Fallback"]},
         {"name": "Telegram", "type": "select", "proxies": ["Proxy", "Auto", "Fallback"]},
     ]
 
@@ -185,7 +188,7 @@ PRESET_TEMPLATES: dict[str, dict[str, Any]] = {
     },
     "streaming": {
         "label": "Streaming",
-        "description": "流媒体策略：Netflix、YouTube、Disney、Spotify、Telegram 独立分流。",
+        "description": "流媒体策略：Netflix、YouTube、Disney、Spotify、HBO、TikTok、巴哈姆特、Telegram 独立分流。",
         "config": _base_template(_core_groups(_streaming_groups()), STREAMING_RULES + COMMON_RULES),
     },
     "full": {

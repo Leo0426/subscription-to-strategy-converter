@@ -856,18 +856,25 @@ def test_leo_surge_keeps_core_services_when_mihomo_only_rules_are_skipped() -> N
     assert conf.index("/rule/Surge/YouTube/YouTube.list") < conf.index(
         "/rule/Surge/Google/Google.list"
     )
-    assert {warning["code"] for warning in warnings} == {
-        "unsupported_rule_sets",
-        "unsupported_rule_types",
-    }
-    skipped_sets = next(
-        warning for warning in warnings if warning["code"] == "unsupported_rule_sets"
-    )
-    assert skipped_sets["count"] == 1
-    assert "category-ai-!cn.list" in skipped_sets["examples"][0]
+    # The Mihomo-only category-ai-!cn list is replaced by the catalog's AI
+    # destinations at the same position, ahead of the broad Google list.
+    assert {warning["code"] for warning in warnings} == {"unsupported_rule_types"}
+    assert "category-ai-!cn" not in conf
+    for rule in (
+        "DOMAIN-SUFFIX,gemini.google.com,AI 服务",
+        "DOMAIN-SUFFIX,aistudio.google.com,AI 服务",
+        "DOMAIN-SUFFIX,generativelanguage.googleapis.com,AI 服务",
+        "DOMAIN-SUFFIX,perplexity.ai,AI 服务",
+        "DOMAIN-SUFFIX,cursor.com,AI 服务",
+        "DOMAIN-SUFFIX,cursor.sh,AI 服务",
+        "DOMAIN-SUFFIX,githubcopilot.com,AI 服务",
+    ):
+        assert conf.index(rule) < conf.index("/rule/Surge/Google/Google.list"), rule
+        assert conf.index(rule) < conf.index("/rule/Surge/GitHub/GitHub.list"), rule
+    assert conf.count("DOMAIN-SUFFIX,openai.com,") == 1
     assert "DOMAIN-SUFFIX,cn,DIRECT" in conf
     assert "DEST-PORT,10000-65535,默认代理" not in conf
-    assert "FINAL,默认代理" in conf
+    assert "FINAL,默认代理,dns-failed" in conf
 
 
 def test_leo_surge_keeps_domestic_douyin_and_fanqie_domain_routes() -> None:
@@ -1057,7 +1064,8 @@ def test_china_geoip_resolves_when_geosite_cn_is_dropped() -> None:
 
     # Without GEOSITE,cn a no-resolve GEOIP rule never sees domestic .com
     # domains, so they would all fall through to the proxied FINAL policy.
-    assert _rule_section(conf) == ["GEOIP,cn,DIRECT", "FINAL,默认代理"]
+    # A failed domestic lookup must fall through to FINAL, not fail the request.
+    assert _rule_section(conf) == ["GEOIP,cn,DIRECT", "FINAL,默认代理,dns-failed"]
 
 
 def test_china_geoip_keeps_no_resolve_without_a_dropped_geosite_cn() -> None:
@@ -1083,7 +1091,7 @@ def test_leo_surge_routes_domestic_domains_direct() -> None:
 
     assert "GEOIP,cn,DIRECT" in rules
     assert "GEOIP,cn,DIRECT,no-resolve" not in rules
-    assert rules.index("GEOIP,cn,DIRECT") < rules.index("FINAL,默认代理")
+    assert rules.index("GEOIP,cn,DIRECT") < rules.index("FINAL,默认代理,dns-failed")
 
 
 def test_named_geosite_tags_map_to_pinned_surge_lists() -> None:

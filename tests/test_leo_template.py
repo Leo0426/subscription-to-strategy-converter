@@ -1003,3 +1003,26 @@ def test_leo_pinned_providers_refresh_weekly() -> None:
 
     # Commit-pinned content never changes; frequent refreshes only cost requests.
     assert {provider["interval"] for provider in providers.values()} == {604800}
+
+
+def test_region_locked_services_can_be_routed_individually() -> None:
+    from app.core.template_policy_transform import transform_service_routes
+    from app.models.strategy import ServiceRoute
+
+    nodes = [_node("香港 01"), _node("美国 01"), _node("台湾 01")]
+    config = apply_template(load_template(LEO_TEMPLATE_ID), nodes)
+    routed = transform_service_routes(
+        config,
+        nodes,
+        [
+            ServiceRoute(service="tiktok", mode="fixed", egress="美国 01"),
+            ServiceRoute(service="bahamut", mode="fixed", egress="台湾 01"),
+            ServiceRoute(service="hbo", mode="fixed", egress="美国 01"),
+        ],
+    )
+
+    assert "GEOSITE,tiktok,TikTok" in routed["rules"]
+    assert "GEOSITE,bahamut,Bahamut" in routed["rules"]
+    assert "GEOSITE,hbo,HBO" in routed["rules"]
+    assert _group(routed, "TikTok")["proxies"] == ["美国 01"]
+    assert _group(routed, "Bahamut")["proxies"] == ["台湾 01"]
