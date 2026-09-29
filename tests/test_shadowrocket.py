@@ -172,3 +172,16 @@ def test_shadowrocket_china_geoip_resolves_when_geosite_cn_is_dropped() -> None:
 
     assert "GEOIP,cn,DIRECT\n" in config
     assert "GEOIP,cn,DIRECT,no-resolve" not in config
+
+
+def test_shadowrocket_maps_named_geosite_tags_to_surge_lists() -> None:
+    nodes = [clash_to_ir({
+        "name": "香港 01", "type": "ss", "server": "hk.example.com", "port": 443,
+        "cipher": "aes-128-gcm", "password": "x",
+    })]
+    config, _ = build_shadowrocket_config(
+        nodes, [], ["GEOSITE,netflix,DIRECT", "GEOSITE,cn,DIRECT", "MATCH,DIRECT"], {},
+    )
+
+    assert "/Netflix/Netflix.list,DIRECT,no-resolve" in config
+    assert "GEOSITE" not in config

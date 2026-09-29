@@ -77,13 +77,13 @@ def test_leo_lightweight_shape_and_generated_footprint() -> None:
     groups = compiled["proxy-groups"]
     rules = compiled["rules"]
 
-    assert _LEO_TEMPLATE_PATH.stat().st_size <= 15 * 1024
+    assert _LEO_TEMPLATE_PATH.stat().st_size <= 16 * 1024
     assert len(template["rule-providers"]) == 8
-    assert len(template["proxy-groups"]) == 16
+    assert len(template["proxy-groups"]) == 17
     assert len(template["rules"]) <= 185
-    assert len(groups) == 16
+    assert len(groups) == 17
     assert sum(group["type"] == "url-test" for group in groups) == 2
-    assert sum(len(group.get("proxies", [])) for group in groups) <= 415
+    assert sum(len(group.get("proxies", [])) for group in groups) <= 425
     assert sum(
         len(group.get("proxies", []))
         for group in groups
@@ -632,7 +632,11 @@ def test_leo_latency_groups_use_surge_default_tolerance() -> None:
 def test_leo_keeps_non_ai_services_on_nearby_default_routes() -> None:
     template = load_template(LEO_TEMPLATE_ID)
 
-    assert _group(template, "默认代理")["proxies"][0] == "香港自动"
+    assert _group(template, "默认代理")["proxies"][:2] == ["香港优先", "香港自动"]
+    # A Hong Kong-wide outage must not stall every default route until a
+    # manual switch: the preferred default fails over to the global pool.
+    assert _group(template, "香港优先")["type"] == "fallback"
+    assert _group(template, "香港优先")["proxies"] == ["香港自动", "自动选择"]
     for name in ("开发服务", "Google"):
         assert _group(template, name)["proxies"][0] == "默认代理"
     # Apple and Microsoft both default to DIRECT: they run China datacenters
@@ -960,3 +964,42 @@ def test_leo_local_defaults_are_loopback_and_fake_ip_safe() -> None:
     fake_ip_filter = template["dns"]["fake-ip-filter"]
     assert "localhost.*.qq.com" in fake_ip_filter
     assert "localhost.*.weixin.qq.com" in fake_ip_filter
+
+
+def test_leo_pins_geodata_to_a_cdn_revision() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+    prefix = (
+        "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@"
+        "e0dcf0d7c187819d84b501b4f8db28ecc5f5d0af/"
+    )
+
+    assert template["geo-auto-update"] is False
+    assert template["geox-url"] == {
+        "geosite": f"{prefix}geosite.dat",
+        "geoip": f"{prefix}geoip.dat",
+        "mmdb": f"{prefix}country.mmdb",
+        "asn": f"{prefix}GeoLite2-ASN.mmdb",
+    }
+
+
+def test_leo_service_groups_offer_region_egress() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+    regions = ["美国节点", "新加坡节点", "台湾节点"]
+
+    for name in ("流媒体", "Google"):
+        proxies = _group(template, name)["proxies"]
+        assert proxies[0] == "默认代理"
+        assert all(region in proxies for region in regions), name
+    # Region choices stay scoped: other service groups share the plain list.
+    assert "美国节点" not in _group(template, "社交通讯")["proxies"]
+
+    config = apply_template(template, [_node("香港 01"), _node("美国 01")])
+    assert "台湾节点" not in _group(config, "流媒体")["proxies"]
+    assert "美国节点" in _group(config, "流媒体")["proxies"]
+
+
+def test_leo_pinned_providers_refresh_weekly() -> None:
+    providers = load_template(LEO_TEMPLATE_ID)["rule-providers"]
+
+    # Commit-pinned content never changes; frequent refreshes only cost requests.
+    assert {provider["interval"] for provider in providers.values()} == {604800}

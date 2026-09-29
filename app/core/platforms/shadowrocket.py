@@ -83,7 +83,7 @@ def _rule_line(rule: str, providers: dict[str, Any]) -> str | None:
     if kind in {"DST-PORT", "DEST-PORT"}:
         line = _rule_to_surge_line(rule.replace("DEST-PORT,", "DST-PORT,", 1), providers)
         return line.replace("DEST-PORT,", "DST-PORT,", 1) if line else None
-    if kind not in _RULE_TYPES and kind != "MATCH":
+    if kind not in _RULE_TYPES and kind not in {"MATCH", "GEOSITE"}:
         return None
     # The emitted classical rules and audited text URLs are shared by both
     # clients; node syntax and group health-check syntax are kept separate.

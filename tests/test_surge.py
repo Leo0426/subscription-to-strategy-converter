@@ -1084,3 +1084,54 @@ def test_leo_surge_routes_domestic_domains_direct() -> None:
     assert "GEOIP,cn,DIRECT" in rules
     assert "GEOIP,cn,DIRECT,no-resolve" not in rules
     assert rules.index("GEOIP,cn,DIRECT") < rules.index("FINAL,默认代理")
+
+
+def test_named_geosite_tags_map_to_pinned_surge_lists() -> None:
+    conf, warnings = build_surge_config(
+        [],
+        [],
+        [
+            "GEOSITE,netflix,流媒体",
+            "GEOSITE,steam@cn,DIRECT",
+            "GEOSITE,category-ads-all,REJECT",
+            "GEOSITE,geolocation-!cn,默认代理",
+            "MATCH,DIRECT",
+        ],
+        {},
+    )
+    base = (
+        "https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@"
+        "8818705adee20571a856daf11c9fc69c4929109a/rule/Surge"
+    )
+
+    assert _rule_section(conf) == [
+        f"RULE-SET,{base}/Netflix/Netflix.list,流媒体,no-resolve",
+        f"RULE-SET,{base}/SteamCN/SteamCN.list,DIRECT,no-resolve",
+        f"DOMAIN-SET,{base}/AdvertisingLite/AdvertisingLite_Domain.list,REJECT",
+        "FINAL,DIRECT",
+    ]
+    assert [w for w in warnings if w["code"] == "unsupported_rule_types"] == [
+        {
+            "code": "unsupported_rule_types",
+            "count": 1,
+            "rule_count": 1,
+            "types": ["GEOSITE"],
+            "suggestion": "Surge 不支持这些 Mihomo 规则类型，已跳过对应规则",
+        }
+    ]
+
+
+def test_leo_surge_service_groups_are_not_empty() -> None:
+    nodes = [ProxyNode(name=n, protocol="ss", server="node.example.com", port=443,
+                       extra={"cipher": "aes-128-gcm", "password": "x"})
+             for n in ("香港 01", "美国 01", "台湾 01")]
+    config = apply_template(load_template(LEO_TEMPLATE_ID), nodes)
+    conf, _ = build_surge_config(
+        nodes, config["proxy-groups"], config["rules"], config["rule-providers"]
+    )
+    rules = _rule_section(conf)
+    targets = {line.split(",")[2] for line in rules if line.startswith(("RULE-SET,", "DOMAIN-SET,"))}
+
+    assert {"流媒体", "游戏服务", "金融服务", "美国节点", "台湾节点", "REJECT"} <= targets
+    assert any("/TikTok/TikTok.list,美国节点" in line for line in rules)
+    assert any("/Bahamut/Bahamut.list,台湾节点" in line for line in rules)

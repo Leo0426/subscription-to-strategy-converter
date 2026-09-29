@@ -391,3 +391,33 @@ def test_malformed_native_node_value_does_not_escape_as_an_unhandled_parser_erro
     with pytest.raises(NativeMihomoProfileError) as error:
         build_mihomo_config(inventory({"proxies": [node()]}), generated(), source)
     assert "provider-secret" not in str(error.value)
+
+
+def _geodata_policy():
+    policy = generated()
+    policy["geo-auto-update"] = False
+    policy["geox-url"] = {"geosite": "https://cdn.example/pinned/geosite.dat"}
+    return policy
+
+
+def test_native_source_without_geodata_settings_receives_the_pinned_source():
+    source = {"proxies": [node()], "rules": ["MATCH,DIRECT"]}
+
+    result, _ = build(source, _geodata_policy())
+
+    # GEOSITE rules are generated policy; their data source must not fall back
+    # to the client's GitHub default before the proxy is available.
+    assert result["geox-url"] == {"geosite": "https://cdn.example/pinned/geosite.dat"}
+    assert result["geo-auto-update"] is False
+
+
+def test_native_geodata_settings_are_preserved():
+    source = {
+        "proxies": [node()], "rules": ["MATCH,DIRECT"],
+        "geo-auto-update": True, "geox-url": {"geosite": "https://airport.example/geosite.dat"},
+    }
+
+    result, _ = build(source, _geodata_policy())
+
+    assert result["geox-url"] == {"geosite": "https://airport.example/geosite.dat"}
+    assert result["geo-auto-update"] is True

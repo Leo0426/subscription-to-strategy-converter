@@ -7,6 +7,13 @@ ipv6: false
 unified-delay: true
 tcp-concurrent: true
 external-controller: 127.0.0.1:9090
+# GEOSITE/GEOIP 数据固定版本并经 CDN 直连下载，冷启动不依赖 GitHub。
+geo-auto-update: false
+geox-url:
+  geosite: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@e0dcf0d7c187819d84b501b4f8db28ecc5f5d0af/geosite.dat
+  geoip: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@e0dcf0d7c187819d84b501b4f8db28ecc5f5d0af/geoip.dat
+  mmdb: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@e0dcf0d7c187819d84b501b4f8db28ecc5f5d0af/country.mmdb
+  asn: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@e0dcf0d7c187819d84b501b4f8db28ecc5f5d0af/GeoLite2-ASN.mmdb
 profile:
   store-selected: true
   store-fake-ip: true
@@ -82,10 +89,22 @@ proxy-groups:
 - name: 默认代理
   type: select
   proxies:
+  - 香港优先
   - 香港自动
   - 自动选择
   - 手动选择
   - DIRECT
+- name: 香港优先
+  # 香港整体不可用时自动转到全局自动选择。
+  type: fallback
+  proxies:
+  - 香港自动
+  - 自动选择
+  url: https://cp.cloudflare.com/generate_204
+  expected-status: 204
+  timeout: 5000
+  lazy: true
+  interval: 300
 - name: 自动选择
   type: url-test
   include-all: true
@@ -153,14 +172,21 @@ proxy-groups:
   interval: 600
 - name: 流媒体
   type: select
+  proxies:
+  - 默认代理
+  - 自动选择
+  - 手动选择
+  - 美国节点
+  - 新加坡节点
+  - 台湾节点
+  - DIRECT
+- name: 社交通讯
+  type: select
   proxies: &service_proxies
   - 默认代理
   - 自动选择
   - 手动选择
   - DIRECT
-- name: 社交通讯
-  type: select
-  proxies: *service_proxies
 - name: 游戏服务
   type: select
   proxies: *service_proxies
@@ -183,6 +209,9 @@ proxy-groups:
   - 默认代理
   - 自动选择
   - 手动选择
+  - 美国节点
+  - 新加坡节点
+  - 台湾节点
 - name: Microsoft
   type: select
   # DIRECT 优先，与 Apple 一致：世纪互联 .cn 端点经海外节点会被慢速或拒绝，
@@ -200,6 +229,7 @@ proxy-groups:
   - 自动选择
   - 手动选择
 rule-providers:
+  # 内容按提交固定不会变化，每周刷新即可。
   # 轻量核心：每项只保留一个固定版本的可信来源；classical YAML 可由
   # Surge 转换，AI domain 裸列表保留为 Mihomo 的广覆盖来源。
   ai-4:
@@ -208,7 +238,7 @@ rule-providers:
     format: text
     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/42c2a789e19516f0a8bb2bca8eb1541505599940/geo/geosite/category-ai-!cn.list
     path: ./rule_provider/leo/005.txt
-    interval: 7200
+    interval: 604800
   # Claude provider 是 Claude 策略子系统的产品契约依赖，不参与合并。
   Claude:
     type: http
@@ -216,21 +246,21 @@ rule-providers:
     format: yaml
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Claude/Claude_No_Resolve.yaml
     path: ./rule_provider/leo/020.yaml
-    interval: 86400
+    interval: 604800
   GitHub-5:
     type: http
     behavior: classical
     format: yaml
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/GitHub/GitHub_No_Resolve.yaml
     path: ./rule_provider/leo/158.yaml
-    interval: 86400
+    interval: 604800
   Apple-4:
     type: http
     behavior: classical
     format: yaml
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Apple/Apple_Classical_No_Resolve.yaml
     path: ./rule_provider/leo/101.yaml
-    interval: 86400
+    interval: 604800
   Google-2:
     type: http
     behavior: classical
@@ -244,21 +274,21 @@ rule-providers:
     format: yaml
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Microsoft/Microsoft_No_Resolve.yaml
     path: ./rule_provider/leo/211.yaml
-    interval: 86400
+    interval: 604800
   YouTube-6:
     type: http
     behavior: classical
     format: yaml
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/YouTube/YouTube_No_Resolve.yaml
     path: ./rule_provider/leo/512.yaml
-    interval: 86400
+    interval: 604800
   Telegram:
     type: http
     behavior: classical
     format: yaml
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Telegram/Telegram_No_Resolve.yaml
     path: ./rule_provider/leo/515.yaml
-    interval: 86400
+    interval: 604800
 rules:
 # Managed service rules: services.json
 - DOMAIN-SUFFIX,anthropic.com,AI 服务
