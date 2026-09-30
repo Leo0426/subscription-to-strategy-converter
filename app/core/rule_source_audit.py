@@ -20,6 +20,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 from app.core.fetcher import _ensure_resolved_host_is_public, _validate_url
+from app.core.address_binding import ADDRESS_EXTENSION, bind_public_addresses
 from app.core.policy_analyzer import _PROVIDER_COUNT_BUDGET as PROVIDER_COUNT_BUDGET
 from app.core.template_engine import LEO_TEMPLATE_ID, load_template
 
@@ -982,25 +983,25 @@ class PublicRuleSourceFetcher:
         self.timeout = timeout
         self.max_bytes = max_bytes
         self._client: httpx.AsyncClient | None = None
-        self._host_tasks: dict[str, asyncio.Task[None]] = {}
+        self._host_tasks: dict[str, asyncio.Task[tuple[str, ...]]] = {}
         self._host_lock = asyncio.Lock()
 
     async def __aenter__(self) -> PublicRuleSourceFetcher:
         # The audit answers "can the target client fetch this?", so it must send
         # the UA a real Mihomo core sends (global-ua defaults to clash.meta);
         # hosts like kelee.one allow-list that prefix and 403 everything else.
-        self._client = httpx.AsyncClient(
+        self._client = bind_public_addresses(httpx.AsyncClient(
             timeout=self.timeout,
             follow_redirects=False,
             headers={"User-Agent": "clash.meta/1.18.0 (subflow-rule-audit)"},
-        )
+        ))
         return self
 
     async def __aexit__(self, *_: object) -> None:
         if self._client is not None:
             await self._client.aclose()
 
-    async def _validate_public_url(self, url: str) -> None:
+    async def _validate_public_url(self, url: str) -> tuple[str, ...]:
         _validate_url(url)
         hostname = urlparse(url).hostname
         if not hostname:
@@ -1010,7 +1011,7 @@ class PublicRuleSourceFetcher:
             if task is None:
                 task = asyncio.create_task(_ensure_resolved_host_is_public(hostname))
                 self._host_tasks[hostname] = task
-        await task
+        return await task
 
     async def fetch(self, url: str) -> dict[str, Any]:
         if self._client is None:
@@ -1018,10 +1019,10 @@ class PublicRuleSourceFetcher:
         current_url = url
         started = perf_counter()
         for _ in range(6):
-            await self._validate_public_url(current_url)
+            addresses = await self._validate_public_url(current_url)
             for attempt in range(_FETCH_TRANSPORT_ATTEMPTS):
                 try:
-                    response = await self._client.get(current_url)
+                    response = await self._client.get(current_url, extensions={ADDRESS_EXTENSION: addresses})
                     break
                 except httpx.TransportError:
                     if attempt + 1 == _FETCH_TRANSPORT_ATTEMPTS:

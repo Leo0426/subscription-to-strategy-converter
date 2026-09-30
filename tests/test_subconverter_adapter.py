@@ -45,18 +45,11 @@ async def test_adapter_requests_a_node_only_clash_document(
     transport = httpx.MockTransport(handler)
     original_async_client = httpx.AsyncClient
 
-    class FakeAsyncClient:
-        def __init__(self, **kwargs: object) -> None:
-            self.client = original_async_client(transport=transport)
-
-        async def __aenter__(self) -> httpx.AsyncClient:
-            return self.client
-
-        async def __aexit__(self, *args: object) -> None:
-            await self.client.aclose()
+    def client_with_mock_transport(**kwargs: object) -> httpx.AsyncClient:
+        return original_async_client(**kwargs, transport=transport)
 
     monkeypatch.setenv("SUBFLOW_SUBCONVERTER_URL", "http://subconverter:25500/")
-    monkeypatch.setattr("app.core.subconverter.httpx.AsyncClient", FakeAsyncClient)
+    monkeypatch.setattr("app.core.subconverter.httpx.AsyncClient", client_with_mock_transport)
 
     content = await convert_subscription_to_clash("https://example.com/sub?token=a b")
 
@@ -97,18 +90,11 @@ async def test_adapter_reports_a_bounded_upstream_error(
     transport = httpx.MockTransport(handler)
     original_async_client = httpx.AsyncClient
 
-    class FakeAsyncClient:
-        def __init__(self, **kwargs: object) -> None:
-            self.client = original_async_client(transport=transport)
-
-        async def __aenter__(self) -> httpx.AsyncClient:
-            return self.client
-
-        async def __aexit__(self, *args: object) -> None:
-            await self.client.aclose()
+    def client_with_mock_transport(**kwargs: object) -> httpx.AsyncClient:
+        return original_async_client(**kwargs, transport=transport)
 
     monkeypatch.setenv("SUBFLOW_SUBCONVERTER_URL", "http://subconverter:25500")
-    monkeypatch.setattr("app.core.subconverter.httpx.AsyncClient", FakeAsyncClient)
+    monkeypatch.setattr("app.core.subconverter.httpx.AsyncClient", client_with_mock_transport)
 
     with pytest.raises(SubconverterError, match="HTTP 500") as exc_info:
         await convert_subscription_to_clash("https://example.com/sub")

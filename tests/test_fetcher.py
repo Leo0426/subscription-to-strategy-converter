@@ -37,18 +37,11 @@ async def test_redirect_to_private_ip_is_rejected(monkeypatch: pytest.MonkeyPatc
 
     original_async_client = httpx.AsyncClient
 
-    class FakeAsyncClient:
-        def __init__(self, **kwargs: object) -> None:
-            self.client = original_async_client(transport=httpx.MockTransport(handler))
-
-        async def __aenter__(self) -> httpx.AsyncClient:
-            return self.client
-
-        async def __aexit__(self, *args: object) -> None:
-            await self.client.aclose()
+    def client_with_mock_transport(**kwargs: object) -> httpx.AsyncClient:
+        return original_async_client(**kwargs, transport=httpx.MockTransport(handler))
 
     monkeypatch.setattr("app.core.fetcher._ensure_resolved_host_is_public", fake_resolve)
-    monkeypatch.setattr("app.core.fetcher.httpx.AsyncClient", FakeAsyncClient)
+    monkeypatch.setattr("app.core.fetcher.httpx.AsyncClient", client_with_mock_transport)
 
     with pytest.raises(FetchError, match="private or local IP"):
         await fetch_subscription("https://example.com/sub")

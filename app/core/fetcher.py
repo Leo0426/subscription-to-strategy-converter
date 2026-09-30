@@ -12,6 +12,7 @@ import json
 import httpx
 
 from app.core.network import fetch_timeout, max_subscription_bytes, outbound_client
+from app.core.address_binding import ADDRESS_EXTENSION
 
 
 class FetchError(ValueError):
@@ -127,13 +128,14 @@ async def _resolve_via_doh(hostname: str) -> list:
         return [ip for answer in answers for ip in answer]
 
 
-async def _ensure_resolved_host_is_public(hostname: str) -> None:
+async def _ensure_resolved_host_is_public(hostname: str) -> tuple[str, ...]:
     try:
         results = await asyncio.to_thread(socket.getaddrinfo, hostname, None, type=socket.SOCK_STREAM)
     except socket.gaierror as exc:
         raise FetchError(f"could not resolve subscription host: {hostname}") from exc
 
     fake_ip_hits: list[ipaddress.IPv4Address | ipaddress.IPv6Address] = []
+    public_addresses: list[str] = []
     for result in results:
         try:
             ip = ipaddress.ip_address(result[4][0])
@@ -143,9 +145,13 @@ async def _ensure_resolved_host_is_public(hostname: str) -> None:
             fake_ip_hits.append(ip)
         elif _is_blocked_ip(ip):
             raise FetchInvalidError(_blocked_ip_message(ip))
+        else:
+            public_addresses.append(str(ip))
 
     if not fake_ip_hits:
-        return
+        if not public_addresses:
+            raise FetchError(f"could not resolve subscription host: {hostname}")
+        return tuple(dict.fromkeys(public_addresses))
 
     tasks = [asyncio.create_task(resolver(hostname)) for resolver in (_resolve_via_udp_dns, _resolve_via_doh)]
     try:
@@ -156,7 +162,7 @@ async def _ensure_resolved_host_is_public(hostname: str) -> None:
             for ip in candidates:
                 if _is_blocked_ip(ip):
                     raise FetchInvalidError(_blocked_ip_message(ip))
-            return
+            return tuple(dict.fromkeys(str(ip) for ip in candidates))
     finally:
         for task in tasks:
             if not task.done():
@@ -190,14 +196,16 @@ async def request_text(url: str, *, headers: dict | None = None, params: dict | 
             # client's own jar rejects cookies from every subscription.
             cookies = httpx.Cookies()
             for hop in range(6):
+                addresses = ()
                 if public:
                     _validate_url(current_url)
-                    await _ensure_resolved_host_is_public(urlparse(current_url).hostname)
+                    addresses = await _ensure_resolved_host_is_public(urlparse(current_url).hostname)
                 for attempt in range(2):
                     if attempt and public:
-                        await _ensure_resolved_host_is_public(urlparse(current_url).hostname)
+                        addresses = await _ensure_resolved_host_is_public(urlparse(current_url).hostname)
                     try:
-                        async with client.stream('GET', current_url, headers=headers, params=params, cookies=cookies) as response:
+                        async with client.stream('GET', current_url, headers=headers, params=params, cookies=cookies,
+                                                 extensions={ADDRESS_EXTENSION: addresses}) as response:
                             cookies.extract_cookies(response)
                             if response.is_redirect and redirects:
                                 location = response.headers.get('location')

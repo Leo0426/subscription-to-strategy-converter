@@ -8,6 +8,8 @@ from weakref import WeakKeyDictionary
 
 import httpx
 
+from app.core.address_binding import bind_public_addresses
+
 _clients = WeakKeyDictionary()
 
 
@@ -33,9 +35,11 @@ class _NoCookies(DefaultCookiePolicy):
 
 
 def _new_client():
-    return httpx.AsyncClient(timeout=httpx.Timeout(10, connect=5, pool=5), follow_redirects=False,
-                            limits=httpx.Limits(max_connections=16, max_keepalive_connections=8),
-                            cookies=CookieJar(policy=_NoCookies()))
+    return bind_public_addresses(httpx.AsyncClient(
+        timeout=httpx.Timeout(10, connect=5, pool=5), follow_redirects=False,
+        limits=httpx.Limits(max_connections=16, max_keepalive_connections=8),
+        cookies=CookieJar(policy=_NoCookies()),
+    ))
 
 
 @asynccontextmanager
