@@ -72,10 +72,6 @@ proxies:
     password: secret
 """
 
-SIMPLE_TEMPLATE = {
-    "proxy-groups": [{"name": "PROXY", "type": "select", "proxies": []}],
-    "rules": ["MATCH,PROXY"],
-}
 
 AI_TEMPLATE = {
     "proxy-groups": [
@@ -90,11 +86,8 @@ def test_workspace_preview_returns_workspace_graph_and_findings(monkeypatch) -> 
     async def fake_fetch_subscription(url: str) -> str:
         return CLASH_SUBSCRIPTION
 
-    async def fake_load_powerfullz_template(options: object) -> dict:
-        return SIMPLE_TEMPLATE
 
     monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
-    monkeypatch.setattr("app.core.template_engine.load_powerfullz_template", fake_load_powerfullz_template)
     client = TestClient(app)
 
     response = client.post(
@@ -115,11 +108,8 @@ def test_workspace_preview_can_replace_all_policy_sections(monkeypatch) -> None:
     async def fake_fetch_subscription(url: str) -> str:
         return CLASH_SUBSCRIPTION
 
-    async def fake_load_powerfullz_template(options: object) -> dict:
-        return SIMPLE_TEMPLATE
 
     monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
-    monkeypatch.setattr("app.core.template_engine.load_powerfullz_template", fake_load_powerfullz_template)
     response = TestClient(app).post(
         "/workspace/preview",
         json={
@@ -158,11 +148,8 @@ def test_workspace_expands_dynamic_node_selector_into_group_members(monkeypatch)
     async def fake_fetch_subscription(url: str) -> str:
         return MULTI_NODE_SUBSCRIPTION
 
-    async def fake_load_powerfullz_template(options: object) -> dict:
-        return SIMPLE_TEMPLATE
 
     monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
-    monkeypatch.setattr("app.core.template_engine.load_powerfullz_template", fake_load_powerfullz_template)
     response = TestClient(app).post(
         "/workspace/preview",
         json={
@@ -200,11 +187,8 @@ def test_workspace_reports_selector_that_produces_empty_group(monkeypatch) -> No
     async def fake_fetch_subscription(url: str) -> str:
         return CLASH_SUBSCRIPTION
 
-    async def fake_load_powerfullz_template(options: object) -> dict:
-        return SIMPLE_TEMPLATE
 
     monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
-    monkeypatch.setattr("app.core.template_engine.load_powerfullz_template", fake_load_powerfullz_template)
     response = TestClient(app).post(
         "/workspace/preview",
         json={
@@ -232,11 +216,8 @@ def test_workspace_rejects_unknown_node_selector_reference(monkeypatch) -> None:
     async def fake_fetch_subscription(url: str) -> str:
         return CLASH_SUBSCRIPTION
 
-    async def fake_load_powerfullz_template(options: object) -> dict:
-        return SIMPLE_TEMPLATE
 
     monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
-    monkeypatch.setattr("app.core.template_engine.load_powerfullz_template", fake_load_powerfullz_template)
     response = TestClient(app).post(
         "/workspace/preview",
         json={
@@ -296,11 +277,8 @@ def test_render_accepts_structured_policy_in_request_body(monkeypatch) -> None:
     async def fake_fetch_subscription(url: str) -> str:
         return CLASH_SUBSCRIPTION
 
-    async def fake_load_powerfullz_template(options: object) -> dict:
-        return SIMPLE_TEMPLATE
 
     monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
-    monkeypatch.setattr("app.core.template_engine.load_powerfullz_template", fake_load_powerfullz_template)
     response = TestClient(app).post(
         "/render",
         json={
@@ -324,11 +302,8 @@ def test_workspace_reports_rules_after_terminal_match_as_unreachable(monkeypatch
     async def fake_fetch_subscription(url: str) -> str:
         return CLASH_SUBSCRIPTION
 
-    async def fake_load_powerfullz_template(options: object) -> dict:
-        return SIMPLE_TEMPLATE
 
     monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
-    monkeypatch.setattr("app.core.template_engine.load_powerfullz_template", fake_load_powerfullz_template)
     response = TestClient(app).post(
         "/workspace/preview",
         json={
@@ -352,11 +327,8 @@ def test_simulate_endpoint_traces_openai_rule(monkeypatch) -> None:
     async def fake_fetch_subscription(url: str) -> str:
         return CLASH_SUBSCRIPTION
 
-    async def fake_load_powerfullz_template(options: object) -> dict:
-        return AI_TEMPLATE
 
     monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
-    monkeypatch.setattr("app.core.template_engine.load_powerfullz_template", fake_load_powerfullz_template)
     client = TestClient(app)
     preview = client.post(
         "/workspace/preview",
@@ -388,11 +360,8 @@ def test_compile_mihomo_endpoint_returns_yaml(monkeypatch) -> None:
     async def fake_fetch_subscription(url: str) -> str:
         return CLASH_SUBSCRIPTION
 
-    async def fake_load_powerfullz_template(options: object) -> dict:
-        return SIMPLE_TEMPLATE
 
     monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
-    monkeypatch.setattr("app.core.template_engine.load_powerfullz_template", fake_load_powerfullz_template)
     client = TestClient(app)
     preview = client.post(
         "/workspace/preview",

@@ -1,7 +1,7 @@
 """Unified Intermediate Representation for proxy nodes.
 
 All input parsers (Clash YAML, URI schemes) produce ProxyNode objects.
-All output renderers (Mihomo, Sing-box) consume ProxyNode objects.
+Client compilers (Mihomo, Surge, Shadowrocket) consume ProxyNode objects.
 The normalizer and strategy system operate on ProxyNode lists.
 """
 from __future__ import annotations

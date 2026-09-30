@@ -29,7 +29,7 @@ from app.core.rule_source_audit import (
 from app.core.template_engine import LEO_TEMPLATE_ID, load_template
 
 
-#: Admission-checklist preferred upstreams (community_templates/leo/README.md).
+#: Admission-checklist preferred upstreams (AGENTS.md).
 TRUSTED_UPSTREAMS = frozenset(
     {
         "github:MetaCubeX",
@@ -341,11 +341,6 @@ async def collect_leo_records(*, concurrency: int = 24, timeout: float = 15.0) -
             *(load_record(name, providers[name]) for name in sorted(providers))
         )
     return list(records)
-
-
-async def plan_leo_consolidation(*, concurrency: int = 24, timeout: float = 15.0) -> dict[str, Any]:
-    """Fetch every Leo provider's content and build the family consolidation plan."""
-    return build_consolidation_plan(await collect_leo_records(concurrency=concurrency, timeout=timeout))
 
 
 def main() -> None:

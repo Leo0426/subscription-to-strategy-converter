@@ -26,6 +26,13 @@ app.include_router(community_router)
 app.include_router(system_router)
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+@app.get("/apple-touch-icon.png", include_in_schema=False)
+@app.get("/apple-touch-icon-precomposed.png", include_in_schema=False)
+async def browser_icon() -> FileResponse:
+    return FileResponse(BASE_DIR / "static" / "assets" / "subflow-logo.png", media_type="image/png")
+
+
 @app.get("/", include_in_schema=False)
 async def index() -> FileResponse:
     return FileResponse(BASE_DIR / "static" / "index.html")

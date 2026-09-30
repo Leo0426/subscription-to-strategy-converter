@@ -191,3 +191,20 @@ def test_workspace_conflicting_rule_set_aliases_are_rejected() -> None:
 
     assert client.post("/simulate", json={"workspace": workspace, "destination": "example.com"}).status_code == 422
     assert client.post("/compile", json={"workspace": workspace, "target": "mihomo"}).status_code == 422
+
+
+@pytest.mark.parametrize("options", [[], ["dns-failed"]])
+def test_surge_final_rule_agrees_between_simulation_and_compilation(options):
+    raw = ",".join(["FINAL", "REJECT", *options])
+    workspace = {"target": "surge", "rules": [{
+        "id": "rule:0", "index": 0, "type": "FINAL", "match": "",
+        "target": "REJECT", "options": options, "raw": raw,
+    }]}
+    client = TestClient(app)
+    simulated = client.post("/simulate", json={"workspace": workspace, "destination": "example.com"})
+    compiled = client.post("/compile", json={"workspace": workspace, "target": "surge"})
+    assert simulated.status_code == 200
+    assert simulated.json()["trace"]["target"] == "REJECT"
+    assert simulated.json()["trace"]["resolved"] == "REJECT"
+    assert compiled.status_code == 200
+    assert raw in compiled.text.split("[Rule]", 1)[1].splitlines()

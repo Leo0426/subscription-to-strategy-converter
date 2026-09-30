@@ -125,14 +125,12 @@ def native_client(monkeypatch, tmp_path):
         yield client, state
 
 
-@pytest.mark.parametrize("endpoint", ["render", "subscribe", "profile"])
+@pytest.mark.parametrize("endpoint", ["render", "profile"])
 def test_native_subscription_preserves_connectivity_and_replaces_routing(native_client, endpoint):
     client, _ = native_client
     request = {"subscription_url": "https://example.com/source", "target": "surge"}
     if endpoint == "render":
         response = client.post("/render", json=request)
-    elif endpoint == "subscribe":
-        response = client.get("/subscribe", params=request)
     else:
         saved = client.post("/profiles", json=request)
         assert saved.status_code == 201, saved.text

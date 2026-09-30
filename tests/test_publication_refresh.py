@@ -99,61 +99,10 @@ async def test_refreshes_coalesce_and_fresh_cache_can_be_bypassed(tmp_path, monk
 
 
 @pytest.mark.asyncio
-async def test_malformed_new_source_never_falls_back_or_keeps_a_fresh_cache(tmp_path, monkeypatch):
-    monkeypatch.setenv('SUBFLOW_DB_PATH', str(tmp_path / 'profiles.db'))
-    content = [SOURCE]
-    async def fetch(_url):
-        return content[0]
-    monkeypatch.setattr('app.core.subscription.fetch_subscription', fetch)
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
-        saved = (await client.post('/profiles', json=intent())).json()
-        url = saved['subscribe_urls']['surge']
-        assert (await client.get(url)).status_code == 200
-        content[0] = 'proxies: invalid-structure'
-        invalid = await client.get(url + '&force_refresh=true')
-        assert invalid.status_code == 400
-        assert 'x-subflow-stale' not in invalid.headers
-        assert (await client.get(url)).status_code == 400
-
-
-@pytest.mark.asyncio
-async def test_invalid_clash_node_port_does_not_keep_a_fresh_artifact(tmp_path, monkeypatch):
-    monkeypatch.setenv('SUBFLOW_DB_PATH', str(tmp_path / 'profiles.db'))
-    source = [SOURCE]
-
-    async def fetch(_url):
-        return source[0]
-
-    monkeypatch.setattr('app.core.subscription.fetch_subscription', fetch)
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app, raise_app_exceptions=False),
-                                 base_url='http://test') as client:
-        saved = (await client.post('/profiles', json=intent())).json()
-        url = saved['subscribe_urls']['surge']
-        assert (await client.get(url)).status_code == 200
-
-        source[0] = SOURCE.replace('"port": 443', '"port": "oops"', 1)
-        invalid = await client.get(url + '&force_refresh=true')
-        assert invalid.status_code == 400
-        assert 'x-subflow-stale' not in invalid.headers
-        assert (await client.get(url)).status_code == 400
-
-
-@pytest.mark.asyncio
-async def test_recursive_clash_alias_does_not_keep_a_fresh_artifact(tmp_path, monkeypatch):
-    monkeypatch.setenv('SUBFLOW_DB_PATH', str(tmp_path / 'profiles.db'))
-    source = [SOURCE]
-
-    async def fetch(_url):
-        return source[0]
-
-    monkeypatch.setattr('app.core.subscription.fetch_subscription', fetch)
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app, raise_app_exceptions=False),
-                                 base_url='http://test') as client:
-        saved = (await client.post('/profiles', json=intent())).json()
-        url = saved['subscribe_urls']['surge']
-        assert (await client.get(url)).status_code == 200
-
-        source[0] = '''proxies:
+@pytest.mark.parametrize('invalid_source,target,error', [
+    pytest.param('proxies: invalid-structure', 'surge', None, id='malformed-proxies'),
+    pytest.param(SOURCE.replace('"port": 443', '"port": "oops"', 1), 'surge', None, id='invalid-port'),
+    pytest.param('''proxies:
   - &node
     name: US01
     type: ss
@@ -163,16 +112,14 @@ async def test_recursive_clash_alias_does_not_keep_a_fresh_artifact(tmp_path, mo
     password: synthetic
     plugin: obfs
     plugin-opts: *node
-'''
-        invalid = await client.get(url + '&force_refresh=true')
-        assert invalid.status_code == 400
-        assert 'recursive YAML aliases' in invalid.json()['detail']
-        assert 'x-subflow-stale' not in invalid.headers
-        assert (await client.get(url)).status_code == 400
-
-
-@pytest.mark.asyncio
-async def test_recursive_clash_dns_alias_does_not_keep_a_fresh_artifact(tmp_path, monkeypatch):
+''', 'surge', 'recursive YAML aliases', id='recursive-node'),
+    pytest.param('''dns: &dns
+  nameserver: *dns
+proxies:
+  - {name: US01, type: ss, server: us01.example.com, port: 443, cipher: aes-128-gcm, password: synthetic}
+''', 'mihomo', 'recursive YAML aliases', id='recursive-dns'),
+])
+async def test_invalid_source_cannot_serve_or_retain_a_cached_artifact(tmp_path, monkeypatch, invalid_source, target, error):
     monkeypatch.setenv('SUBFLOW_DB_PATH', str(tmp_path / 'profiles.db'))
     source = [SOURCE]
 
@@ -182,20 +129,19 @@ async def test_recursive_clash_dns_alias_does_not_keep_a_fresh_artifact(tmp_path
     monkeypatch.setattr('app.core.subscription.fetch_subscription', fetch)
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app, raise_app_exceptions=False),
                                  base_url='http://test') as client:
-        saved = (await client.post('/profiles', json={
-            'subscription_url': 'https://example.com/synthetic', 'target': 'mihomo',
-        })).json()
-        url = saved['subscribe_urls']['clash']
+        request = intent() if target == 'surge' else {
+            'subscription_url': 'https://example.com/synthetic', 'target': target,
+        }
+        saved = await client.post('/profiles', json=request)
+        assert saved.status_code == 201, saved.text
+        url = saved.json()['subscribe_urls']['surge' if target == 'surge' else 'clash']
         assert (await client.get(url)).status_code == 200
 
-        source[0] = '''dns: &dns
-  nameserver: *dns
-proxies:
-  - {name: US01, type: ss, server: us01.example.com, port: 443, cipher: aes-128-gcm, password: synthetic}
-'''
+        source[0] = invalid_source
         invalid = await client.get(url + '&force_refresh=true')
         assert invalid.status_code == 400
-        assert 'recursive YAML aliases' in invalid.json()['detail']
+        if error:
+            assert error in invalid.json()['detail']
         assert 'x-subflow-stale' not in invalid.headers
         assert (await client.get(url)).status_code == 400
 
@@ -382,7 +328,6 @@ async def test_post_fetch_work_can_outlive_fetch_timeout_without_stale_fallback(
         assert refreshed.status_code == 200
         assert refreshed.headers['x-subflow-cache'] == 'fresh'
         assert 'x-subflow-stale' not in refreshed.headers
-
 
 
 @pytest.mark.asyncio

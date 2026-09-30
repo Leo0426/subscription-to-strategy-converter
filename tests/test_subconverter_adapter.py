@@ -49,7 +49,7 @@ async def test_adapter_requests_a_node_only_clash_document(
         return original_async_client(**kwargs, transport=transport)
 
     monkeypatch.setenv("SUBFLOW_SUBCONVERTER_URL", "http://subconverter:25500/")
-    monkeypatch.setattr("app.core.subconverter.httpx.AsyncClient", client_with_mock_transport)
+    monkeypatch.setattr("app.core.fetcher.httpx.AsyncClient", client_with_mock_transport)
 
     content = await convert_subscription_to_clash("https://example.com/sub?token=a b")
 
@@ -94,7 +94,7 @@ async def test_adapter_reports_a_bounded_upstream_error(
         return original_async_client(**kwargs, transport=transport)
 
     monkeypatch.setenv("SUBFLOW_SUBCONVERTER_URL", "http://subconverter:25500")
-    monkeypatch.setattr("app.core.subconverter.httpx.AsyncClient", client_with_mock_transport)
+    monkeypatch.setattr("app.core.fetcher.httpx.AsyncClient", client_with_mock_transport)
 
     with pytest.raises(SubconverterError, match="HTTP 500") as exc_info:
         await convert_subscription_to_clash("https://example.com/sub")

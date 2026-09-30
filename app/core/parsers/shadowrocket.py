@@ -172,8 +172,3 @@ def parse_shadowrocket_source(content: str) -> tuple[list[ProxyNode], str | None
         # Includes JSON, Base64, URL/port, quote and Unicode failures. Suppress
         # exception chaining because parser exceptions can include credentials.
         raise ShadowrocketParseError(_ERROR) from None
-
-
-def parse_shadowrocket_inventory(content: str) -> list[ProxyNode]:
-    """Read raw/Base64 URI subscriptions or native INI without normalizing names."""
-    return parse_shadowrocket_source(content)[0]

@@ -127,7 +127,7 @@ proxies:
     assert raw_config["dns"]["proxy-server-nameserver"] == ["223.5.5.5"]
 
     async with original_client(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-        response = await client.get("/subscribe", params={"subscription_url": source_url, "target": "mihomo"})
+        response = await client.post("/render", json={"subscription_url": source_url, "target": "mihomo"})
 
     assert response.status_code == 200
     proxies, rendered = parse_clash_yaml_full(response.text)

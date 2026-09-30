@@ -117,17 +117,6 @@ def test_leo_lightweight_shape_and_generated_footprint() -> None:
     ] == []
 
 
-def test_leo_defaults_to_openclash_safe_ipv4_dns() -> None:
-    template = load_template(LEO_TEMPLATE_ID)
-
-    assert template["ipv6"] is False
-    assert template["dns"]["ipv6"] is False
-    assert template["dns"]["proxy-server-nameserver"] == [
-        "223.5.5.5",
-        "119.29.29.29",
-    ]
-
-
 def test_leo_preserves_source_proxy_server_nameservers() -> None:
     template = load_template(LEO_TEMPLATE_ID)
     config = apply_template(
@@ -200,39 +189,6 @@ def test_leo_ignores_source_dns_with_a_dangling_group_reference() -> None:
     )
 
     assert config["dns"]["proxy-server-nameserver"] == default_nameservers
-
-
-def test_leo_fake_ip_filter_has_no_duplicate_patterns() -> None:
-    template = load_template(LEO_TEMPLATE_ID)
-    patterns = template["dns"]["fake-ip-filter"]
-
-    assert len(patterns) == len(set(patterns))
-
-
-def test_leo_fake_ip_filter_has_no_exact_name_covered_by_plus_suffix() -> None:
-    patterns = load_template(LEO_TEMPLATE_ID)["dns"]["fake-ip-filter"]
-    plus_suffixes = [pattern[2:].lower() for pattern in patterns if pattern.startswith("+.")]
-
-    assert not {
-        pattern
-        for pattern in patterns
-        if not pattern.startswith("+.")
-        and any(
-            pattern.lower() == suffix or pattern.lower().endswith(f".{suffix}")
-            for suffix in plus_suffixes
-        )
-    }
-
-
-def test_leo_sniffer_preserves_sensitive_destinations() -> None:
-    template = load_template(LEO_TEMPLATE_ID)
-
-    assert template["sniffer"]["override-destination"] is False
-    assert template["sniffer"]["sniff"]["HTTP"]["override-destination"] is True
-    assert template["sniffer"]["skip-domain"] == [
-        "Mijia Cloud",
-        "+.push.apple.com",
-    ]
 
 
 def test_leo_routes_core_providers_and_builtin_services_to_expected_targets() -> None:
@@ -957,15 +913,6 @@ def test_leo_keeps_bittorrent_off_the_airport() -> None:
     assert "DOMAIN-KEYWORD,tracker,DIRECT" in rules
 
 
-def test_leo_local_defaults_are_loopback_and_fake_ip_safe() -> None:
-    template = load_template(LEO_TEMPLATE_ID)
-
-    assert template["allow-lan"] is False
-    fake_ip_filter = template["dns"]["fake-ip-filter"]
-    assert "localhost.*.qq.com" in fake_ip_filter
-    assert "localhost.*.weixin.qq.com" in fake_ip_filter
-
-
 def test_leo_pins_geodata_to_a_cdn_revision() -> None:
     template = load_template(LEO_TEMPLATE_ID)
     prefix = (
@@ -1026,3 +973,39 @@ def test_region_locked_services_can_be_routed_individually() -> None:
     assert "GEOSITE,hbo,HBO" in routed["rules"]
     assert _group(routed, "TikTok")["proxies"] == ["美国 01"]
     assert _group(routed, "Bahamut")["proxies"] == ["台湾 01"]
+
+
+def test_leo_connectivity_defaults_preserve_local_and_sensitive_destinations() -> None:
+    template = load_template(LEO_TEMPLATE_ID)
+
+    assert template["ipv6"] is False
+    assert template["dns"]["ipv6"] is False
+    assert template["dns"]["proxy-server-nameserver"] == [
+        "223.5.5.5",
+        "119.29.29.29",
+    ]
+
+    patterns = template["dns"]["fake-ip-filter"]
+    assert len(patterns) == len(set(patterns))
+    plus_suffixes = [pattern[2:].lower() for pattern in patterns if pattern.startswith("+.")]
+
+    assert not {
+        pattern
+        for pattern in patterns
+        if not pattern.startswith("+.")
+        and any(
+            pattern.lower() == suffix or pattern.lower().endswith(f".{suffix}")
+            for suffix in plus_suffixes
+        )
+    }
+
+    assert template["sniffer"]["override-destination"] is False
+    assert template["sniffer"]["sniff"]["HTTP"]["override-destination"] is True
+    assert template["sniffer"]["skip-domain"] == [
+        "Mijia Cloud",
+        "+.push.apple.com",
+    ]
+
+    assert template["allow-lan"] is False
+    assert "localhost.*.qq.com" in patterns
+    assert "localhost.*.weixin.qq.com" in patterns

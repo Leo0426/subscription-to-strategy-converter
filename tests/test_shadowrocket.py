@@ -136,7 +136,7 @@ def test_shadowrocket_native_protocols_are_not_filtered_by_our_legacy_serializer
     client, state = shadowrocket_client
     state["content"] = "proxies:\n  - {name: WG, type: wireguard, server: wg.example.com, port: 443}\n"
     for target in ("shadowrocket", "shadowrocket-config"):
-        response = client.get("/subscribe", params={"subscription_url": "https://example.com/sub", "target": target})
+        response = client.post("/render", json={"subscription_url": "https://example.com/sub", "target": target})
         assert response.status_code == 200
         assert "WG" in response.text
         if target == "shadowrocket":

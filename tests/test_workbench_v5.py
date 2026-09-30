@@ -112,14 +112,15 @@ def test_diagnostics_are_static_until_runtime_is_explicitly_requested(client):
     assert response.json()['service']['id']=='openai'
 
 
-def test_catalog_generated_template_and_rule_packs_share_the_same_rules(client):
+def test_catalog_and_generated_template_share_the_same_rules(client):
     import subprocess
     result = subprocess.run(['.venv/bin/python','scripts/sync-service-rules.py','--check'], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
     services = client.get('/services').json()['services']
-    packs = {pack['id']:pack for pack in client.get('/rule-packs').json()['packs']}
+    from app.core.template_engine import LEO_TEMPLATE_ID, load_template
+    rules = load_template(LEO_TEMPLATE_ID)['rules']
     for service in services:
-        assert packs[service['id']]['rules'] == [f"{r['match']},{service['group']}" for r in service['rules']]
+        assert all(f"{r['match']},{service['default_target']}" in rules for r in service['rules'] if r.get('template_inline'))
 
 
 def test_diagnostic_request_cannot_supply_a_controller_or_arbitrary_probe_url(client):

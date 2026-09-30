@@ -1,23 +1,17 @@
 from __future__ import annotations
 
-from app.core.service_catalog import category_rules
-
 from copy import deepcopy
-from functools import lru_cache
 import json
 from pathlib import Path
 import re
 import warnings
-from typing import Any
 from urllib.parse import unquote
 
 from ruamel.yaml import YAML
 from ruamel.yaml.error import ReusedAnchorWarning
 
 from app.core.parsers.clash import ir_to_clash_dict
-from app.core.powerfullz import PowerfullzTemplateError, load_powerfullz_template
 from app.ir import BUILTIN_POLICY_TARGETS, ProxyNode
-from app.models.powerfullz import PowerfullzOptions
 from app.models.strategy import CustomStrategy, SelectedPolicy
 
 
@@ -30,9 +24,6 @@ _PROJECT_DIR = _APP_DIR.parent
 
 LEO_TEMPLATE_ID = "local:community_templates/leo/leo.yaml"
 
-LOCAL_TEMPLATE_ROOTS = (
-    _PROJECT_DIR / "community_templates",
-)
 DIRECT_NODE_GROUP_NAMES = {
     "Proxy",
     "手动选择",
@@ -56,161 +47,6 @@ _DNS_BUILTIN_OUTBOUNDS = {
     "RULES",
 }
 
-_RESOLVED_LOCAL_TEMPLATE_ROOTS = tuple(r.resolve() for r in LOCAL_TEMPLATE_ROOTS)
-
-
-def _base_template(groups: list[dict], rules: list[str], rule_providers: dict | None = None) -> dict:
-    return {
-        "mixed-port": 7890,
-        "allow-lan": True,
-        "mode": "rule",
-        "log-level": "info",
-        "dns": {
-            "enable": True,
-            "enhanced-mode": "fake-ip",
-            "nameserver": ["https://dns.alidns.com/dns-query", "https://doh.pub/dns-query"],
-            "fallback": ["https://1.1.1.1/dns-query", "https://8.8.8.8/dns-query"],
-        },
-        "tun": {
-            "enable": True,
-            "stack": "mixed",
-            "auto-route": True,
-            "auto-detect-interface": True,
-        },
-        "proxy-groups": groups,
-        "rule-providers": rule_providers or {},
-        "rules": rules,
-    }
-
-
-def _core_groups(extra: list[dict] | None = None) -> list[dict]:
-    groups = [
-        {"name": "Proxy", "type": "select", "proxies": ["Auto", "Fallback", "DIRECT"]},
-        {
-            "name": "Auto",
-            "type": "url-test",
-            "include-all": True,
-            "url": "https://www.gstatic.com/generate_204",
-            "interval": 300,
-        },
-        {
-            "name": "Fallback",
-            "type": "fallback",
-            "include-all": True,
-            "url": "https://www.gstatic.com/generate_204",
-            "interval": 300,
-        },
-        {"name": "Global", "type": "select", "proxies": ["Proxy", "Auto", "Fallback", "DIRECT"]},
-        {"name": "China", "type": "select", "proxies": ["DIRECT", "Proxy"]},
-        {"name": "Reject", "type": "select", "proxies": ["REJECT", "DIRECT"]},
-    ]
-    if extra:
-        groups.extend(extra)
-    return groups
-
-
-def _ai_groups() -> list[dict]:
-    return [
-        {
-            "name": "US Nodes",
-            "type": "select",
-            "include-all": True,
-            "filter": r"(?i)(美国|美國|🇺🇸|United States|(^|[^A-Za-z])(US|USA|LAX|SJC|SFO)([^A-Za-z]|$))",
-            # Health checks only report generic connectivity and latency;
-            # Selector never changes the user's chosen node automatically.
-            "url": "https://cp.cloudflare.com/generate_204",
-            "expected-status": 204,
-            "timeout": 5000,
-            "lazy": True,
-            "interval": 600,
-        },
-        {"name": "AI", "type": "select", "proxies": ["US Nodes", "Proxy", "Auto", "Fallback"]},
-        {"name": "Claude", "type": "select", "proxies": ["US Nodes", "AI", "Proxy", "Auto"]},
-        {"name": "OpenAI", "type": "select", "proxies": ["US Nodes", "AI", "Proxy", "Auto"]},
-        {"name": "Gemini", "type": "select", "proxies": ["US Nodes", "AI", "Proxy", "Auto"]},
-        {"name": "Perplexity", "type": "select", "proxies": ["US Nodes", "AI", "Proxy", "Auto"]},
-        {"name": "Cursor", "type": "select", "proxies": ["US Nodes", "AI", "Proxy", "Auto"]},
-        {"name": "GitHub Copilot", "type": "select", "proxies": ["US Nodes", "AI", "Proxy", "Auto"]},
-    ]
-
-
-def _developer_groups() -> list[dict]:
-    return [
-        {"name": "Developer", "type": "select", "proxies": ["Proxy", "Auto", "Fallback"]},
-        {"name": "GitHub", "type": "select", "proxies": ["Developer", "Proxy", "Auto"]},
-        {"name": "Microsoft", "type": "select", "proxies": ["Proxy", "Auto", "DIRECT"]},
-        {"name": "Apple", "type": "select", "proxies": ["DIRECT", "Proxy"]},
-    ]
-
-
-def _streaming_groups() -> list[dict]:
-    return [
-        {"name": "Streaming", "type": "select", "proxies": ["Proxy", "Auto", "Fallback"]},
-        {"name": "Netflix", "type": "select", "proxies": ["Streaming", "Proxy", "Auto"]},
-        {"name": "YouTube", "type": "select", "proxies": ["Streaming", "Proxy", "Auto"]},
-        {"name": "Disney", "type": "select", "proxies": ["Streaming", "Proxy", "Auto"]},
-        {"name": "Spotify", "type": "select", "proxies": ["Streaming", "Proxy", "Auto"]},
-        {"name": "HBO", "type": "select", "proxies": ["Streaming", "Proxy", "Auto"]},
-        {"name": "TikTok", "type": "select", "proxies": ["Proxy", "Auto", "Fallback"]},
-        {"name": "Bahamut", "type": "select", "proxies": ["Proxy", "Auto", "Fallback"]},
-        {"name": "Telegram", "type": "select", "proxies": ["Proxy", "Auto", "Fallback"]},
-    ]
-
-
-AI_RULES = category_rules("ai")
-DEV_RULES = category_rules("developer")
-STREAMING_RULES = category_rules("streaming")
-
-
-COMMON_RULES = [
-    "DOMAIN-SUFFIX,local,DIRECT",
-    "DOMAIN-SUFFIX,cn,China",
-    "GEOIP,CN,China",
-    "MATCH,Proxy",
-]
-
-
-PRESET_TEMPLATES: dict[str, dict[str, Any]] = {
-    "minimal": {
-        "label": "Minimal",
-        "description": "最小策略：Proxy / Auto / Fallback / DIRECT / REJECT。",
-        "config": _base_template(_core_groups(), COMMON_RULES),
-    },
-    "developer": {
-        "label": "Developer",
-        "description": "开发者策略：GitHub、npm、Docker、JetBrains、Microsoft 独立分流。",
-        "config": _base_template(_core_groups(_developer_groups()), DEV_RULES + COMMON_RULES),
-    },
-    "ai-tools": {
-        "label": "AI Tools",
-        "description": "AI 工具策略：Claude、OpenAI、Gemini、Perplexity、Cursor、GitHub Copilot 独立分流。",
-        "config": _base_template(_core_groups(_ai_groups() + [{"name": "GitHub", "type": "select", "proxies": ["GitHub Copilot", "Proxy", "Auto"]}]), AI_RULES + DEV_RULES[:2] + COMMON_RULES),
-    },
-    "streaming": {
-        "label": "Streaming",
-        "description": "流媒体策略：Netflix、YouTube、Disney、Spotify、HBO、TikTok、巴哈姆特、Telegram 独立分流。",
-        "config": _base_template(_core_groups(_streaming_groups()), STREAMING_RULES + COMMON_RULES),
-    },
-    "full": {
-        "label": "Full",
-        "description": "全量策略：AI + Developer + Streaming + 地区自动筛选 + DNS/TUN。",
-        "config": _base_template(
-            _core_groups(
-                _ai_groups()
-                + _developer_groups()
-                + _streaming_groups()
-                + [
-                    {"name": "HK", "type": "url-test", "include-all": True, "filter": "香港|HK|Hong", "url": "https://www.gstatic.com/generate_204", "interval": 300},
-                    {"name": "SG", "type": "url-test", "include-all": True, "filter": "新加坡|SG|Singapore", "url": "https://www.gstatic.com/generate_204", "interval": 300},
-                    {"name": "JP", "type": "url-test", "include-all": True, "filter": "日本|JP|Japan", "url": "https://www.gstatic.com/generate_204", "interval": 300},
-                    {"name": "US", "type": "url-test", "include-all": True, "filter": "美国|US|United States", "url": "https://www.gstatic.com/generate_204", "interval": 300},
-                ]
-            ),
-            AI_RULES + DEV_RULES + STREAMING_RULES + COMMON_RULES,
-        ),
-    },
-}
-
 
 def _load_yaml_file(path: Path, template_name: str) -> dict:
     yaml = YAML(typ="safe")
@@ -226,111 +62,10 @@ def _load_yaml_file(path: Path, template_name: str) -> dict:
     return loaded
 
 
-def _local_template_path(template_id: str) -> Path:
-    relative_name = template_id.removeprefix("local:")
-    if not relative_name:
-        raise TemplateError("invalid local template name")
-
-    relative_path = Path(relative_name)
-    if relative_path.is_absolute() or ".." in relative_path.parts:
-        raise TemplateError("invalid local template path")
-    if relative_path.suffix.lower() not in {".yaml", ".yml"}:
-        raise TemplateError("local template must be a YAML file")
-
-    path = (_PROJECT_DIR / relative_path).resolve()
-    if not any(path.is_relative_to(root) for root in _RESOLVED_LOCAL_TEMPLATE_ROOTS):
-        raise TemplateError("local template path is outside allowed template roots")
-    if not path.exists():
-        raise TemplateError(f"template not found: {template_id}")
-    return path
-
-
 def load_template(name: str) -> dict:
-    if name == "canonical":
-        return deepcopy(PRESET_TEMPLATES["minimal"]["config"])
-    if name in PRESET_TEMPLATES:
-        return deepcopy(PRESET_TEMPLATES[name]["config"])
-    if name.startswith("local:"):
-        return _load_yaml_file(_local_template_path(name), name)
+    if name == LEO_TEMPLATE_ID:
+        return _load_yaml_file(_PROJECT_DIR / "community_templates" / "leo" / "leo.yaml", name)
     raise TemplateError(f"template not found: {name}")
-
-
-def _template_summary(
-    template_id: str,
-    label: str,
-    source: str,
-    path: str | None = None,
-    description: str = "",
-    proxy_group_count: int = 0,
-) -> dict[str, Any]:
-    return {
-        "id": template_id,
-        "label": label,
-        "source": source,
-        "path": path,
-        "description": description,
-        "proxy_group_count": proxy_group_count,
-    }
-
-
-def _local_label(path: Path) -> str:
-    relative = path.relative_to(_PROJECT_DIR)
-    return str(relative.with_suffix(""))
-
-
-def _local_template_meta(path: Path) -> dict | None:
-    """Load a local template and return its metadata, or None if unsupported."""
-    try:
-        loaded = _load_yaml_file(path, str(path))
-    except TemplateError:
-        return None
-    groups = loaded.get("proxy-groups")
-    if not isinstance(groups, list):
-        return None
-    return {"proxy_group_count": len(groups)}
-
-
-@lru_cache(maxsize=1)
-def list_templates() -> list[dict[str, Any]]:
-    templates = [
-        _template_summary(
-            template_id,
-            preset["label"],
-            "preset",
-            description=preset["description"],
-            proxy_group_count=len(preset["config"].get("proxy-groups", [])),
-        )
-        for template_id, preset in PRESET_TEMPLATES.items()
-    ]
-    templates.append(
-        _template_summary(
-            "powerfullz",
-            "powerfullz override",
-            "built-in",
-            description="基于 powerfullz/override-rules 静态 YAML 覆写，支持按需开关负载均衡、IPv6、Fake-IP 等组件。",
-        )
-    )
-
-    for root in LOCAL_TEMPLATE_ROOTS:
-        if not root.exists():
-            continue
-        for path in sorted(root.rglob("*")):
-            if path.suffix.lower() not in {".yaml", ".yml"}:
-                continue
-            meta = _local_template_meta(path)
-            if meta is None:
-                continue
-            relative = path.relative_to(_PROJECT_DIR)
-            templates.append(
-                _template_summary(
-                    f"local:{relative.as_posix()}",
-                    _local_label(path),
-                    "local",
-                    relative.as_posix(),
-                    proxy_group_count=meta["proxy_group_count"],
-                )
-            )
-    return templates
 
 
 def _expand_members(
@@ -858,12 +593,3 @@ def apply_template(
     _apply_source_connectivity(config, source_config)
 
     return config
-
-
-async def load_any_template(name: str, options: PowerfullzOptions | None = None) -> dict:
-    if name == "powerfullz":
-        try:
-            return await load_powerfullz_template(options or PowerfullzOptions())
-        except PowerfullzTemplateError as exc:
-            raise TemplateError(str(exc)) from exc
-    return load_template(name)

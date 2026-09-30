@@ -380,7 +380,7 @@ def test_malformed_subrules_fail_without_leaking_source_values(subrules):
         build({"proxies": [node()], "sub-rules": subrules})
 
 
-@pytest.mark.parametrize("endpoint", ["render", "subscribe", "profile", "workspace"])
+@pytest.mark.parametrize("endpoint", ["render", "profile", "workspace"])
 def test_publication_prunes_unused_airport_definitions(monkeypatch, tmp_path, endpoint):
     source = {"proxies": [node()], "dns": {"nameserver": ["https://dns.example/query#DNS Exit"]},
               "proxy-groups": [group("DNS Exit", "DIRECT"), group("Airport unused", "DIRECT")],
@@ -397,8 +397,6 @@ def test_publication_prunes_unused_airport_definitions(monkeypatch, tmp_path, en
     with TestClient(app) as client:
         if endpoint == "render":
             response = client.post("/render", json=request)
-        elif endpoint == "subscribe":
-            response = client.get("/subscribe", params=request)
         elif endpoint == "profile":
             saved = client.post("/profiles", json={**request, "publication_targets": ["mihomo"]})
             assert saved.status_code == 201, saved.text

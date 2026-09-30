@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import PurePosixPath
 import re
 from typing import Any
@@ -19,6 +19,7 @@ class TemplatePolicyTransformError(ValueError):
 
 _CLAUDE_RE = re.compile(r"claude|anthropic", re.IGNORECASE)
 _SURGE_RULE_EXTENSIONS = {".list", ".txt", ".conf"}
+
 def transform_service_routes(
     config: dict[str, Any],
     nodes: list[ProxyNode],
@@ -133,15 +134,10 @@ def _transform_current_service(config: dict, nodes: list[ProxyNode], route: Serv
 @dataclass(frozen=True)
 class ClaudeTemplateCapability:
     contains_claude: bool
-    rule_count: int
-    rule_provider_names: tuple[str, ...]
     current_targets: tuple[str, ...]
     dedicated_group: str | None
     surge_compatible: bool
     surge_incompatibility_reasons: tuple[str, ...]
-
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
 
 
 def analyze_claude_template(config: dict[str, Any]) -> ClaudeTemplateCapability:
@@ -154,11 +150,8 @@ def analyze_claude_template(config: dict[str, Any]) -> ClaudeTemplateCapability:
         if isinstance(group, dict) and group.get("name")
     }
 
-    matches = [_parse_rule(rule) for rule in rules if isinstance(rule, str)]
-    matches = [parts for parts in matches if parts and _is_claude_rule(parts)]
-    provider_names = tuple(
-        dict.fromkeys(parts[1] for parts in matches if parts[0].upper() == "RULE-SET")
-    )
+    parsed = [_parse_rule(rule) for rule in rules if isinstance(rule, str)]
+    matches = [parts for parts in parsed if parts and _is_claude_rule(parts)]
     targets = tuple(dict.fromkeys(parts[2] for parts in matches if len(parts) >= 3))
     dedicated = next((target for target in targets if target in group_names and _is_claude(target)), None)
     if dedicated is None:
@@ -175,7 +168,7 @@ def analyze_claude_template(config: dict[str, Any]) -> ClaudeTemplateCapability:
     referenced_providers = tuple(
         dict.fromkeys(
             parts[1]
-            for parts in (_parse_rule(rule) for rule in rules if isinstance(rule, str))
+            for parts in parsed
             if len(parts) >= 3 and parts[0].upper() == "RULE-SET"
         )
     )
@@ -203,7 +196,7 @@ def analyze_claude_template(config: dict[str, Any]) -> ClaudeTemplateCapability:
     unsupported_rule_types = tuple(
         dict.fromkeys(
             parts[0].upper()
-            for parts in (_parse_rule(rule) for rule in rules if isinstance(rule, str))
+            for parts in parsed
             if parts and parts[0].upper() not in SURGE_IOS_RULE_TYPES
         )
     )
@@ -212,8 +205,6 @@ def analyze_claude_template(config: dict[str, Any]) -> ClaudeTemplateCapability:
 
     return ClaudeTemplateCapability(
         contains_claude=bool(matches),
-        rule_count=len(matches),
-        rule_provider_names=provider_names,
         current_targets=targets,
         dedicated_group=dedicated,
         surge_compatible=bool(matches) and not reasons,

@@ -31,9 +31,6 @@ class ProfileSummary:
     id: str
     target: str
     template: str
-    clash_template: str
-    surge_template: str
-    preset: str | None
     has_artifact: bool
 
 
@@ -134,15 +131,6 @@ class ProfileStore:
                     id=profile_id,
                     target=str(request.get("target", "mihomo")),
                     template=str(request.get("template", "local:community_templates/leo/leo.yaml")),
-                    clash_template=str(
-                        request.get("clash_template")
-                        or request.get("template", "local:community_templates/leo/leo.yaml")
-                    ),
-                    surge_template=str(
-                        request.get("surge_template")
-                        or request.get("template", "local:community_templates/leo/leo.yaml")
-                    ),
-                    preset=str(request["preset"]) if request.get("preset") else None,
                     has_artifact=artifact is not None or bool(_artifacts_from_row(artifacts_json)),
                 )
             )

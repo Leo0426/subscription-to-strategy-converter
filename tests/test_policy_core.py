@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import pytest
+
 from app.core.policy_analyzer import analyze_workspace
 from app.core.policy_graph import build_policy_graph
 from app.core.policy_simulator import simulate_destination
-from app.core.template_engine import LEO_TEMPLATE_ID, load_template
+from app.core.template_engine import LEO_TEMPLATE_ID, apply_template, load_template
 from app.core.policy_workspace import compile_mihomo_config, config_to_workspace, workspace_to_mihomo_config
 from app.ir import ProxyNode
+from app.models.strategy import SelectedPolicy
 
 
 def _node(name: str = "HK-01") -> ProxyNode:
@@ -261,3 +264,16 @@ def test_analyzer_warns_on_inline_ip_cidrs_for_shared_infrastructure() -> None:
     # domainless service traffic still requires it, while DIRECT stays exempt.
     assert len(findings) == 1
     assert "3 IP-layer rules" in findings[0].message
+
+
+@pytest.mark.parametrize("original,duplicate,different", [
+    ("DOMAIN,a.example,DIRECT", "DOMAIN, a.example , DIRECT", "DOMAIN,b.example,DIRECT"),
+    ({"proxy": "DIRECT", "type": "DOMAIN", "match": "a.example"},
+     {"match": "a.example", "proxy": "DIRECT", "type": "DOMAIN"},
+     {"proxy": "DIRECT", "type": "DOMAIN", "match": "b.example"}),
+])
+def test_policy_merge_deduplicates_equivalent_rules_and_keeps_distinct_routes(original, duplicate, different):
+    config = apply_template(
+        {"proxy-groups": [], "rules": [original]}, [], selected_policy=SelectedPolicy(rules=[duplicate, different]),
+    )
+    assert config["rules"] == [different, original]

@@ -39,8 +39,3 @@ def parse_clash_yaml_full(content: str) -> tuple[list[dict], dict]:
         parsed.append(dict(proxy))
 
     return parsed, dict(data)
-
-
-def parse_clash_yaml(content: str) -> list[dict]:
-    proxies, _ = parse_clash_yaml_full(content)
-    return proxies

@@ -1,4 +1,4 @@
-"""Shared service rules for current preferences, legacy RulePacks and Leo exports."""
+"""Shared service rules for workbench preferences and Leo exports."""
 from __future__ import annotations
 
 import hashlib
@@ -18,10 +18,6 @@ def catalog_revision() -> str:
 
 def service_rules(service: dict, target: str | None = None) -> list[str]:
     return [f"{rule['match']},{target or service['group']}" for rule in service['rules']]
-
-
-def category_rules(category: str) -> list[str]:
-    return [rule for service in service_catalog() if service['category'] == category for rule in service_rules(service)]
 
 
 def template_service_block() -> str:

@@ -44,7 +44,7 @@ proxies:
         yield result
 
 
-@pytest.mark.parametrize("mode", ("default", "fixed", "legacy", "pack"))
+@pytest.mark.parametrize("mode", ("default", "fixed", "legacy"))
 def test_claude_chain_survives_profile_publication_without_remote_rules(client, mode):
     request = {"subscription_url": "https://example.com/sub"}
     target, node = "AI 服务", "US01"
@@ -54,9 +54,6 @@ def test_claude_chain_survives_profile_publication_without_remote_rules(client, 
     elif mode == "legacy":
         request["claude_policy"] = {"egress": "JP01"}
         target, node = "Claude", "JP01"
-    elif mode == "pack":
-        request["rule_packs"] = ["claude"]
-        target = "Claude"
 
     created = client.post("/profiles", json=request)
     assert created.status_code == 201, created.text

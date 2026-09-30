@@ -213,3 +213,53 @@ def test_malformed_workspace_port_returns_client_error(client, endpoint):
     response = client.post(endpoint, json={"workspace": workspace, "destination": "example.com"})
     assert response.status_code == 422, response.text
     assert "workspace" in response.json()["detail"].lower()
+
+
+@pytest.mark.parametrize("key,value", [
+    ("preset", "ai"),
+    ("rule_packs", ["openai"]),
+    ("route_intent", {"node_pools": [], "service_routes": []}),
+])
+def test_saved_policy_snapshot_remains_publishable_after_legacy_api_removal(client, key, value):
+    store = ProfileStore(os.environ["SUBFLOW_DB_PATH"])
+    saved = store.create({
+        "subscription_url": "https://example.com/sub",
+        key: value,
+        "selected_policy": {
+            "mode": "merge",
+            "proxy_groups": [{"name": "OpenAI", "type": "select", "proxies": ["TW01"]}],
+            "rules": ["DOMAIN-SUFFIX,chatgpt.com,OpenAI"],
+        },
+    })
+    path = f"/profiles/{saved.id}"
+    params = {"token": saved.token}
+    draft = client.get(path + "/draft", params=params)
+    assert draft.status_code == 200, draft.text
+    assert draft.json()["mode"] == "legacy_snapshot"
+    assert key not in draft.json()["request"]
+    published = client.get(f"/subscribe/{saved.id}", params=params)
+    assert published.status_code == 200, published.text
+    assert "DOMAIN-SUFFIX,chatgpt.com,OpenAI" in published.text
+    preview = client.post(path + "/upgrade-preview", params=params)
+    assert preview.status_code == 200, preview.text
+    assert preview.json()["request"]["service_routes"][0]["egress"] == "TW01"
+    assert store.get(saved.id, saved.token).request[key] == value
+    assert client.post("/profiles", json={"subscription_url": "https://example.com/sub", key: value}).status_code == 422
+
+
+def test_incomplete_legacy_profile_cannot_silently_publish_default_rules(client):
+    saved = ProfileStore(os.environ["SUBFLOW_DB_PATH"]).create({
+        "subscription_url": "https://example.com/sub", "preset": "ai",
+    })
+    response = client.get(f"/subscribe/{saved.id}", params={"token": saved.token})
+    assert response.status_code == 400
+    assert "缺少已保存的策略快照" in response.json()["detail"]
+
+
+def test_experimental_compile_target_and_old_catalogs_are_unavailable(client):
+    for path in ("/templates", "/claude/templates", "/presets", "/rule-packs", "/intent/catalog", "/policy-catalog", "/subscribe"):
+        assert client.get(path).status_code == 404
+    assert client.post("/session", json={}).status_code == 404
+    response = client.post("/compile", json={"target": "singbox", "workspace": {}})
+    assert response.status_code == 400
+    assert response.json()["detail"] == "unsupported target: singbox"

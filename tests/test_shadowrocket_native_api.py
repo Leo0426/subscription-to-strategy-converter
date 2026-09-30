@@ -66,14 +66,12 @@ def native_api(monkeypatch, tmp_path):
         yield client, state
 
 
-@pytest.mark.parametrize('endpoint', ['render', 'subscribe', 'profile'])
+@pytest.mark.parametrize('endpoint', ['render', 'profile'])
 def test_native_shadowrocket_subscription_is_returned_unchanged(native_api, endpoint):
     client, state = native_api
     request = {'subscription_url': 'https://example.com/all/', 'target': 'shadowrocket'}
     if endpoint == 'render':
         response = client.post('/render', json=request)
-    elif endpoint == 'subscribe':
-        response = client.get('/subscribe', params=request)
     else:
         saved = client.post('/profiles', json={**request, 'publication_targets': ['shadowrocket']})
         assert saved.status_code == 201, saved.text

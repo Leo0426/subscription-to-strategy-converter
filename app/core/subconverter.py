@@ -10,8 +10,6 @@ import os
 import asyncio
 from urllib.parse import urlparse
 
-import httpx
-
 from app.core.fetcher import FetchError, FetchInvalidError, _ensure_resolved_host_is_public, _validate_url, request_text
 from app.core.network import fetch_timeout
 
