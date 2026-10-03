@@ -5,7 +5,7 @@ import re
 
 from app.core.normalizer import normalize_nodes_with_source_names
 from app.core.parsers.surge import parse_surge_nodes
-from app.ir import BUILTIN_POLICY_TARGETS
+from app.core.platforms.ini import _BUILTIN_TARGETS
 
 
 _SECTION = re.compile(r"^[ \t]*\[([^]\r\n]+)\][ \t]*(?:(?:#|;|//)[^\r\n]*)?\r?\n?$")
@@ -60,7 +60,7 @@ def replace_surge_routing(
     normalized = normalize_nodes_with_source_names(parse_surge_nodes(source)) if source_names is None else []
     node_names = {node.name: original_name for node, original_name in normalized} if source_names is None else source_names
     if ((source_names is None and len(node_names) != len(normalized))
-            or node_names.keys() & (generated_names | BUILTIN_POLICY_TARGETS)):
+            or node_names.keys() & (generated_names | _BUILTIN_TARGETS)):
         raise NativeSurgeProfileError(
             "机场节点或生成策略组存在名称冲突，无法无损区分连接与分流引用；请调整节点或策略组名称"
         )

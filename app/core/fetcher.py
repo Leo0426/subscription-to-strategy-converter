@@ -24,19 +24,10 @@ class FetchInvalidError(FetchError):
 
 
 BLOCKED_HOSTS = {"localhost"}
-BLOCKED_NETWORKS = tuple(
-    ipaddress.ip_network(network)
-    for network in (
-        "127.0.0.0/8",
-        "10.0.0.0/8",
-        "172.16.0.0/12",
-        "192.168.0.0/16",
-        "::1/128",
-    )
-)
 FAKE_IP_NETWORKS = (
     ipaddress.ip_network("198.18.0.0/15"),
 )
+NAT64_WELL_KNOWN_NETWORK = ipaddress.ip_network("64:ff9b::/96")
 # Universal subscription endpoints negotiate their output from this header.
 # Include both names: older panels recognize "meta", newer ones "mihomo".
 # This is the input format capability, independent of the requested output target.
@@ -68,7 +59,19 @@ def _validate_url(url: str) -> None:
 
 
 def _is_blocked_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
-    return any(ip in network for network in BLOCKED_NETWORKS) or ip.is_private or ip.is_loopback
+    # IPv4-mapped IPv6 must obey the underlying IPv4 address restrictions.
+    if isinstance(ip, ipaddress.IPv6Address):
+        if ip.ipv4_mapped is not None:
+            ip = ip.ipv4_mapped
+        elif ip in NAT64_WELL_KNOWN_NETWORK:
+            # RFC 6052 permits the well-known NAT64 prefix only for global
+            # IPv4 addresses. Check the translated endpoint, not the prefix.
+            ip = ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF)
+        elif ip.is_site_local:
+            return True
+    # Shared carrier space is neither private nor global. Multicast can be
+    # classified as global, but is never a public HTTP subscription endpoint.
+    return not ip.is_global or ip.is_multicast or ip.is_reserved
 
 
 def _blocked_ip_message(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> str:

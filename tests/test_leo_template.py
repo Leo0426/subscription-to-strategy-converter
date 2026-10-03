@@ -1,6 +1,9 @@
 import json
 from pathlib import Path
 
+import pytest
+
+from app.core.platforms.surge import build_surge_config
 from app.core.policy_analyzer import analyze_workspace
 from app.core.policy_simulator import simulate_destination
 from app.core.rule_source_audit import audit_snapshot_matches_template
@@ -789,27 +792,41 @@ def test_leo_domestic_bytedance_rules_follow_tiktok_and_precede_china_fallbacks(
     assert "PROCESS-NAME,com.zhiliaoapp.musically,DIRECT" not in rules
 
 
-def test_leo_generic_port_and_inbound_routes_do_not_bypass_direct_catchalls() -> None:
-    nodes = [_node("香港 01")]
+@pytest.mark.parametrize("target", ["mihomo", "surge"])
+def test_leo_generic_port_and_inbound_routes_do_not_bypass_direct_catchalls(target: str) -> None:
+    nodes = [_node("香港 01"), _node("美国 01")]
     config = apply_template(load_template(LEO_TEMPLATE_ID), nodes)
-    rules = compile_mihomo_config(config, nodes)["rules"]
-    # A NAS on :50001, a .cn site on :10443, or a named mixed listener must
-    # reach private/China matching before any generic proxy fallback.
-    last_direct_catchall = max(
-        rules.index(rule)
-        for rule in (
+    if target == "surge":
+        rendered, _ = build_surge_config(
+            nodes, config["proxy-groups"], config["rules"], config["rule-providers"]
+        )
+        rules = [line.strip() for line in rendered.split("[Rule]\n", 1)[1].splitlines()]
+        catchalls = ("GEOIP,cn,DIRECT", "DOMAIN-SUFFIX,cn,DIRECT")
+        service_rules = ("/Netflix/Netflix.list,流媒体", "/TikTok/TikTok.list,美国节点")
+        final = "FINAL,默认代理,dns-failed"
+    else:
+        rules = compile_mihomo_config(config, nodes)["rules"]
+        catchalls = (
             "GEOSITE,private,DIRECT",
             "GEOIP,private,DIRECT,no-resolve",
             "DOMAIN-SUFFIX,cn,DIRECT",
+            "RULE-SET,China,DIRECT,no-resolve",
             "GEOSITE,cn,DIRECT",
             "GEOIP,cn,DIRECT,no-resolve",
         )
-    )
+        service_rules = ("GEOSITE,netflix,流媒体", "GEOSITE,tiktok,美国节点")
+        final = "MATCH,默认代理"
+    # A NAS on :50001, a .cn site on :10443, or a named mixed listener must
+    # reach private/China matching before generic port or listener fallbacks.
+    # Port 6881 is also usable by named services; it does not prove BT traffic.
+    last_direct_catchall = max(rules.index(rule) for rule in catchalls)
+    for service in service_rules:
+        assert any(service in rule for rule in rules[:last_direct_catchall]), service
     for index, rule in enumerate(rules):
         parts = rule.split(",")
-        if parts[0] in {"DST-PORT", "IN-NAME"} and parts[2] == "默认代理":
+        if parts[0] in {"DST-PORT", "DEST-PORT", "IN-NAME"}:
             assert index > last_direct_catchall, f"direct catchall bypassed: {rule}"
-    assert rules[-1] == "MATCH,默认代理"
+    assert rules[-1] == final
 
 
 def test_leo_keeps_domestic_infrastructure_off_the_proxy() -> None:

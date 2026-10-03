@@ -12,11 +12,16 @@ def simulate_destination(workspace: PolicyWorkspace, destination: str) -> Simula
     for rule in workspace.rules:
         matched = _rule_matches(rule, destination)
         if matched is None:
+            if not trace.warnings:
+                trace.warnings.append(
+                    "The simulated route is conditional: an earlier rule requires "
+                    "provider/runtime data and may match first."
+                )
             trace.steps.append(
                 SimulationStep(
                     type="rule",
                     ref=rule.id,
-                    message=f"{rule.type} '{rule.match}' depends on provider/runtime data; skipped for deterministic MVP simulation.",
+                    message=f"{rule.type} '{rule.match}' cannot be evaluated from the destination alone; continuing conditionally.",
                     matched=None,
                 )
             )
@@ -36,7 +41,7 @@ def simulate_destination(workspace: PolicyWorkspace, destination: str) -> Simula
             trace.resolved = _resolve_target(workspace, rule.target, trace)
             return trace
 
-    trace.warnings.append("No rule matched destination.")
+    trace.warnings.append("No statically evaluable rule matched destination.")
     return trace
 
 
@@ -50,22 +55,23 @@ def _rule_matches(rule: PolicyRule, destination: str) -> bool | None:
         return destination == match or destination.endswith(f".{match}")
     if rule_type == "DOMAIN-KEYWORD":
         return match in destination
-    if rule_type == "IP-CIDR":
-        return _ip_in_cidr(destination, match)
-    if rule_type == "GEOIP":
-        return None
-    if rule_type == "RULE-SET":
-        return None
+    if rule_type in {"IP-CIDR", "IP-CIDR6"}:
+        return _ip_in_cidr(destination, match, no_resolve="no-resolve" in rule.options)
     if rule_type in {"MATCH", "FINAL"}:
         return True
-    return False
+    return None
 
 
-def _ip_in_cidr(destination: str, cidr: str) -> bool:
+def _ip_in_cidr(destination: str, cidr: str, *, no_resolve: bool) -> bool | None:
     try:
-        return ipaddress.ip_address(destination) in ipaddress.ip_network(cidr, strict=False)
+        network = ipaddress.ip_network(cidr, strict=False)
     except ValueError:
         return False
+    try:
+        address = ipaddress.ip_address(destination)
+    except ValueError:
+        return False if no_resolve else None
+    return address in network
 
 
 def _resolve_target(workspace: PolicyWorkspace, target: str, trace: SimulationTrace) -> str:

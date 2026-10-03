@@ -381,8 +381,6 @@ rules:
 - GEOSITE,google-cn,Google
 - RULE-SET,Microsoft-6,Microsoft
 - RULE-SET,Telegram,社交通讯,no-resolve
-# BT 不走机场：tracker 与默认端口统一直连。
-- DST-PORT,6881-6999,DIRECT
 - GEOSITE,category-ads-all,REJECT
 - IP-CIDR,198.18.0.1/16,REJECT,no-resolve
 - IP-CIDR,169.254.169.254/32,REJECT,no-resolve
@@ -483,6 +481,8 @@ rules:
 - RULE-SET,China,DIRECT,no-resolve
 - GEOSITE,cn,DIRECT
 - GEOIP,cn,DIRECT,no-resolve
+# BT 端口兜底排在服务与地域规则之后。
+- DST-PORT,6881-6999,DIRECT
 # 仅境外 DNS/DoT 走代理。
 - AND,((DST-PORT,53),(NOT,((IN-TYPE,Inner)))),默认代理
 - AND,((NOT,((OR,((PROCESS-NAME,mihomo),(PROCESS-NAME,ClashMeta))))),(DST-PORT,853)),默认代理

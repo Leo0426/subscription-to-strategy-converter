@@ -46,7 +46,7 @@ class ProxyNode:
     extra: dict[str, Any] = field(default_factory=dict)
 
 
-BUILTIN_POLICY_TARGETS = {"DIRECT", "REJECT", "REJECT-DROP", "PASS", "GLOBAL"}
+BUILTIN_POLICY_TARGETS = {"DIRECT", "REJECT", "REJECT-DROP", "PASS", "PASS-RULE", "COMPATIBLE", "GLOBAL"}
 
 
 @dataclass

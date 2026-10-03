@@ -15,7 +15,11 @@ def service_report(config: dict, nodes: list, service_id: str | None = None) -> 
         domains = []
         for destination in service['destinations']:
             trace = simulate_destination(workspace, destination)
-            certain = trace.matched_rule is not None and trace.matched_rule.type in {'DOMAIN', 'DOMAIN-SUFFIX'}
+            certain = (
+                trace.matched_rule is not None
+                and trace.matched_rule.type in {'DOMAIN', 'DOMAIN-SUFFIX'}
+                and not any(step.type == 'rule' and step.matched is None for step in trace.steps)
+            )
             domains.append({
                 'domain': destination, 'target': trace.target,
                 'configured_node': trace.resolved,

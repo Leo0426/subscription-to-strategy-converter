@@ -72,7 +72,11 @@ def analyze_workspace(workspace: PolicyWorkspace) -> list[AnalyzerFinding]:
             )
 
     for group_index, group in enumerate(workspace.proxy_groups):
-        if not group.members and not group.raw.get("include-all") and not group.raw.get("use"):
+        options = {str(key).lower().replace("_", "-"): value for key, value in group.raw.items()}
+        dynamic_members = any(options.get(flag) for flag in (
+            "include-all", "include-all-proxies", "include-all-providers",
+        ))
+        if not group.members and not dynamic_members and not options.get("use"):
             findings.append(
                 AnalyzerFinding(
                     severity="error",

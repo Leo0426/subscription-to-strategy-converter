@@ -460,12 +460,23 @@ async def _check_request(request: ConvertRequest) -> dict:
                 if target == base_target
                 else await _build_config(request.model_copy(update={"target": target}))
             )
-            _, compiler_warnings = _render_output(
-                target,
-                result.nodes,
-                result.config,
-                source_config=result.source_config,
-            )
+            if _TARGET_ALIASES.get(target, target) == "mihomo":
+                # Native connection dependencies are added during compilation;
+                # the generated policy alone cannot expose their graph errors.
+                compiled, compiler_warnings = build_mihomo_config(
+                    result.nodes, result.config, source_config=result.source_config,
+                )
+                errors.extend(
+                    finding.message for finding in analyze_workspace(config_to_workspace(compiled))
+                    if finding.severity == "error"
+                )
+            else:
+                _, compiler_warnings = _render_output(
+                    target,
+                    result.nodes,
+                    result.config,
+                    source_config=result.source_config,
+                )
             warnings = result.warnings + compiler_warnings
             if target == "shadowrocket":
                 _, policy_warnings = _render_output(
