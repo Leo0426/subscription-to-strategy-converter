@@ -1,3 +1,4 @@
+from copy import deepcopy
 from dataclasses import dataclass
 import json
 import os
@@ -169,11 +170,15 @@ async def _load_source(request: ConvertRequest) -> tuple[list[ProxyNode], dict]:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-async def _build_config(request: ConvertRequest) -> BuildResult:
+async def _build_config(
+    request: ConvertRequest, *, preloaded_source: tuple[list[ProxyNode], dict] | None = None,
+) -> BuildResult:
     _require_leo_template(request.template)
     _require_supported_target(request.target)
 
-    nodes, raw_config = await _load_source(request)
+    nodes, raw_config = (
+        await _load_source(request) if preloaded_source is None else deepcopy(preloaded_source)
+    )
 
     try:
         template = load_template(request.template)
@@ -447,7 +452,24 @@ async def _check_request(request: ConvertRequest) -> dict:
     targets = request.publication_targets or [request.target]
     default_target = _default_publication_target(request)
     base_target = "shadowrocket" if default_target == "shadowrocket-config" else default_target
-    base_result = await _build_config(request.model_copy(update={"target": base_target}))
+    sources: dict[str, tuple[list[ProxyNode], dict] | HTTPException] = {}
+
+    async def build(target: str) -> BuildResult:
+        inputs = request.model_copy(update={"target": target})
+        family = "shadowrocket" if target in {"shadowrocket", "shadowrocket-config"} else "mihomo"
+        if family not in sources:
+            try:
+                sources[family] = await _load_source(inputs)
+            except HTTPException as exc:
+                sources[family] = exc
+        source = sources[family]
+        if isinstance(source, HTTPException):
+            raise source
+        # One source observation per identity, with independent compiler inputs.
+        # Failed observations also remain consistent across this check's clients.
+        return await _build_config(inputs, preloaded_source=source)
+
+    base_result = await build(base_target)
     findings = workspace_to_dict(
         analyze_workspace(config_to_workspace(base_result.config, base_result.nodes))
     )
@@ -460,7 +482,7 @@ async def _check_request(request: ConvertRequest) -> dict:
             result = (
                 base_result
                 if target == base_target
-                else await _build_config(request.model_copy(update={"target": target}))
+                else await build(target)
             )
             if _TARGET_ALIASES.get(target, target) == "mihomo":
                 # Native connection dependencies are added during compilation;

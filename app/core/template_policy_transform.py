@@ -28,13 +28,17 @@ def transform_service_routes(
     target: str = "clash",
 ) -> dict[str, Any]:
     result = config
-    current_services: set[str] = set()
+    current_services = {route.service for route in routes if route.enabled and route.mode != "legacy"}
+    # Service preferences describe one graph. Allow references to groups that
+    # a later preference will create; final graph validation still rejects cycles.
+    generated_groups = {
+        service["group"] for service in service_catalog() if service["id"] in current_services
+    } if current_services else set()
     for route in routes:
         if not route.enabled:
             continue
         if route.mode != "legacy":
-            result = _transform_current_service(result, nodes, route)
-            current_services.add(route.service)
+            result = _transform_current_service(result, nodes, route, generated_groups)
             continue
         if route.service != "claude":
             raise TemplatePolicyTransformError(
@@ -92,7 +96,9 @@ def _prioritize_service_domains(rules: list, current_services: set[str]) -> list
     return [rule for _, _, rule in prioritized] + remaining
 
 
-def _transform_current_service(config: dict, nodes: list[ProxyNode], route: ServiceRoute) -> dict:
+def _transform_current_service(
+    config: dict, nodes: list[ProxyNode], route: ServiceRoute, generated_groups: set[str],
+) -> dict:
     service = next((item for item in service_catalog() if item["id"] == route.service), None)
     if service is None:
         raise TemplatePolicyTransformError(f"unknown service: {route.service}")
@@ -100,7 +106,7 @@ def _transform_current_service(config: dict, nodes: list[ProxyNode], route: Serv
     groups = {group["name"] for group in config.get("proxy-groups", [])}
     allowed = node_names | {"DIRECT", "REJECT"}
     if route.mode == "manual":
-        allowed |= groups - {service["group"]}
+        allowed |= (groups | generated_groups) - {service["group"]}
     if route.egress not in allowed:
         raise TemplatePolicyTransformError(f"{service['label']} 的出口不存在或不符合模式：{route.egress}")
     if route.mode == "fallback" and (route.egress not in node_names or route.fallback not in node_names):

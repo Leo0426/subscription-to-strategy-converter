@@ -142,7 +142,7 @@ def test_profile_update_rejects_cycle_between_legacy_and_modern_routes(client):
     assert draft.json()["request"]["service_routes"] == []
 
 
-def test_offline_save_rejects_route_referring_to_group_created_later(client):
+def test_offline_save_and_render_accept_group_created_later(client):
     request = {
         "subscription_url": "https://example.com/sub",
         "service_routes": [
@@ -151,11 +151,11 @@ def test_offline_save_rejects_route_referring_to_group_created_later(client):
         ],
     }
     rendered = client.post("/render", json=request)
-    assert rendered.status_code == 400, rendered.text
+    assert rendered.status_code == 200, rendered.text
 
     saved = client.post("/profiles", json=request)
-    assert saved.status_code == 400, saved.text
-    assert client.get("/profiles").json()["profiles"] == []
+    assert saved.status_code == 201, saved.text
+    assert [profile["id"] for profile in client.get("/profiles").json()["profiles"]] == [saved.json()["id"]]
 
 
 def _legacy_store(tmp_path):

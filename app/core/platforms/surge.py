@@ -549,16 +549,27 @@ def substitute_ai_provider_rules(rules: list[Any], rule_providers: dict[str, Any
         for service in service_catalog() if service["category"] == "ai"
         for rule in service["rules"]
     ]
-    present = {_rule_key(rule) for rule in rules if isinstance(rule, str)}
+    # Only earlier rules can cover a provider domain without changing priority.
+    present: set[tuple[str, str]] = set()
+    inserted: set[tuple[str, str, str]] = set()
     result: list[Any] = []
     for rule in rules:
         parts = [part.strip() for part in rule.split(",")] if isinstance(rule, str) else []
         if len(parts) >= 3 and parts[0].upper() == "RULE-SET" and parts[1] in ai_providers:
             for match in matches:
-                if _rule_key(match) not in present:
-                    present.add(_rule_key(match))
+                key = _rule_key(match)
+                if key not in present:
+                    present.add(key)
+                    inserted.add((*key, parts[2]))
                     result.append(f"{match},{parts[2]}")
             continue
+        if isinstance(rule, str):
+            key = _rule_key(rule)
+            # Drop a duplicate only when its replacement is already emitted;
+            # preserve original rules that select a different target.
+            if len(parts) == 3 and (*key, parts[2]) in inserted:
+                continue
+            present.add(key)
         result.append(rule)
     return result
 

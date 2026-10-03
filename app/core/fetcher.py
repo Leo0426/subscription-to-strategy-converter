@@ -220,6 +220,10 @@ async def request_text(url: str, *, headers: dict | None = None, params: dict | 
                             if response.status_code in {502, 503, 504} and attempt == 0:
                                 await asyncio.sleep(0.1)
                                 continue
+                            if response.status_code in {401, 403, 404, 410}:
+                                # Denied or missing sources cannot authorize a stale
+                                # publication. Keep outages/rate limits recoverable.
+                                raise FetchInvalidError(f'subscription source rejected or unavailable: HTTP {response.status_code}')
                             if not 200 <= response.status_code < 300:
                                 raise FetchError(f'subscription fetch failed with HTTP {response.status_code}')
                             content = bytearray()

@@ -104,7 +104,7 @@ docker compose -f docker-compose.yml -f docker-compose.compatibility.yml up -d -
 ARM64 将 amd64 改为 arm64；输出为本地镜像及 dist/docker 归档。
 
 - 更新后先刷新已保存订阅，再让客户端下载并启用；对照工作台配置标识、实际节点和请求记录。
-- 上游暂时不可用可能返回上次成功产物，带 `X-Subflow-Stale: true`；无效来源、配置和鉴权错误直接报错。
+- 上游限流、超时或临时故障可能返回上次成功产物，带 `X-Subflow-Stale: true`；来源返回 401/403/404/410 时直接报错并丢弃该目标旧缓存，无效来源、配置和鉴权错误也不回退。
 - 手机故障需在手机核对版本及 Wi-Fi/蜂窝差异；工作台诊断只读取配置的控制器或本机 Surge。
 
 </details>
