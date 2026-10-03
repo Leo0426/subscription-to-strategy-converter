@@ -1,10 +1,10 @@
 import pytest
 
-from app.core.parser import ParseError, parse_clash_yaml
+from app.core.parser import ParseError, parse_clash_yaml_full
 
 
 def test_clash_yaml_can_be_parsed() -> None:
-    nodes = parse_clash_yaml(
+    nodes, _ = parse_clash_yaml_full(
         """
 proxies:
   - name: 香港-01
@@ -30,12 +30,12 @@ proxies:
 
 def test_empty_subscription_returns_error() -> None:
     with pytest.raises(ParseError, match="YAML must be an object"):
-        parse_clash_yaml("")
+        parse_clash_yaml_full("")
 
 
 def test_proxy_requires_core_fields() -> None:
     with pytest.raises(ParseError, match="missing required fields"):
-        parse_clash_yaml(
+        parse_clash_yaml_full(
             """
 proxies:
   - name: bad

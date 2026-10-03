@@ -15,6 +15,7 @@ from app.ir import BUILTIN_POLICY_TARGETS, ProxyNode
 
 
 _INTERNAL_SETTINGS = {"_surge_source", "source-format", "native_source_format"}
+_GEODATA_SETTINGS = ("geox-url", "geo-auto-update")
 _PROVIDER_REFERENCE = re.compile(r"(^|\()(\s*RULE-SET\s*,\s*)([^,()]+)", re.IGNORECASE)
 
 
@@ -211,6 +212,11 @@ def build_mihomo_config(
                 target_names, native_paths, used_paths,
             )
     result["rules"] = [_rewrite_rule(rule, target_names, rule_provider_names) for rule in compiled["rules"]]
+    # GEOSITE/GEOIP data is a dependency of the generated rules, not airport
+    # connectivity: supply the pinned CDN source only where the source is silent.
+    for key in _GEODATA_SETTINGS:
+        if key in compiled and key not in result:
+            result[key] = deepcopy(compiled[key])
     if str(result.get("mode", "")).lower() in {"global", "direct"}:
         result["mode"] = "rule"
         warnings.append({"code": "source_mode_changed", "field": "mode", "value": "rule",

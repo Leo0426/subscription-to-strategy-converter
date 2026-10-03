@@ -5,10 +5,56 @@ import socket
 import pytest
 import httpx
 
+import app.core.subconverter as subconverter
 from app.core.parsers.clash import clash_to_ir, ir_to_clash_dict
 from app.core.parser import parse_clash_yaml_full
 from app.core.subscription import SubscriptionError, load_subscription
 from app.main import app
+
+
+@pytest.mark.asyncio
+async def test_invalid_subconverter_configuration_is_not_external_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def resolve_public(_hostname: str) -> None:
+        return None
+
+    monkeypatch.setenv("SUBFLOW_SUBCONVERTER_URL", "invalid-url")
+    monkeypatch.setattr(subconverter, "_ensure_resolved_host_is_public", resolve_public)
+
+    with pytest.raises(subconverter.SubconverterError, match="SUBFLOW_SUBCONVERTER_URL") as error:
+        await subconverter.convert_subscription_to_clash("https://example.com/source")
+    assert type(error.value) is subconverter.SubconverterInvalidError
+
+
+@pytest.mark.asyncio
+async def test_invalid_source_url_is_not_external_adapter_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SUBFLOW_SUBCONVERTER_URL", "http://adapter.example.com")
+
+    with pytest.raises(subconverter.SubconverterError, match="local hostnames") as error:
+        await subconverter.convert_subscription_to_clash("http://localhost/source")
+    assert type(error.value) is subconverter.SubconverterInvalidError
+
+
+@pytest.mark.asyncio
+async def test_empty_subconverter_response_is_invalid_source(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def resolve_public(_hostname: str) -> None:
+        return None
+
+    async def empty_response(_url: str, **_kwargs: object) -> str:
+        return ""
+
+    monkeypatch.setenv("SUBFLOW_SUBCONVERTER_URL", "http://adapter.example.com")
+    monkeypatch.setattr(subconverter, "_ensure_resolved_host_is_public", resolve_public)
+    monkeypatch.setattr(subconverter, "request_text", empty_response)
+
+    with pytest.raises(subconverter.SubconverterError, match="empty content") as error:
+        await subconverter.convert_subscription_to_clash("https://example.com/source")
+    assert type(error.value) is subconverter.SubconverterInvalidError
 
 
 @pytest.mark.parametrize(("plugin", "mode", "expected_host"), [
@@ -81,7 +127,7 @@ proxies:
     assert raw_config["dns"]["proxy-server-nameserver"] == ["223.5.5.5"]
 
     async with original_client(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-        response = await client.get("/subscribe", params={"subscription_url": source_url, "target": "mihomo"})
+        response = await client.post("/render", json={"subscription_url": source_url, "target": "mihomo"})
 
     assert response.status_code == 200
     proxies, rendered = parse_clash_yaml_full(response.text)

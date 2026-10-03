@@ -59,6 +59,85 @@ def test_inspect_rule_source_content_counts_plain_rules_and_ignores_comments() -
     assert summary["valid"] is True
 
 
+def test_inspect_rule_source_content_keeps_plain_domain_rules_valid() -> None:
+    summary = inspect_rule_source_content(
+        b"api.openai.com\n+.example.com\n",
+        content_type="text/plain",
+        declared_format="text",
+    )
+
+    assert summary["detected_format"] == "text-rules"
+    assert summary["entry_count"] == 2
+    assert summary["valid"] is True
+
+
+def test_inspect_rule_source_content_rejects_yaml_payload_with_error_message() -> None:
+    summary = inspect_rule_source_content(
+        b"payload:\n  - rate limit\n",
+        content_type="text/yaml",
+        declared_format="yaml",
+    )
+
+    assert summary["valid"] is False
+    assert summary["entry_count"] == 0
+
+
+@pytest.mark.parametrize(
+    ("declared_format", "content", "detected_format"),
+    [
+        ("text", b"payload:\n  - DOMAIN-SUFFIX,openai.com\n", "yaml-payload"),
+        ("yaml", b"DOMAIN-SUFFIX,openai.com\n", "text-rules"),
+    ],
+)
+def test_inspect_rule_source_content_rejects_declared_format_mismatch(
+    declared_format: str, content: bytes, detected_format: str,
+) -> None:
+    summary = inspect_rule_source_content(content, declared_format=declared_format)
+
+    assert summary["detected_format"] == detected_format
+    assert summary["valid"] is False
+
+
+@pytest.mark.parametrize("entry", [
+    "DOMAIN-WILDCARD,*.google.com",
+    "SRC-GEOIP,cn",
+    "SRC-IP-ASN,9808",
+    "SRC-IP-SUFFIX,192.168.1.201/8",
+    "IN-PORT,7890",
+    "IN-TYPE,SOCKS/HTTP",
+    "IN-USER,mihomo",
+    "IN-NAME,ss",
+    "REMATCH-NAME,rematch1",
+    "PROCESS-PATH-WILDCARD,/usr/*/wget",
+    "PROCESS-PATH-REGEX,.*bin/wget",
+    "PROCESS-NAME-WILDCARD,*telegram*",
+    "PROCESS-NAME-REGEX,curl$",
+    "UID,1001",
+    "DSCP,4",
+    "SUB-RULE,(NETWORK,tcp),sub-rule",
+    "MATCH,auto",
+])
+def test_inspect_rule_source_content_accepts_mihomo_classical_rule_types(entry: str) -> None:
+    summary = inspect_rule_source_content(
+        f"payload:\n  - '{entry}'\n".encode(),
+        content_type="text/yaml",
+        declared_format="yaml",
+    )
+
+    assert summary["detected_format"] == "yaml-payload"
+    assert summary["valid"] is True
+
+
+def test_inspect_rule_source_content_rejects_unknown_classical_type() -> None:
+    summary = inspect_rule_source_content(
+        b"payload:\n  - UPSTREAM-ERROR,rate-limit\n",
+        content_type="text/yaml",
+        declared_format="yaml",
+    )
+
+    assert summary["valid"] is False
+
+
 def test_inspect_rule_source_content_accepts_nonempty_declared_mrs_binary() -> None:
     summary = inspect_rule_source_content(
         b"MRS\x00\x01\x02binary",
@@ -405,6 +484,41 @@ async def test_audit_rule_sources_isolates_fetch_failures_and_summarizes_results
     assert report["sources"][0]["name"] == "Broken"
     assert report["sources"][0]["error"] == "timeout"
     assert "content" not in report["sources"][1]
+
+
+@pytest.mark.asyncio
+async def test_audit_rejects_json_error_body_and_cannot_publish_it_as_valid(tmp_path) -> None:
+    provider = {"Broken": {"url": "https://rules.example/broken.txt", "format": "text", "behavior": "domain"}}
+
+    async def fetch(url: str) -> dict:
+        return {"status_code": 200, "final_url": url, "content_type": "application/json",
+                "content": b'{"error":"rate limit"}'}
+
+    report = await audit_rule_sources(provider, {"Broken": ["DIRECT"]}, fetch=fetch)
+    assert report["summary"] == {"total": 1, "valid": 0, "invalid": 1, "failed": 0}
+    assert report["sources"][0]["valid"] is False
+    assert report["sources"][0]["rule_type_counts"] is None
+    assert report["sources"][0]["normalized_sha256"] == ""
+
+    template_path = tmp_path / "leo.yaml"
+    template_path.write_text("rules: []\n", encoding="utf-8")
+    report["template"] = template_audit_metadata({"rule-providers": provider, "rules": []}, template_path)
+    target = tmp_path / "audit.json"
+    with pytest.raises(ValueError, match="refusing to publish"):
+        write_public_audit_snapshot(report, target, template_path=template_path)
+    assert not target.exists()
+
+
+@pytest.mark.asyncio
+async def test_audit_rejects_plain_text_error_body() -> None:
+    provider = {"Broken": {"url": "https://rules.example/broken.txt", "format": "text", "behavior": "domain"}}
+
+    async def fetch(url: str) -> dict:
+        return {"status_code": 200, "final_url": url, "content_type": "text/plain",
+                "content": b"rate limit"}
+
+    report = await audit_rule_sources(provider, {"Broken": ["DIRECT"]}, fetch=fetch)
+    assert report["summary"] == {"total": 1, "valid": 0, "invalid": 1, "failed": 0}
 
 
 @pytest.mark.asyncio

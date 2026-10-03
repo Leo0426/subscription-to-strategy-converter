@@ -7,8 +7,7 @@ from typing import Any
 from app.ir import ProxyNode, TLSConfig, TransportConfig
 
 
-_PROXY_SECTION = re.compile(r"^\s*\[proxy\]\s*$", re.IGNORECASE | re.MULTILINE)
-_SECTION = re.compile(r"^\s*\[[^]]+\]\s*$")
+_SECTION = re.compile(r"^[ \t]*\[([^]\r\n]+)\][ \t]*(?:(?:#|;|//)[^\r\n]*)?$")
 _SUPPORTED_PROTOCOLS = {"ss", "trojan", "vmess", "http", "https", "socks5", "socks5-tls", "anytls"}
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 
@@ -19,7 +18,11 @@ class SurgeParseError(ValueError):
 
 def looks_like_surge_config(content: str) -> bool:
     """Return whether content contains an actual Surge ``[Proxy]`` section."""
-    return _PROXY_SECTION.search(content) is not None
+    for line in content.lstrip("\ufeff").splitlines():
+        section = _SECTION.match(line)
+        if section and section[1].strip().lower() == "proxy":
+            return True
+    return False
 
 
 def _as_bool(value: str | None) -> bool:
@@ -204,12 +207,13 @@ def parse_surge_nodes(content: str) -> list[ProxyNode]:
     in_proxy_section = False
     nodes: list[ProxyNode] = []
 
-    for line_number, raw_line in enumerate(content.splitlines(), start=1):
+    for line_number, raw_line in enumerate(content.lstrip("\ufeff").splitlines(), start=1):
         line = raw_line.strip()
-        if not line or line.startswith(("#", ";")):
+        if not line or line.startswith(("#", ";", "//")):
             continue
-        if _SECTION.match(line):
-            if line.lower() == "[proxy]":
+        section = _SECTION.match(line)
+        if section:
+            if section[1].strip().lower() == "proxy":
                 in_proxy_section = True
                 continue
             if in_proxy_section:

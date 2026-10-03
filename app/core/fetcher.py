@@ -12,10 +12,15 @@ import json
 import httpx
 
 from app.core.network import fetch_timeout, max_subscription_bytes, outbound_client
+from app.core.address_binding import ADDRESS_EXTENSION
 
 
 class FetchError(ValueError):
     pass
+
+
+class FetchInvalidError(FetchError):
+    """The source URL or response violates an input or safety constraint."""
 
 
 BLOCKED_HOSTS = {"localhost"}
@@ -39,15 +44,19 @@ DEFAULT_SUBSCRIPTION_USER_AGENT = "clash.meta/1.19.30 mihomo/1.19.30 subflow/0.1
 
 
 def _validate_url(url: str) -> None:
-    parsed = urlparse(url)
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+    except ValueError as exc:
+        raise FetchInvalidError("subscription_url is invalid") from exc
     if parsed.scheme not in {"http", "https"}:
-        raise FetchError("subscription_url must use http or https")
-    if not parsed.hostname:
-        raise FetchError("subscription_url must include a hostname")
+        raise FetchInvalidError("subscription_url must use http or https")
+    if not hostname:
+        raise FetchInvalidError("subscription_url must include a hostname")
 
-    hostname = parsed.hostname.strip().lower()
+    hostname = hostname.strip().lower()
     if hostname in BLOCKED_HOSTS or hostname.endswith(".localhost"):
-        raise FetchError("local hostnames are not allowed")
+        raise FetchInvalidError("local hostnames are not allowed")
 
     try:
         ip = ipaddress.ip_address(hostname)
@@ -55,7 +64,7 @@ def _validate_url(url: str) -> None:
         ip = None
 
     if ip is not None and _is_blocked_ip(ip):
-        raise FetchError("private or local IP URLs are not allowed")
+        raise FetchInvalidError("private or local IP URLs are not allowed")
 
 
 def _is_blocked_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
@@ -119,13 +128,14 @@ async def _resolve_via_doh(hostname: str) -> list:
         return [ip for answer in answers for ip in answer]
 
 
-async def _ensure_resolved_host_is_public(hostname: str) -> None:
+async def _ensure_resolved_host_is_public(hostname: str) -> tuple[str, ...]:
     try:
         results = await asyncio.to_thread(socket.getaddrinfo, hostname, None, type=socket.SOCK_STREAM)
     except socket.gaierror as exc:
         raise FetchError(f"could not resolve subscription host: {hostname}") from exc
 
     fake_ip_hits: list[ipaddress.IPv4Address | ipaddress.IPv6Address] = []
+    public_addresses: list[str] = []
     for result in results:
         try:
             ip = ipaddress.ip_address(result[4][0])
@@ -134,10 +144,14 @@ async def _ensure_resolved_host_is_public(hostname: str) -> None:
         if _is_fake_ip(ip):
             fake_ip_hits.append(ip)
         elif _is_blocked_ip(ip):
-            raise FetchError(_blocked_ip_message(ip))
+            raise FetchInvalidError(_blocked_ip_message(ip))
+        else:
+            public_addresses.append(str(ip))
 
     if not fake_ip_hits:
-        return
+        if not public_addresses:
+            raise FetchError(f"could not resolve subscription host: {hostname}")
+        return tuple(dict.fromkeys(public_addresses))
 
     tasks = [asyncio.create_task(resolver(hostname)) for resolver in (_resolve_via_udp_dns, _resolve_via_doh)]
     try:
@@ -147,15 +161,15 @@ async def _ensure_resolved_host_is_public(hostname: str) -> None:
                 continue
             for ip in candidates:
                 if _is_blocked_ip(ip):
-                    raise FetchError(_blocked_ip_message(ip))
-            return
+                    raise FetchInvalidError(_blocked_ip_message(ip))
+            return tuple(dict.fromkeys(str(ip) for ip in candidates))
     finally:
         for task in tasks:
             if not task.done():
                 task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
 
-    raise FetchError(_blocked_ip_message(fake_ip_hits[0]))
+    raise FetchInvalidError(_blocked_ip_message(fake_ip_hits[0]))
 
 
 async def fetch_subscription(url: str, *, target: str = "mihomo") -> str:
@@ -182,19 +196,21 @@ async def request_text(url: str, *, headers: dict | None = None, params: dict | 
             # client's own jar rejects cookies from every subscription.
             cookies = httpx.Cookies()
             for hop in range(6):
+                addresses = ()
                 if public:
                     _validate_url(current_url)
-                    await _ensure_resolved_host_is_public(urlparse(current_url).hostname)
+                    addresses = await _ensure_resolved_host_is_public(urlparse(current_url).hostname)
                 for attempt in range(2):
                     if attempt and public:
-                        await _ensure_resolved_host_is_public(urlparse(current_url).hostname)
+                        addresses = await _ensure_resolved_host_is_public(urlparse(current_url).hostname)
                     try:
-                        async with client.stream('GET', current_url, headers=headers, params=params, cookies=cookies) as response:
+                        async with client.stream('GET', current_url, headers=headers, params=params, cookies=cookies,
+                                                 extensions={ADDRESS_EXTENSION: addresses}) as response:
                             cookies.extract_cookies(response)
                             if response.is_redirect and redirects:
                                 location = response.headers.get('location')
                                 if not location:
-                                    raise FetchError('subscription redirect response is missing Location')
+                                    raise FetchInvalidError('subscription redirect response is missing Location')
                                 current_url = str(response.url.join(location))
                                 params = None
                                 break
@@ -207,15 +223,17 @@ async def request_text(url: str, *, headers: dict | None = None, params: dict | 
                             limit = max_subscription_bytes()
                             async for chunk in response.aiter_bytes():
                                 if len(content) + len(chunk) > limit:
-                                    raise FetchError('subscription exceeds decoded size limit')
+                                    raise FetchInvalidError('subscription exceeds decoded size limit')
                                 content.extend(chunk)
                             return content.decode(response.encoding or 'utf-8', errors='replace')
                     except httpx.TransportError:
                         if attempt:
                             raise
                         await asyncio.sleep(0.1)
-            raise FetchError('subscription fetch exceeded redirect limit')
+            raise FetchInvalidError('subscription fetch exceeded redirect limit')
     except TimeoutError as exc:
         raise FetchError('subscription refresh deadline exceeded') from exc
+    except httpx.InvalidURL as exc:
+        raise FetchInvalidError('subscription_url is invalid') from exc
     except httpx.HTTPError as exc:
         raise FetchError(f'subscription network failure ({type(exc).__name__})') from exc

@@ -869,18 +869,25 @@ def test_leo_surge_keeps_core_services_when_mihomo_only_rules_are_skipped() -> N
     assert conf.index("/rule/Surge/YouTube/YouTube.list") < conf.index(
         "/rule/Surge/Google/Google.list"
     )
-    assert {warning["code"] for warning in warnings} == {
-        "unsupported_rule_sets",
-        "unsupported_rule_types",
-    }
-    skipped_sets = next(
-        warning for warning in warnings if warning["code"] == "unsupported_rule_sets"
-    )
-    assert skipped_sets["count"] == 1
-    assert "category-ai-!cn.list" in skipped_sets["examples"][0]
+    # The Mihomo-only category-ai-!cn list is replaced by the catalog's AI
+    # destinations at the same position, ahead of the broad Google list.
+    assert {warning["code"] for warning in warnings} == {"unsupported_rule_types"}
+    assert "category-ai-!cn" not in conf
+    for rule in (
+        "DOMAIN-SUFFIX,gemini.google.com,AI 服务",
+        "DOMAIN-SUFFIX,aistudio.google.com,AI 服务",
+        "DOMAIN-SUFFIX,generativelanguage.googleapis.com,AI 服务",
+        "DOMAIN-SUFFIX,perplexity.ai,AI 服务",
+        "DOMAIN-SUFFIX,cursor.com,AI 服务",
+        "DOMAIN-SUFFIX,cursor.sh,AI 服务",
+        "DOMAIN-SUFFIX,githubcopilot.com,AI 服务",
+    ):
+        assert conf.index(rule) < conf.index("/rule/Surge/Google/Google.list"), rule
+        assert conf.index(rule) < conf.index("/rule/Surge/GitHub/GitHub.list"), rule
+    assert conf.count("DOMAIN-SUFFIX,openai.com,") == 1
     assert "DOMAIN-SUFFIX,cn,DIRECT" in conf
     assert "DEST-PORT,10000-65535,默认代理" not in conf
-    assert "FINAL,默认代理" in conf
+    assert "FINAL,默认代理,dns-failed" in conf
 
 
 def test_leo_surge_keeps_domestic_douyin_and_fanqie_domain_routes() -> None:
@@ -1080,3 +1087,98 @@ def test_build_surge_config_skips_non_b7_clash_yaml() -> None:
     assert warnings[0]["examples"] == [
         "https://raw.githubusercontent.com/ameyukisora/Clash-Rule/abc/provider/fakeip-filter.yaml"
     ]
+
+
+def _rule_section(conf: str) -> list[str]:
+    return conf.split("[Rule]", 1)[1].split("\n[", 1)[0].strip().splitlines()
+
+
+def test_china_geoip_resolves_when_geosite_cn_is_dropped() -> None:
+    conf, _ = build_surge_config(
+        [],
+        [],
+        ["GEOSITE,cn,DIRECT", "GEOIP,cn,DIRECT,no-resolve", "MATCH,默认代理"],
+        {},
+    )
+
+    # Without GEOSITE,cn a no-resolve GEOIP rule never sees domestic .com
+    # domains, so they would all fall through to the proxied FINAL policy.
+    # A failed domestic lookup must fall through to FINAL, not fail the request.
+    assert _rule_section(conf) == ["GEOIP,cn,DIRECT", "FINAL,默认代理,dns-failed"]
+
+
+def test_china_geoip_keeps_no_resolve_without_a_dropped_geosite_cn() -> None:
+    conf, _ = build_surge_config(
+        [],
+        [],
+        ["GEOIP,cn,DIRECT,no-resolve", "GEOIP,cn,默认代理,no-resolve", "MATCH,DIRECT"],
+        {},
+    )
+
+    assert "GEOIP,cn,DIRECT,no-resolve" in _rule_section(conf)
+    assert "GEOIP,cn,默认代理,no-resolve" in _rule_section(conf)
+
+
+def test_leo_surge_routes_domestic_domains_direct() -> None:
+    nodes = [ProxyNode(name="香港 01", protocol="ss", server="hk.example.com", port=443,
+                       extra={"cipher": "aes-128-gcm", "password": "x"})]
+    config = apply_template(load_template(LEO_TEMPLATE_ID), nodes)
+    conf, _ = build_surge_config(
+        nodes, config["proxy-groups"], config["rules"], config["rule-providers"]
+    )
+    rules = _rule_section(conf)
+
+    assert "GEOIP,cn,DIRECT" in rules
+    assert "GEOIP,cn,DIRECT,no-resolve" not in rules
+    assert rules.index("GEOIP,cn,DIRECT") < rules.index("FINAL,默认代理,dns-failed")
+
+
+def test_named_geosite_tags_map_to_pinned_surge_lists() -> None:
+    conf, warnings = build_surge_config(
+        [],
+        [],
+        [
+            "GEOSITE,netflix,流媒体",
+            "GEOSITE,steam@cn,DIRECT",
+            "GEOSITE,category-ads-all,REJECT",
+            "GEOSITE,geolocation-!cn,默认代理",
+            "MATCH,DIRECT",
+        ],
+        {},
+    )
+    base = (
+        "https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@"
+        "8818705adee20571a856daf11c9fc69c4929109a/rule/Surge"
+    )
+
+    assert _rule_section(conf) == [
+        f"RULE-SET,{base}/Netflix/Netflix.list,流媒体,no-resolve",
+        f"RULE-SET,{base}/SteamCN/SteamCN.list,DIRECT,no-resolve",
+        f"DOMAIN-SET,{base}/AdvertisingLite/AdvertisingLite_Domain.list,REJECT",
+        "FINAL,DIRECT",
+    ]
+    assert [w for w in warnings if w["code"] == "unsupported_rule_types"] == [
+        {
+            "code": "unsupported_rule_types",
+            "count": 1,
+            "rule_count": 1,
+            "types": ["GEOSITE"],
+            "suggestion": "Surge 不支持这些 Mihomo 规则类型，已跳过对应规则",
+        }
+    ]
+
+
+def test_leo_surge_service_groups_are_not_empty() -> None:
+    nodes = [ProxyNode(name=n, protocol="ss", server="node.example.com", port=443,
+                       extra={"cipher": "aes-128-gcm", "password": "x"})
+             for n in ("香港 01", "美国 01", "台湾 01")]
+    config = apply_template(load_template(LEO_TEMPLATE_ID), nodes)
+    conf, _ = build_surge_config(
+        nodes, config["proxy-groups"], config["rules"], config["rule-providers"]
+    )
+    rules = _rule_section(conf)
+    targets = {line.split(",")[2] for line in rules if line.startswith(("RULE-SET,", "DOMAIN-SET,"))}
+
+    assert {"流媒体", "游戏服务", "金融服务", "美国节点", "台湾节点", "REJECT"} <= targets
+    assert any("/TikTok/TikTok.list,美国节点" in line for line in rules)
+    assert any("/Bahamut/Bahamut.list,台湾节点" in line for line in rules)

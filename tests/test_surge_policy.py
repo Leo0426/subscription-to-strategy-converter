@@ -52,12 +52,6 @@ def test_surge_protocol_preferences_are_normalized_and_deduplicated() -> None:
     assert request.surge_preferences.auto_test_protocols == ["anytls", "ss"]
 
 
-def test_legacy_request_defaults_to_no_surge_filter() -> None:
-    request = ConvertRequest(subscription_url="https://example.com/sub")
-
-    assert request.surge_preferences.auto_test_protocols == []
-
-
 def test_anytls_filter_reduces_automatic_groups_but_keeps_manual_nodes() -> None:
     nodes = mixed_nodes()
     config = apply_template(load_template(LEO_TEMPLATE_ID), nodes)

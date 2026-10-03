@@ -136,7 +136,7 @@ def test_shadowrocket_native_protocols_are_not_filtered_by_our_legacy_serializer
     client, state = shadowrocket_client
     state["content"] = "proxies:\n  - {name: WG, type: wireguard, server: wg.example.com, port: 443}\n"
     for target in ("shadowrocket", "shadowrocket-config"):
-        response = client.get("/subscribe", params={"subscription_url": "https://example.com/sub", "target": target})
+        response = client.post("/render", json={"subscription_url": "https://example.com/sub", "target": target})
         assert response.status_code == 200
         assert "WG" in response.text
         if target == "shadowrocket":
@@ -156,3 +156,54 @@ def test_shadowrocket_pair_refreshes_nodes_and_service_members_without_new_urls(
         assert "美国 02" in refreshed.text
         assert "美国 01" not in refreshed.text
         assert "X-Subflow-Stale" not in refreshed.headers
+
+
+def test_shadowrocket_china_geoip_resolves_when_geosite_cn_is_dropped() -> None:
+    nodes = [clash_to_ir({
+        "name": "香港 01", "type": "ss", "server": "hk.example.com", "port": 443,
+        "cipher": "aes-128-gcm", "password": "x",
+    })]
+    config, _ = build_shadowrocket_config(
+        nodes,
+        [],
+        ["GEOSITE,cn,DIRECT", "GEOIP,cn,DIRECT,no-resolve", "MATCH,DIRECT"],
+        {},
+    )
+
+    assert "GEOIP,cn,DIRECT\n" in config
+    assert "GEOIP,cn,DIRECT,no-resolve" not in config
+
+
+def test_shadowrocket_maps_named_geosite_tags_to_surge_lists() -> None:
+    nodes = [clash_to_ir({
+        "name": "香港 01", "type": "ss", "server": "hk.example.com", "port": 443,
+        "cipher": "aes-128-gcm", "password": "x",
+    })]
+    config, _ = build_shadowrocket_config(
+        nodes, [], ["GEOSITE,netflix,DIRECT", "GEOSITE,cn,DIRECT", "MATCH,DIRECT"], {},
+    )
+
+    assert "/Netflix/Netflix.list,DIRECT,no-resolve" in config
+    assert "GEOSITE" not in config
+
+
+def test_shadowrocket_substitutes_ai_catalog_without_surge_only_options() -> None:
+    nodes = [clash_to_ir({
+        "name": "香港 01", "type": "ss", "server": "hk.example.com", "port": 443,
+        "cipher": "aes-128-gcm", "password": "x",
+    })]
+    providers = {"ai-4": {
+        "type": "http", "behavior": "domain", "format": "text",
+        "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/abc/geo/geosite/category-ai-!cn.list",
+    }}
+    config, warnings = build_shadowrocket_config(
+        nodes, [],
+        ["RULE-SET,ai-4,DIRECT", "GEOSITE,cn,DIRECT", "GEOIP,cn,DIRECT,no-resolve", "MATCH,DIRECT"],
+        providers,
+    )
+
+    assert "DOMAIN-SUFFIX,gemini.google.com,DIRECT" in config
+    assert "category-ai-!cn" not in config
+    assert not any(w["code"] == "unsupported_rule_sets" for w in warnings)
+    # dns-failed is a Surge option; keep Shadowrocket output to syntax it parses.
+    assert "dns-failed" not in config

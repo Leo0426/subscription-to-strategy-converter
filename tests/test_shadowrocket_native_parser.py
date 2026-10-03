@@ -18,8 +18,8 @@ def _ssr(name, password="test-password"):
 
 
 def _parse(content):
-    from app.core.parsers.shadowrocket import parse_shadowrocket_inventory
-    return parse_shadowrocket_inventory(content)
+    from app.core.parsers.shadowrocket import parse_shadowrocket_source
+    return parse_shadowrocket_source(content)[0]
 
 
 def test_outer_base64_inventory_keeps_all_original_ssr_and_anytls_names():

@@ -10,6 +10,7 @@ from app.ir import BUILTIN_POLICY_TARGETS
 
 _SECTION = re.compile(r"^[ \t]*\[([^]\r\n]+)\][ \t]*(?:(?:#|;|//)[^\r\n]*)?\r?\n?$")
 _MANAGED = re.compile(r"^\s*#!MANAGED-CONFIG\b", re.IGNORECASE)
+_RULE_OPTIONS = frozenset({"no-resolve", "dns-failed"})
 
 
 class NativeSurgeProfileError(ValueError):
@@ -20,11 +21,11 @@ def _sections(profile: str) -> list[tuple[str, str]]:
     sections: list[tuple[str, str]] = []
     name = ""
     lines: list[str] = []
-    for line in profile.splitlines(keepends=True):
+    for line_number, line in enumerate(profile.splitlines(keepends=True)):
         if _MANAGED.match(line.lstrip("\ufeff")):
             # The input's update URL would replace our rules with the raw source.
             continue
-        match = _SECTION.match(line)
+        match = _SECTION.match(line.lstrip("\ufeff") if line_number == 0 else line)
         if match:
             if lines:
                 sections.append((name, "".join(lines)))
@@ -94,7 +95,10 @@ def replace_surge_routing(
     for line in replacements["rule"].splitlines()[1:]:
         parts = line.split(",")
         if len(parts) > 1:
-            position = -2 if parts[-1].strip().lower() == "no-resolve" else -1
+            # Trailing rule options (no-resolve, dns-failed) follow the target.
+            position = -1
+            while len(parts) + position > 1 and parts[position].strip().lower() in _RULE_OPTIONS:
+                position -= 1
             parts[position] = target(parts[position].strip())
             line = ",".join(parts)
         rule_lines.append(line)

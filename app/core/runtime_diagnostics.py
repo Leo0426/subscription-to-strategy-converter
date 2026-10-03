@@ -150,8 +150,10 @@ async def _surge(service: dict) -> dict:
             return {'status':'unavailable','message':'节点名称无法安全用于 CLI 探测。','actual_node':None}
         async def probe(url):
             try:
-                _, output = await _cli('http','probe',url,node)
+                code, output = await _cli('http','probe',url,node)
             except OSError:
+                return {'url':url, 'status':'failed', 'http_status':None, 'latency_ms':None}
+            if code:
                 return {'url':url, 'status':'failed', 'http_status':None, 'latency_ms':None}
             status = re.search(r'^Status: (\d+)', output, re.MULTILINE)
             duration = re.search(r'^Duration: ([\d.]+)', output, re.MULTILINE)

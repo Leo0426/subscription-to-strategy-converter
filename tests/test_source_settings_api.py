@@ -48,15 +48,13 @@ US  01 = ss, edge.example, 443, method=aes-128-gcm, password=test-only
         yield client, state
 
 
-@pytest.mark.parametrize("endpoint", ["render", "subscribe", "profile"])
+@pytest.mark.parametrize("endpoint", ["render", "profile"])
 @pytest.mark.parametrize("target", ["mihomo", "shadowrocket-config"])
 def test_public_output_uses_airport_settings(source_client, endpoint, target):
     client, _ = source_client
     request = {"subscription_url": "https://example.com/source", "target": target}
     if endpoint == "render":
         response = client.post("/render", json=request)
-    elif endpoint == "subscribe":
-        response = client.get("/subscribe", params=request)
     else:
         saved = client.post("/profiles", json={**request, "target": "mihomo"})
         assert saved.status_code == 201, saved.text
@@ -182,3 +180,19 @@ def test_materialized_workspace_keeps_necessary_override_warning(source_client):
     assert response.status_code == 200
     assert any(w["code"] == "source_mode_changed"
                for w in json.loads(response.headers.get("X-Compile-Warnings", "[]")))
+
+
+@pytest.mark.parametrize("target", ["mihomo", "surge"])
+def test_node_dns_is_preserved_or_disclosed_without_leaking_credentials(source_client, target):
+    client, state = source_client
+    dns = {"proxy-server-nameserver": SOURCE["dns"]["proxy-server-nameserver"]}
+    state["config"]["dns"] = dns
+    response = client.post("/render", json={"subscription_url": "https://example.com/source", "target": target})
+    assert response.status_code == 200, response.text
+    if target == "mihomo":
+        assert YAML(typ="safe").load(response.text)["dns"] == dns
+    else:
+        warnings = response.headers.get("X-Compile-Warnings", "[]")
+        assert any(warning["code"] == "unsupported_node_dns" for warning in json.loads(warnings))
+        assert "node.example" not in warnings and "private-token" not in warnings
+        assert "DOMAIN-SUFFIX,chatgpt.com,AI 服务" in response.text

@@ -85,7 +85,7 @@ def test_chatgpt_has_an_inline_ai_route_in_both_compiled_targets(destination) ->
 
 
 def test_chatgpt_route_survives_public_preview_simulation_render_and_subscription(
-    monkeypatch,
+    monkeypatch, tmp_path,
 ) -> None:
     nodes = _nodes()
     config = compile_mihomo_config(
@@ -117,9 +117,13 @@ def test_chatgpt_route_survives_public_preview_simulation_render_and_subscriptio
         assert trace["resolved"] == "US01", destination
         required_rules.add(trace["matched_rule"]["raw"])
 
+    monkeypatch.setenv("SUBFLOW_DB_PATH", str(tmp_path / "profiles.db"))
+    created = client.post("/profiles", json=request)
+    assert created.status_code == 201, created.text
+    saved = created.json()
     for target in ("mihomo", "surge"):
         rendered = client.post("/render", json={**request, "target": target})
-        subscribed = client.get("/subscribe", params={**request, "target": target})
+        subscribed = client.get(saved["subscribe_urls"]["clash" if target == "mihomo" else "surge"])
         for artifact in (rendered, subscribed):
             assert artifact.status_code == 200
             emitted = (

@@ -205,6 +205,14 @@
         {
           "match": "DOMAIN-SUFFIX,generativelanguage.googleapis.com",
           "template_inline": false
+        },
+        {
+          "match": "DOMAIN-SUFFIX,gemini.google.com",
+          "template_inline": false
+        },
+        {
+          "match": "DOMAIN-SUFFIX,aistudio.google.com",
+          "template_inline": false
         }
       ],
       "probe_urls": [
@@ -212,7 +220,9 @@
       ],
       "destinations": [
         "generativeai.google",
-        "generativelanguage.googleapis.com"
+        "generativelanguage.googleapis.com",
+        "gemini.google.com",
+        "aistudio.google.com"
       ],
       "rule_providers": [],
       "geosite_tags": []
@@ -495,6 +505,94 @@
       "rule_providers": [],
       "geosite_tags": [
         "spotify"
+      ]
+    },
+    {
+      "id": "hbo",
+      "group": "HBO",
+      "label": "HBO Max",
+      "category": "streaming",
+      "default_target": "流媒体",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,max.com",
+          "template_inline": false
+        },
+        {
+          "match": "DOMAIN-SUFFIX,hbomax.com",
+          "template_inline": false
+        },
+        {
+          "match": "DOMAIN-SUFFIX,hbo.com",
+          "template_inline": false
+        }
+      ],
+      "probe_urls": [],
+      "destinations": [
+        "max.com",
+        "hbomax.com",
+        "hbo.com"
+      ],
+      "rule_providers": [],
+      "geosite_tags": [
+        "hbo"
+      ]
+    },
+    {
+      "id": "tiktok",
+      "group": "TikTok",
+      "label": "TikTok",
+      "category": "streaming",
+      "default_target": "美国节点",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,tiktok.com",
+          "template_inline": false
+        },
+        {
+          "match": "DOMAIN-SUFFIX,tiktokv.com",
+          "template_inline": false
+        },
+        {
+          "match": "DOMAIN-SUFFIX,tiktokcdn.com",
+          "template_inline": false
+        }
+      ],
+      "probe_urls": [],
+      "destinations": [
+        "tiktok.com",
+        "tiktokv.com",
+        "tiktokcdn.com"
+      ],
+      "rule_providers": [],
+      "geosite_tags": [
+        "tiktok"
+      ]
+    },
+    {
+      "id": "bahamut",
+      "group": "Bahamut",
+      "label": "巴哈姆特动画疯",
+      "category": "streaming",
+      "default_target": "台湾节点",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,gamer.com.tw",
+          "template_inline": false
+        },
+        {
+          "match": "DOMAIN-SUFFIX,bahamut.com.tw",
+          "template_inline": false
+        }
+      ],
+      "probe_urls": [],
+      "destinations": [
+        "gamer.com.tw",
+        "bahamut.com.tw"
+      ],
+      "rule_providers": [],
+      "geosite_tags": [
+        "bahamut"
       ]
     },
     {

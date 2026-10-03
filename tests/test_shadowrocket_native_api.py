@@ -66,14 +66,12 @@ def native_api(monkeypatch, tmp_path):
         yield client, state
 
 
-@pytest.mark.parametrize('endpoint', ['render', 'subscribe', 'profile'])
+@pytest.mark.parametrize('endpoint', ['render', 'profile'])
 def test_native_shadowrocket_subscription_is_returned_unchanged(native_api, endpoint):
     client, state = native_api
     request = {'subscription_url': 'https://example.com/all/', 'target': 'shadowrocket'}
     if endpoint == 'render':
         response = client.post('/render', json=request)
-    elif endpoint == 'subscribe':
-        response = client.get('/subscribe', params=request)
     else:
         saved = client.post('/profiles', json={**request, 'publication_targets': ['shadowrocket']})
         assert saved.status_code == 201, saved.text
@@ -117,6 +115,20 @@ def test_full_native_shadowrocket_profile_keeps_all_nonrouting_sections(native_a
     assert 'Subflow 默认代理 = select,' in new['proxy group']
     assert 'FINAL,Subflow 默认代理' in new['rule']
     assert 'airport-old-rule.example' not in new['rule']
+
+
+def test_native_shadowrocket_first_rule_section_with_bom_is_replaced(native_api):
+    client, state = native_api
+    state['source'] = ('\ufeff[Rule]\nDOMAIN,airport-old-rule.example,DIRECT\n\n'
+                       '[Proxy]\nUS  01 = anytls, native.example, 443, password=test-secret\n')
+
+    response = client.post('/render', json={
+        'subscription_url': 'https://example.com/all/', 'target': 'shadowrocket-config',
+    })
+
+    assert response.status_code == 200, response.text
+    assert 'airport-old-rule.example' not in response.text
+    assert response.text.count('[Rule]') == 1
 
 
 def test_each_selected_client_is_checked_against_its_own_native_response(native_api):

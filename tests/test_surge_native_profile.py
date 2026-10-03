@@ -125,14 +125,12 @@ def native_client(monkeypatch, tmp_path):
         yield client, state
 
 
-@pytest.mark.parametrize("endpoint", ["render", "subscribe", "profile"])
+@pytest.mark.parametrize("endpoint", ["render", "profile"])
 def test_native_subscription_preserves_connectivity_and_replaces_routing(native_client, endpoint):
     client, _ = native_client
     request = {"subscription_url": "https://example.com/source", "target": "surge"}
     if endpoint == "render":
         response = client.post("/render", json=request)
-    elif endpoint == "subscribe":
-        response = client.get("/subscribe", params=request)
     else:
         saved = client.post("/profiles", json=request)
         assert saved.status_code == 201, saved.text
@@ -252,6 +250,30 @@ def test_native_routing_replacement_handles_commented_headers_and_bom(native_cli
     assert "source-token" not in response.text
     assert response.text.count("[Rule]") == 1
     assert response.text.count("[Proxy Group]") == 1
+
+
+@pytest.mark.parametrize("proxy_header", [
+    "[Proxy] # airport nodes",
+    "[Proxy] ; airport nodes",
+    "[Proxy] // airport nodes",
+    "\ufeff[Proxy] # airport nodes",
+])
+def test_surge_source_accepts_commented_proxy_header_and_bom(native_client, proxy_header):
+    client, state = native_client
+    state["source"] = (
+        f"{proxy_header}\n"
+        "US01 = ss, node.example.com, 443, encrypt-method=aes-128-gcm, password=example\n"
+        "[Proxy Group] # airport groups\nAirport = select, US01\n"
+        "[Rule] // airport routing\nDOMAIN,provider-old-rule.example,Airport\n"
+    )
+
+    response = client.post("/render", json={
+        "subscription_url": "https://example.com/source", "target": "surge",
+    })
+
+    assert response.status_code == 200, response.text
+    assert "US01 = ss, node.example.com, 443" in response.text
+    assert "provider-old-rule.example" not in response.text
 
 
 def test_native_source_keeps_existing_normalized_node_choices_for_other_clients(native_client):

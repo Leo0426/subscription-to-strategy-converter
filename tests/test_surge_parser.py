@@ -30,7 +30,19 @@ Proxy = select, VMess-WS, HTTPS, SOCKS
 
 def test_surge_detection_requires_proxy_section() -> None:
     assert looks_like_surge_config("[Proxy]\nHK = ss, example.com, 443") is True
+    assert looks_like_surge_config("\ufeff[Proxy] # airport nodes\nHK = ss, example.com, 443") is True
     assert looks_like_surge_config("not YAML; text mentions [Proxy] inline") is False
+
+
+def test_surge_parser_stops_at_commented_next_section() -> None:
+    nodes = parse_surge_nodes(
+        "[Proxy] // airport nodes\n"
+        "HK = ss, hk.example.com, 443, password=secret\n"
+        "[General] # airport settings\n"
+        "Unused = ss, not-a-node.example.com, 443, password=secret\n"
+    )
+
+    assert [node.name for node in nodes] == ["HK"]
 
 
 def test_surge_parser_preserves_quoted_commas_in_option_values() -> None:

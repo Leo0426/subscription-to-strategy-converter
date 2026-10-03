@@ -112,14 +112,15 @@ def test_diagnostics_are_static_until_runtime_is_explicitly_requested(client):
     assert response.json()['service']['id']=='openai'
 
 
-def test_catalog_generated_template_and_rule_packs_share_the_same_rules(client):
+def test_catalog_and_generated_template_share_the_same_rules(client):
     import subprocess
     result = subprocess.run(['.venv/bin/python','scripts/sync-service-rules.py','--check'], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
     services = client.get('/services').json()['services']
-    packs = {pack['id']:pack for pack in client.get('/rule-packs').json()['packs']}
+    from app.core.template_engine import LEO_TEMPLATE_ID, load_template
+    rules = load_template(LEO_TEMPLATE_ID)['rules']
     for service in services:
-        assert packs[service['id']]['rules'] == [f"{r['match']},{service['group']}" for r in service['rules']]
+        assert all(f"{r['match']},{service['default_target']}" in rules for r in service['rules'] if r.get('template_inline'))
 
 
 def test_diagnostic_request_cannot_supply_a_controller_or_arbitrary_probe_url(client):
@@ -200,6 +201,26 @@ def test_surge_diagnostics_compare_mobile_domains_and_redact_rule_urls(client, m
     assert runtime['selection_stable'] is True
     assert {r['domain'] for r in runtime['domain_routes']} >= {'ios.chat.openai.com','humb.apple.com','ws.chatgpt.com'}
     assert 'secret=private' not in response.text
+
+
+def test_surge_probe_requires_successful_cli_exit_even_with_http_status_in_output(client, monkeypatch):
+    monkeypatch.setenv('SUBFLOW_SURGE_CLI', __file__)
+
+    async def command(*args):
+        if args[:2] == ('http', 'probe'):
+            return 1, 'Status: 200\nDuration: 12\nprobe failed\n'
+        return 0, 'Final policy: US01 (Shadowsocks)\n'
+
+    monkeypatch.setattr('app.core.runtime_diagnostics._cli', command)
+    response = client.post('/diagnose', json={
+        'request': request(), 'service': 'openai', 'runtime': True, 'client': 'surge',
+    })
+
+    assert response.status_code == 200, response.text
+    probes = response.json()['runtime']['probes']
+    assert probes
+    assert all(probe['status'] == 'failed' for probe in probes)
+    assert all(probe['http_status'] is None and probe['latency_ms'] is None for probe in probes)
 
 
 def test_incompatible_fixed_node_cannot_publish_even_with_another_supported_node(client, monkeypatch):

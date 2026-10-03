@@ -1,3 +1,5 @@
+import pytest
+
 from fastapi.testclient import TestClient
 
 from app.core.template_policy_transform import analyze_claude_template
@@ -29,8 +31,17 @@ proxies:
 """
 
 SHARED_AI_TEMPLATE = "local:community_templates/leo/leo.yaml"
-DEDICATED_TEMPLATE = SHARED_AI_TEMPLATE
-MRS_TEMPLATE = SHARED_AI_TEMPLATE
+
+
+@pytest.fixture
+def client(monkeypatch, tmp_path):
+    async def fetch(_url):
+        return SUBSCRIPTION
+
+    monkeypatch.setattr("app.core.subscription.fetch_subscription", fetch)
+    monkeypatch.setenv("SUBFLOW_DB_PATH", str(tmp_path / "profiles.db"))
+    with TestClient(app) as client:
+        yield client
 
 
 def test_claude_capability_rejects_mac_only_process_rules_for_surge_ios() -> None:
@@ -49,28 +60,8 @@ def test_claude_capability_rejects_mac_only_process_rules_for_surge_ios() -> Non
     )
 
 
-def test_claude_template_catalog_exposes_only_existing_policies_and_surge_gate() -> None:
-    response = TestClient(app).get("/claude/templates")
-
-    assert response.status_code == 200
-    templates = response.json()["templates"]
-    assert templates
-    assert all(item["claude"]["contains_claude"] for item in templates)
-
-    list_template = next(item for item in templates if item["id"] == SHARED_AI_TEMPLATE)
-    assert list_template["claude"]["surge_compatible"] is False
-    assert list_template["claude"]["current_targets"] == ["AI 服务"]
-
-    assert [item["id"] for item in templates] == [SHARED_AI_TEMPLATE]
-    assert list_template["claude"]["surge_incompatibility_reasons"]
-
-
-def test_workspace_customizes_only_existing_claude_policy_subgraph(monkeypatch) -> None:
-    async def fake_fetch_subscription(url: str) -> str:
-        return SUBSCRIPTION
-
-    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
-    response = TestClient(app).post(
+def test_workspace_customizes_only_existing_claude_policy_subgraph(client) -> None:
+    response = client.post(
         "/workspace/preview",
         json={
             "subscription_url": "https://example.com/sub",
@@ -83,6 +74,7 @@ def test_workspace_customizes_only_existing_claude_policy_subgraph(monkeypatch) 
     assert response.status_code == 200
     workspace = response.json()["workspace"]
     groups = {group["name"]: group for group in workspace["proxy_groups"]}
+    assert [group["name"] for group in workspace["proxy_groups"] if "Claude" in group["name"]] == ["Claude"]
     assert groups["Claude"]["members"] == ["US-Stable", "AI 服务"]
 
     rules = workspace["rules"]
@@ -100,12 +92,8 @@ def test_workspace_customizes_only_existing_claude_policy_subgraph(monkeypatch) 
     assert "/rule/Clash/Claude/" in provider["url"]
 
 
-def test_workspace_accepts_platform_neutral_service_route(monkeypatch) -> None:
-    async def fake_fetch_subscription(url: str) -> str:
-        return SUBSCRIPTION
-
-    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
-    response = TestClient(app).post(
+def test_workspace_accepts_platform_neutral_service_route(client) -> None:
+    response = client.post(
         "/workspace/preview",
         json={
             "subscription_url": "https://example.com/sub",
@@ -123,12 +111,8 @@ def test_workspace_accepts_platform_neutral_service_route(monkeypatch) -> None:
     assert groups["Claude"]["members"] == ["US-Stable", "JP-Backup"]
 
 
-def test_workspace_rejects_unsupported_service_route(monkeypatch) -> None:
-    async def fake_fetch_subscription(url: str) -> str:
-        return SUBSCRIPTION
-
-    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
-    response = TestClient(app).post(
+def test_workspace_rejects_unsupported_service_route(client) -> None:
+    response = client.post(
         "/workspace/preview",
         json={
             "subscription_url": "https://example.com/sub",
@@ -142,12 +126,8 @@ def test_workspace_rejects_unsupported_service_route(monkeypatch) -> None:
     assert response.json()["detail"] == "unsupported service route: openai"
 
 
-def test_workspace_rejects_duplicate_routes_for_same_service(monkeypatch) -> None:
-    async def fake_fetch_subscription(url: str) -> str:
-        return SUBSCRIPTION
-
-    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
-    response = TestClient(app).post(
+def test_workspace_rejects_duplicate_routes_for_same_service(client) -> None:
+    response = client.post(
         "/workspace/preview",
         json={
             "subscription_url": "https://example.com/sub",
@@ -163,59 +143,12 @@ def test_workspace_rejects_duplicate_routes_for_same_service(monkeypatch) -> Non
     assert response.status_code == 422
 
 
-def test_workspace_preserves_dedicated_claude_group_and_only_prioritizes_egress(monkeypatch) -> None:
-    async def fake_fetch_subscription(url: str) -> str:
-        return SUBSCRIPTION
-
-    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
-    response = TestClient(app).post(
+def test_surge_generation_fails_closed_for_incompatible_claude_provider(client) -> None:
+    response = client.post(
         "/workspace/preview",
         json={
             "subscription_url": "https://example.com/sub",
-            "template": DEDICATED_TEMPLATE,
-            "target": "clash",
-            "claude_policy": {"egress": "US-Stable"},
-        },
-    )
-
-    assert response.status_code == 200
-    workspace = response.json()["workspace"]
-    groups = [group for group in workspace["proxy_groups"] if "Claude" in group["name"]]
-    assert len(groups) == 1
-    assert groups[0]["members"][0] == "US-Stable"
-    claude_rule = next(rule for rule in workspace["rules"] if rule["match"] == "Claude")
-    assert claude_rule["target"] == groups[0]["name"]
-
-
-def test_customization_rejects_non_leo_template(monkeypatch) -> None:
-    async def fake_fetch_subscription(url: str) -> str:
-        return SUBSCRIPTION
-
-    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
-    response = TestClient(app).post(
-        "/workspace/preview",
-        json={
-            "subscription_url": "https://example.com/sub",
-            "template": "minimal",
-            "target": "clash",
-            "claude_policy": {"egress": "US-Stable"},
-        },
-    )
-
-    assert response.status_code == 422
-    assert "only leo.yaml template is supported" in response.text
-
-
-def test_surge_generation_fails_closed_for_incompatible_claude_provider(monkeypatch) -> None:
-    async def fake_fetch_subscription(url: str) -> str:
-        return SUBSCRIPTION
-
-    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
-    response = TestClient(app).post(
-        "/workspace/preview",
-        json={
-            "subscription_url": "https://example.com/sub",
-            "template": MRS_TEMPLATE,
+            "template": SHARED_AI_TEMPLATE,
             "target": "surge",
             "claude_policy": {"egress": "US-Stable"},
         },
@@ -225,18 +158,12 @@ def test_surge_generation_fails_closed_for_incompatible_claude_provider(monkeypa
     assert "selected template is not Surge-compatible" in response.text
 
 
-def test_profile_uses_leo_claude_template(tmp_path, monkeypatch) -> None:
-    async def fake_fetch_subscription(url: str) -> str:
-        return SUBSCRIPTION
-
-    monkeypatch.setenv("SUBFLOW_DB_PATH", str(tmp_path / "subflow.db"))
-    monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
-    client = TestClient(app)
+def test_profile_uses_leo_claude_template(client) -> None:
     created = client.post(
         "/profiles",
         json={
             "subscription_url": "https://example.com/sub",
-            "template": MRS_TEMPLATE,
+            "template": SHARED_AI_TEMPLATE,
             "target": "clash",
             "claude_policy": {"egress": "US-Stable"},
         },
@@ -251,20 +178,35 @@ def test_profile_uses_leo_claude_template(tmp_path, monkeypatch) -> None:
     assert "/Claude/" in clash.text
 
 
-def test_surge_claude_query_fails_closed_for_incompatible_leo_providers(monkeypatch) -> None:
+def test_surge_claude_render_fails_closed_for_incompatible_leo_providers(monkeypatch) -> None:
     async def fake_fetch_subscription(url: str) -> str:
         return SUBSCRIPTION_WITH_UNSUPPORTED_SURGE_NODE
 
     monkeypatch.setattr("app.core.subscription.fetch_subscription", fake_fetch_subscription)
-    response = TestClient(app).get(
-        "/subscribe",
-        params={
+    response = TestClient(app).post(
+        "/render",
+        json={
             "subscription_url": "https://example.com/sub",
-                "template": MRS_TEMPLATE,
+            "template": SHARED_AI_TEMPLATE,
             "target": "surge",
-            "claude": '{"enabled":true,"egress":"AI"}',
+            "claude_policy": {"enabled": True, "egress": "AI"},
         },
     )
 
     assert response.status_code == 400
     assert "selected template is not Surge-compatible" in response.json()["detail"]
+
+
+def test_claude_egress_cannot_reference_template_claude_group(client) -> None:
+    response = client.post(
+        "/workspace/preview",
+        json={
+            "subscription_url": "https://example.com/sub",
+            "template": SHARED_AI_TEMPLATE,
+            "target": "clash",
+            "claude_policy": {"egress": "Claude"},
+        },
+    )
+
+    assert response.status_code == 400
+    assert "cannot reference" in response.json()["detail"]

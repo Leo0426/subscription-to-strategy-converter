@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import PurePosixPath
 import re
 from typing import Any
@@ -19,6 +19,7 @@ class TemplatePolicyTransformError(ValueError):
 
 _CLAUDE_RE = re.compile(r"claude|anthropic", re.IGNORECASE)
 _SURGE_RULE_EXTENSIONS = {".list", ".txt", ".conf"}
+
 def transform_service_routes(
     config: dict[str, Any],
     nodes: list[ProxyNode],
@@ -27,11 +28,13 @@ def transform_service_routes(
     target: str = "clash",
 ) -> dict[str, Any]:
     result = config
+    current_services: set[str] = set()
     for route in routes:
         if not route.enabled:
             continue
         if route.mode != "legacy":
             result = _transform_current_service(result, nodes, route)
+            current_services.add(route.service)
             continue
         if route.service != "claude":
             raise TemplatePolicyTransformError(
@@ -47,7 +50,46 @@ def transform_service_routes(
             ),
             target=target,
         )
+    if current_services:
+        result["rules"] = _prioritize_service_domains(result["rules"], current_services)
     return result
+
+
+def _prioritize_service_domains(rules: list, current_services: set[str]) -> list:
+    """Keep explicit service domains ahead of broader selected service rules."""
+    selected_matches = {
+        rule["match"]
+        for service in service_catalog()
+        if service["id"] in current_services
+        for rule in service["rules"]
+    }
+    selected_suffixes = {
+        match.split(",", 1)[1].lower()
+        for match in selected_matches
+        if match.startswith("DOMAIN-SUFFIX,")
+    }
+    prioritized: list[tuple[str, str, str]] = []
+    remaining: list = []
+    for rule in rules:
+        parts = rule.split(",", 2) if isinstance(rule, str) else []
+        if len(parts) < 3 or parts[0] not in {"DOMAIN", "DOMAIN-SUFFIX"}:
+            remaining.append(rule)
+            continue
+        rule_type, domain = parts[0], parts[1].lower()
+        match = f"{rule_type},{parts[1]}"
+        more_specific = any(
+            domain.endswith(f".{suffix}")
+            or (rule_type == "DOMAIN" and domain == suffix)
+            for suffix in selected_suffixes
+        )
+        if match in selected_matches or more_specific:
+            prioritized.append((rule_type, domain, rule))
+        else:
+            remaining.append(rule)
+    # First-match clients need the narrowest matching domain first. Sorting
+    # only the affected explicit rules preserves all other template ordering.
+    prioritized.sort(key=lambda item: (-len(item[1]), item[0] != "DOMAIN", item[1]))
+    return [rule for _, _, rule in prioritized] + remaining
 
 
 def _transform_current_service(config: dict, nodes: list[ProxyNode], route: ServiceRoute) -> dict:
@@ -92,15 +134,10 @@ def _transform_current_service(config: dict, nodes: list[ProxyNode], route: Serv
 @dataclass(frozen=True)
 class ClaudeTemplateCapability:
     contains_claude: bool
-    rule_count: int
-    rule_provider_names: tuple[str, ...]
     current_targets: tuple[str, ...]
     dedicated_group: str | None
     surge_compatible: bool
     surge_incompatibility_reasons: tuple[str, ...]
-
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
 
 
 def analyze_claude_template(config: dict[str, Any]) -> ClaudeTemplateCapability:
@@ -113,11 +150,8 @@ def analyze_claude_template(config: dict[str, Any]) -> ClaudeTemplateCapability:
         if isinstance(group, dict) and group.get("name")
     }
 
-    matches = [_parse_rule(rule) for rule in rules if isinstance(rule, str)]
-    matches = [parts for parts in matches if parts and _is_claude_rule(parts)]
-    provider_names = tuple(
-        dict.fromkeys(parts[1] for parts in matches if parts[0].upper() == "RULE-SET")
-    )
+    parsed = [_parse_rule(rule) for rule in rules if isinstance(rule, str)]
+    matches = [parts for parts in parsed if parts and _is_claude_rule(parts)]
     targets = tuple(dict.fromkeys(parts[2] for parts in matches if len(parts) >= 3))
     dedicated = next((target for target in targets if target in group_names and _is_claude(target)), None)
     if dedicated is None:
@@ -134,7 +168,7 @@ def analyze_claude_template(config: dict[str, Any]) -> ClaudeTemplateCapability:
     referenced_providers = tuple(
         dict.fromkeys(
             parts[1]
-            for parts in (_parse_rule(rule) for rule in rules if isinstance(rule, str))
+            for parts in parsed
             if len(parts) >= 3 and parts[0].upper() == "RULE-SET"
         )
     )
@@ -162,7 +196,7 @@ def analyze_claude_template(config: dict[str, Any]) -> ClaudeTemplateCapability:
     unsupported_rule_types = tuple(
         dict.fromkeys(
             parts[0].upper()
-            for parts in (_parse_rule(rule) for rule in rules if isinstance(rule, str))
+            for parts in parsed
             if parts and parts[0].upper() not in SURGE_IOS_RULE_TYPES
         )
     )
@@ -171,8 +205,6 @@ def analyze_claude_template(config: dict[str, Any]) -> ClaudeTemplateCapability:
 
     return ClaudeTemplateCapability(
         contains_claude=bool(matches),
-        rule_count=len(matches),
-        rule_provider_names=provider_names,
         current_targets=targets,
         dedicated_group=dedicated,
         surge_compatible=bool(matches) and not reasons,

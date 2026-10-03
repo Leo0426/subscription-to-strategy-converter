@@ -20,6 +20,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 from app.core.fetcher import _ensure_resolved_host_is_public, _validate_url
+from app.core.address_binding import ADDRESS_EXTENSION, bind_public_addresses
 from app.core.policy_analyzer import _PROVIDER_COUNT_BUDGET as PROVIDER_COUNT_BUDGET
 from app.core.template_engine import LEO_TEMPLATE_ID, load_template
 
@@ -76,6 +77,36 @@ _NESTED_TARGET_IP_RULE = re.compile(
     r"(?:^|[(,])\s*(?:ip-cidr6?|ip-suffix|ip-asn|geoip)\s*,",
     re.IGNORECASE,
 )
+_TEXT_RULE_DOMAIN = re.compile(r"(?:\+\.|\*\.|\.)?(?:[\w-]+\.)+[\w-]+")
+# Structural types from https://wiki.metacubex.one/en/config/rules/.
+_TEXT_RULE_TYPES = frozenset({
+    "DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD", "DOMAIN-WILDCARD",
+    "DOMAIN-REGEX", "GEOSITE", "IP-CIDR", "IP-CIDR6", "IP-SUFFIX",
+    "IP-ASN", "GEOIP", "SRC-GEOIP", "SRC-IP-ASN", "SRC-IP-CIDR",
+    "SRC-IP-SUFFIX", "DST-PORT", "SRC-PORT", "IN-PORT", "IN-TYPE",
+    "IN-USER", "IN-NAME", "REMATCH-NAME", "PROCESS-PATH",
+    "PROCESS-PATH-WILDCARD", "PROCESS-PATH-REGEX", "PROCESS-NAME",
+    "PROCESS-NAME-WILDCARD", "PROCESS-NAME-REGEX", "UID", "NETWORK",
+    "DSCP", "RULE-SET", "AND", "OR", "NOT", "SUB-RULE", "MATCH",
+})
+
+
+def _looks_like_rule_entry(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    rule = value.strip()
+    if not rule:
+        return False
+    if "," in rule:
+        rule_type, _, match = rule.partition(",")
+        return rule_type.strip().upper() in _TEXT_RULE_TYPES and bool(match.strip())
+    if _TEXT_RULE_DOMAIN.fullmatch(rule):
+        return True
+    try:
+        ip_network(rule, strict=False)
+    except ValueError:
+        return False
+    return True
 
 
 def template_content_sha256(path: Path = LEO_TEMPLATE_PATH) -> str:
@@ -758,18 +789,24 @@ def inspect_rule_source_content(
             loaded = yaml.load(text)
         except YAMLError:
             loaded = None
-        if isinstance(loaded, dict) and isinstance(loaded.get("payload"), list):
+        if (isinstance(loaded, dict) and isinstance(loaded.get("payload"), list)
+                and all(_looks_like_rule_entry(entry) for entry in loaded["payload"])):
             detected_format = "yaml-payload"
             entry_count = len(loaded["payload"])
-        elif declared_format.lower() != "mrs":
+        elif not isinstance(loaded, (dict, list)) and declared_format.lower() != "mrs":
             rule_lines = [
                 line.strip()
                 for line in text.splitlines()
                 if line.strip() and not line.lstrip().startswith(("#", "//"))
             ]
-            if rule_lines:
+            if rule_lines and all(_looks_like_rule_entry(line) for line in rule_lines):
                 detected_format = "text-rules"
                 entry_count = len(rule_lines)
+
+    expected_format = {"text": "text-rules", "yaml": "yaml-payload", "mrs": "mrs-binary"}.get(
+        declared_format.strip().lower()
+    )
+    format_matches = not declared_format.strip() or expected_format == detected_format
 
     return {
         "declared_format": declared_format,
@@ -778,8 +815,10 @@ def inspect_rule_source_content(
         "byte_count": len(content),
         "entry_count": entry_count,
         "sha256": digest,
-        "valid": detected_format == "mrs-binary"
-        or (detected_format not in {"unknown", "html"} and bool(entry_count)),
+        "valid": format_matches and (
+            detected_format == "mrs-binary"
+            or (detected_format not in {"unknown", "html"} and bool(entry_count))
+        ),
     }
 
 
@@ -821,16 +860,16 @@ async def audit_rule_sources(
                 content_type=str(response.get("content_type") or ""),
                 declared_format=base["declared_format"],
             )
-            entries = extract_normalized_rule_entries(
-                content,
-                declared_format=base["declared_format"],
+            entries = (
+                extract_normalized_rule_entries(content, declared_format=base["declared_format"])
+                if inspection["valid"] else frozenset()
             )
             normalized_digest = (
                 sha256("\n".join(sorted(entries)).encode("utf-8")).hexdigest()
                 if entries
                 else ""
             )
-            rule_types_inspectable = inspection["detected_format"] != "mrs-binary"
+            rule_types_inspectable = inspection["valid"] and inspection["detected_format"] != "mrs-binary"
             return {
                 **base,
                 **inspection,
@@ -944,25 +983,25 @@ class PublicRuleSourceFetcher:
         self.timeout = timeout
         self.max_bytes = max_bytes
         self._client: httpx.AsyncClient | None = None
-        self._host_tasks: dict[str, asyncio.Task[None]] = {}
+        self._host_tasks: dict[str, asyncio.Task[tuple[str, ...]]] = {}
         self._host_lock = asyncio.Lock()
 
     async def __aenter__(self) -> PublicRuleSourceFetcher:
         # The audit answers "can the target client fetch this?", so it must send
         # the UA a real Mihomo core sends (global-ua defaults to clash.meta);
         # hosts like kelee.one allow-list that prefix and 403 everything else.
-        self._client = httpx.AsyncClient(
+        self._client = bind_public_addresses(httpx.AsyncClient(
             timeout=self.timeout,
             follow_redirects=False,
             headers={"User-Agent": "clash.meta/1.18.0 (subflow-rule-audit)"},
-        )
+        ))
         return self
 
     async def __aexit__(self, *_: object) -> None:
         if self._client is not None:
             await self._client.aclose()
 
-    async def _validate_public_url(self, url: str) -> None:
+    async def _validate_public_url(self, url: str) -> tuple[str, ...]:
         _validate_url(url)
         hostname = urlparse(url).hostname
         if not hostname:
@@ -972,7 +1011,7 @@ class PublicRuleSourceFetcher:
             if task is None:
                 task = asyncio.create_task(_ensure_resolved_host_is_public(hostname))
                 self._host_tasks[hostname] = task
-        await task
+        return await task
 
     async def fetch(self, url: str) -> dict[str, Any]:
         if self._client is None:
@@ -980,10 +1019,10 @@ class PublicRuleSourceFetcher:
         current_url = url
         started = perf_counter()
         for _ in range(6):
-            await self._validate_public_url(current_url)
+            addresses = await self._validate_public_url(current_url)
             for attempt in range(_FETCH_TRANSPORT_ATTEMPTS):
                 try:
-                    response = await self._client.get(current_url)
+                    response = await self._client.get(current_url, extensions={ADDRESS_EXTENSION: addresses})
                     break
                 except httpx.TransportError:
                     if attempt + 1 == _FETCH_TRANSPORT_ATTEMPTS:

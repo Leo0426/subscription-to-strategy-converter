@@ -492,6 +492,86 @@ def _group_to_surge_line(
 
 # ── Rule mapping layer ─────────────────────────────────────────────────────
 
+# Surge and Shadowrocket cannot load GEOSITE. Named service tags whose groups
+# would otherwise be empty on these clients map to native lists from the same
+# pinned blackmatrix7 revision as the Leo providers. Broad or mixed-origin tags
+# (cn, gfw, geolocation-!cn, category-games) stay unmapped: the FINAL policy
+# and the resolving China GEOIP fallback already cover them.
+_GEOSITE_SURGE_BASE = (
+    "https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@"
+    "8818705adee20571a856daf11c9fc69c4929109a/rule/Surge"
+)
+_GEOSITE_SURGE_RULE_SETS: dict[str, tuple[str, str]] = {
+    "netflix": ("RULE-SET", "Netflix/Netflix.list"),
+    "disney": ("RULE-SET", "Disney/Disney.list"),
+    "hbo": ("RULE-SET", "HBO/HBO.list"),
+    "spotify": ("RULE-SET", "Spotify/Spotify.list"),
+    "tiktok": ("RULE-SET", "TikTok/TikTok.list"),
+    "bahamut": ("RULE-SET", "Bahamut/Bahamut.list"),
+    "bilibili": ("RULE-SET", "BiliBili/BiliBili.list"),
+    "steam@cn": ("RULE-SET", "SteamCN/SteamCN.list"),
+    "steam": ("RULE-SET", "Steam/Steam.list"),
+    "paypal": ("RULE-SET", "PayPal/PayPal.list"),
+    "twitter": ("RULE-SET", "Twitter/Twitter.list"),
+    "facebook": ("RULE-SET", "Facebook/Facebook.list"),
+    "pixiv": ("RULE-SET", "Pixiv/Pixiv.list"),
+    "category-speedtest": ("RULE-SET", "Speedtest/Speedtest.list"),
+    # Domain-only lite list: the full ad set needs MitM URL-REGEX rules.
+    "category-ads-all": ("DOMAIN-SET", "AdvertisingLite/AdvertisingLite_Domain.list"),
+}
+
+
+# Mihomo's category-ai-!cn domain list has no Surge-loadable form. The service
+# catalog owns the AI destinations, so Surge-family output substitutes them at
+# the provider's position instead of dropping AI routing to Google or FINAL.
+_CATEGORY_AI_PROVIDER = re.compile(
+    r"/meta-rules-dat[@/][^/]+/geo/geosite/category-ai-!cn\.(?:list|mrs|yaml)$"
+)
+
+
+def _rule_key(rule: str) -> tuple[str, str]:
+    parts = [part.strip() for part in rule.split(",")]
+    return parts[0].upper(), parts[1].lower() if len(parts) > 1 else ""
+
+
+def substitute_ai_provider_rules(rules: list[Any], rule_providers: dict[str, Any]) -> list[Any]:
+    providers = rule_providers if isinstance(rule_providers, dict) else {}
+    ai_providers = {
+        name for name, provider in providers.items()
+        if isinstance(provider, dict) and _CATEGORY_AI_PROVIDER.search(str(provider.get("url") or ""))
+    }
+    if not ai_providers or not isinstance(rules, list):
+        return rules
+    from app.core.service_catalog import service_catalog
+
+    matches = [
+        rule["match"]
+        for service in service_catalog() if service["category"] == "ai"
+        for rule in service["rules"]
+    ]
+    present = {_rule_key(rule) for rule in rules if isinstance(rule, str)}
+    result: list[Any] = []
+    for rule in rules:
+        parts = [part.strip() for part in rule.split(",")] if isinstance(rule, str) else []
+        if len(parts) >= 3 and parts[0].upper() == "RULE-SET" and parts[1] in ai_providers:
+            for match in matches:
+                if _rule_key(match) not in present:
+                    present.add(_rule_key(match))
+                    result.append(f"{match},{parts[2]}")
+            continue
+        result.append(rule)
+    return result
+
+
+def _geosite_to_surge_line(tag: str, target: str) -> str | None:
+    mapped = _GEOSITE_SURGE_RULE_SETS.get(tag.lower())
+    if mapped is None:
+        return None
+    directive, path = mapped
+    # List IP rules only match IP-literal flows; never resolve for them.
+    suffix = ",no-resolve" if directive == "RULE-SET" else ""
+    return f"{directive},{_GEOSITE_SURGE_BASE}/{path},{target}{suffix}"
+
 
 def _rule_to_surge_line(
     rule: str,
@@ -509,9 +589,10 @@ def _rule_to_surge_line(
 
     rule_type = parts[0].upper()
 
-    if rule_type == "MATCH":
+    if rule_type in {"MATCH", "FINAL"}:
         target = parts[1].strip() if len(parts) > 1 else "DIRECT"
-        return f"FINAL,{target}"
+        dns_failed = rule_type == "FINAL" and "dns-failed" in (part.lower() for part in parts[2:])
+        return f"FINAL,{target}{',dns-failed' if dns_failed else ''}"
 
     if len(parts) < 3:
         return None
@@ -533,6 +614,9 @@ def _rule_to_surge_line(
         # no-resolve only applies to IP matching; DOMAIN-SET has no IP rules.
         suffix = ",no-resolve" if (no_resolve and resolved.directive == "RULE-SET") else ""
         return f"{resolved.directive},{resolved.url},{target}{suffix}"
+
+    if rule_type == "GEOSITE":
+        return _geosite_to_surge_line(value, target)
 
     if rule_type == "DST-PORT":
         # Clash's DST-PORT is Surge's DEST-PORT. Emit only the port forms Surge
@@ -655,7 +739,7 @@ def build_surge_config(
     A native source owns all non-routing sections, including the proxy entries.
     """
     conf, warnings = build_ini_config(
-        nodes, proxy_groups, rules, rule_providers,
+        nodes, proxy_groups, substitute_ai_provider_rules(rules, rule_providers), rule_providers,
         dialect=IniDialect(
             name="Surge",
             node=None if source_profile is not None else _node_to_surge_line,
@@ -664,6 +748,7 @@ def build_surge_config(
             rule_types=SURGE_IOS_RULE_TYPES,
             general="" if source_profile is not None else _general_section(),
             host=(lambda _nodes: None) if source_profile is not None else _host_section,
+            final_dns_failed=True,
         ),
     )
     skipped_nodes = incompatible_node_names(nodes, warnings)
