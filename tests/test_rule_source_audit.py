@@ -243,15 +243,29 @@ def test_supply_chain_facts_classifies_origin_pinning_and_intermediaries() -> No
         "https://github.com/owner/repo/raw/0123456789abcdef0123456789abcdef01234567/rules.txt"
     )
 
-    assert branch == {"upstream": "github:MetaCubeX", "pinned": False, "via_intermediary": False}
+    assert branch == {"upstream": "github:MetaCubeX", "pinned": False, "immutable": False, "via_intermediary": False}
     assert tag["pinned"] is True and tag["via_intermediary"] is False
     assert sha["pinned"] is True
-    assert cdn_branch == {"upstream": "github:owner", "pinned": False, "via_intermediary": False}
+    assert cdn_branch == {"upstream": "github:owner", "pinned": False, "immutable": False, "via_intermediary": False}
     assert cdn_version["pinned"] is True
-    assert proxied == {"upstream": "github:owner", "pinned": False, "via_intermediary": True}
-    assert first_party == {"upstream": "ruleset.skk.moe", "pinned": False, "via_intermediary": False}
+    assert proxied == {"upstream": "github:owner", "pinned": False, "immutable": False, "via_intermediary": True}
+    assert first_party == {"upstream": "ruleset.skk.moe", "pinned": False, "immutable": False, "via_intermediary": False}
     assert ghcom_raw_branch["pinned"] is False
     assert ghcom_raw_sha["pinned"] is True
+
+
+@pytest.mark.parametrize("url,pinned,immutable", [
+    ("https://raw.githubusercontent.com/owner/repo/refs/tags/v1.2.0/rules.yaml", True, False),
+    ("https://cdn.jsdelivr.net/gh/owner/repo@1.2.3/rules.txt", True, False),
+    ("https://raw.githubusercontent.com/owner/repo/0123456789abcdef0123456789abcdef01234567/rules.yaml", True, True),
+    ("https://cdn.jsdelivr.net/gh/owner/repo@0123456789abcdef0123456789abcdef01234567/rules.txt", True, True),
+    ("https://raw.githubusercontent.com/owner/repo/refs/heads/0123456789abcdef0123456789abcdef01234567/rules.yaml", False, False),
+    ("https://rules.example/rules.txt", False, False),
+])
+def test_supply_chain_facts_distinguishes_mutable_tags_from_commit_content(url, pinned, immutable) -> None:
+    facts = supply_chain_facts(url)
+    assert facts["pinned"] is pinned
+    assert facts["immutable"] is immutable
 
 
 def test_score_rule_source_report_scores_supply_chain_and_cold_start_cost() -> None:

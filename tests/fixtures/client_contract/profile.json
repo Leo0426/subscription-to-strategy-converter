@@ -1,0 +1,49 @@
+{
+  "source": {
+    "mixed-port": 18082,
+    "allow-lan": false,
+    "bind-address": "127.0.0.1",
+    "mode": "rule",
+    "log-level": "info",
+    "ipv6": false,
+    "dns": {"enable": false},
+    "tun": {"enable": false},
+    "sniffer": {"enable": false},
+    "hosts": {"retained.contract.test": "127.0.0.1"},
+    "profile": {"store-selected": false, "store-fake-ip": false},
+    "proxies": [
+      {"name": "Route A", "type": "http", "server": "127.0.0.1", "port": 18080},
+      {"name": "Route B", "type": "http", "server": "127.0.0.1", "port": 18081},
+      {"name": "Unused dependency", "type": "http", "server": "127.0.0.1", "port": 9, "dialer-proxy": "Contract exact"}
+    ],
+    "proxy-groups": [
+      {"name": "Contract exact", "type": "select", "proxies": ["Source leaf"]},
+      {"name": "Source leaf", "type": "select", "proxies": ["DIRECT"]}
+    ],
+    "rules": ["MATCH,REJECT"]
+  },
+  "selected_policy": {
+    "mode": "replace",
+    "proxy_groups": [
+      {"name": "Contract exact", "type": "select", "proxies": ["Route A"]},
+      {"name": "Contract broad", "type": "select", "proxies": ["Route B"]}
+    ],
+    "rule_providers": {
+      "contract-domains": {"type": "file", "behavior": "classical", "format": "yaml", "path": "./contract-domains.yaml"}
+    },
+    "rules": [
+      "DOMAIN,exact.contract.test,Contract exact",
+      "DOMAIN-SUFFIX,contract.test,Contract broad",
+      "RULE-SET,contract-domains,Contract broad",
+      "IP-CIDR,198.18.0.0/15,Contract broad,no-resolve",
+      "MATCH,Contract exact"
+    ]
+  },
+  "routes": {
+    "exact.contract.test": "A",
+    "wide.contract.test": "B",
+    "provider.fixture.test": "B",
+    "198.18.0.42": "B",
+    "unmatched.fixture.test": "A"
+  }
+}

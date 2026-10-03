@@ -91,7 +91,7 @@ _TEXT_RULE_TYPES = frozenset({
 })
 
 
-def _looks_like_rule_entry(value: Any) -> bool:
+def _looks_like_rule_entry(value: Any, rule_types: frozenset[str] = _TEXT_RULE_TYPES) -> bool:
     if not isinstance(value, str):
         return False
     rule = value.strip()
@@ -99,7 +99,7 @@ def _looks_like_rule_entry(value: Any) -> bool:
         return False
     if "," in rule:
         rule_type, _, match = rule.partition(",")
-        return rule_type.strip().upper() in _TEXT_RULE_TYPES and bool(match.strip())
+        return rule_type.strip().upper() in rule_types and bool(match.strip())
     if _TEXT_RULE_DOMAIN.fullmatch(rule):
         return True
     try:
@@ -536,25 +536,28 @@ _COMMIT_SHA = re.compile(r"^[0-9a-f]{40}$")
 _VERSION_TAG = re.compile(r"^v?\d+(\.\d+)+$")
 
 
-def _github_ref_is_pinned(segments: list[str]) -> bool:
+def _github_ref_pin_facts(segments: list[str]) -> dict[str, bool]:
     """segments: [owner, repo, ref, ...], [owner, repo, "refs", "heads"|"tags", ref, ...],
     or the github.com/<owner>/<repo>/raw/... variant of either (one extra leading "raw")."""
     if len(segments) < 3:
-        return False
+        return {"pinned": False, "immutable": False}
     tail = segments[3:] if segments[2] == "raw" else segments[2:]
     if not tail:
-        return False
+        return {"pinned": False, "immutable": False}
     if tail[0] == "refs" and len(tail) >= 3:
-        return tail[1] == "tags"
-    return bool(_COMMIT_SHA.match(tail[0]) or _VERSION_TAG.match(tail[0]))
+        return {"pinned": tail[1] == "tags", "immutable": False}
+    immutable = bool(_COMMIT_SHA.match(tail[0]))
+    return {"pinned": immutable or bool(_VERSION_TAG.match(tail[0])), "immutable": immutable}
 
 
 def supply_chain_facts(url: str) -> dict[str, Any]:
     """Machine-checkable supply-chain properties of one RuleSource URL.
 
     - `upstream`: who can change the content (`github:<owner>` or the hostname).
-    - `pinned`: the URL names an immutable ref (commit sha or tag), so upstream
-      pushes cannot silently change what clients download.
+    - `pinned`: the URL names a commit SHA or version/tag rather than a branch.
+      Tags can be moved, so this does not establish immutable content.
+    - `immutable`: the URL names a complete commit SHA. This describes the
+      upstream ref, not a guarantee that a CDN or intermediary serves its bytes.
     - `via_intermediary`: the content passes through a third-party proxy front
       (gh-proxy style) that could rewrite it in transit; official CDNs with a
       declared upstream (jsDelivr `gh/<owner>/<repo>@<ref>`) are not intermediaries.
@@ -565,13 +568,12 @@ def supply_chain_facts(url: str) -> dict[str, Any]:
 
     if host in _GITHUB_ORIGIN_HOSTS:
         upstream = f"github:{segments[0]}" if segments else host
-        return {"upstream": upstream, "pinned": _github_ref_is_pinned(segments), "via_intermediary": False}
+        return {"upstream": upstream, **_github_ref_pin_facts(segments), "via_intermediary": False}
 
     if host.endswith(".jsdelivr.net") and len(segments) >= 3 and segments[0] == "gh":
         owner = segments[1]
         _, _, ref = segments[2].partition("@")
-        pinned = bool(_COMMIT_SHA.match(ref) or _VERSION_TAG.match(ref))
-        return {"upstream": f"github:{owner}", "pinned": pinned, "via_intermediary": False}
+        return {"upstream": f"github:{owner}", **_github_ref_pin_facts([owner, "repo", ref]), "via_intermediary": False}
 
     embedded = next(
         (index for index, segment in enumerate(segments) if segment.lower() in _GITHUB_ORIGIN_HOSTS),
@@ -580,9 +582,9 @@ def supply_chain_facts(url: str) -> dict[str, Any]:
     if embedded is not None:
         inner = segments[embedded + 1 :]
         upstream = f"github:{inner[0]}" if inner else host
-        return {"upstream": upstream, "pinned": _github_ref_is_pinned(inner), "via_intermediary": True}
+        return {"upstream": upstream, **_github_ref_pin_facts(inner), "via_intermediary": True}
 
-    return {"upstream": host, "pinned": False, "via_intermediary": False}
+    return {"upstream": host, "pinned": False, "immutable": False, "via_intermediary": False}
 
 
 def score_rule_source_report(report: Mapping[str, Any]) -> dict[str, Any]:
@@ -767,6 +769,7 @@ def inspect_rule_source_content(
     *,
     content_type: str = "",
     declared_format: str = "",
+    rule_types: frozenset[str] = _TEXT_RULE_TYPES,
 ) -> dict[str, Any]:
     """Return a privacy-safe structural summary of one RuleSource body."""
     digest = sha256(content).hexdigest()
@@ -790,7 +793,7 @@ def inspect_rule_source_content(
         except YAMLError:
             loaded = None
         if (isinstance(loaded, dict) and isinstance(loaded.get("payload"), list)
-                and all(_looks_like_rule_entry(entry) for entry in loaded["payload"])):
+                and all(_looks_like_rule_entry(entry, rule_types) for entry in loaded["payload"])):
             detected_format = "yaml-payload"
             entry_count = len(loaded["payload"])
         elif not isinstance(loaded, (dict, list)) and declared_format.lower() != "mrs":
@@ -799,7 +802,7 @@ def inspect_rule_source_content(
                 for line in text.splitlines()
                 if line.strip() and not line.lstrip().startswith(("#", "//"))
             ]
-            if rule_lines and all(_looks_like_rule_entry(line) for line in rule_lines):
+            if rule_lines and all(_looks_like_rule_entry(line, rule_types) for line in rule_lines):
                 detected_format = "text-rules"
                 entry_count = len(rule_lines)
 

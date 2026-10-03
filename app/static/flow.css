@@ -291,6 +291,8 @@ input[type=checkbox] { width: 16px; height: 16px; padding: 0; accent-color: var(
 .diagnosis-summary > b { font-size: 16px; }
 .diagnosis-summary p { margin: 6px 0 0; }
 .table-scroll { overflow: auto; }
+.evidence-table th:first-child, .evidence-table td:first-child { min-width: 76px; white-space: nowrap; }
+.evidence-table th:nth-child(2), .evidence-table td:nth-child(2) { white-space: nowrap; }
 table { width: 100%; border-collapse: collapse; font-size: 11px; }
 th, td { text-align: left; padding: 9px 6px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 th { color: var(--muted); font-weight: 500; }

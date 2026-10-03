@@ -21,6 +21,7 @@ from app.core.platforms.ini import NoSupportedNodesError, incompatible_node_name
 from app.core.policy_analyzer import analyze_workspace
 from app.core.policy_graph import build_policy_graph
 from app.core.rule_source_audit import template_content_sha256
+from app.core.target_dependencies import collect_target_dependencies
 from app.core.profiles import ProfileStore
 from app.core.inflight import SingleFlight, BusyError
 from app.core import publication
@@ -454,6 +455,7 @@ async def _check_request(request: ConvertRequest) -> dict:
     for target in targets:
         warnings: list[dict] = []
         errors = []
+        dependencies = None
         try:
             result = (
                 base_result
@@ -470,8 +472,9 @@ async def _check_request(request: ConvertRequest) -> dict:
                     finding.message for finding in analyze_workspace(config_to_workspace(compiled))
                     if finding.severity == "error"
                 )
+                artifact = render_yaml(compiled)
             else:
-                _, compiler_warnings = _render_output(
+                artifact, compiler_warnings = _render_output(
                     target,
                     result.nodes,
                     result.config,
@@ -479,13 +482,16 @@ async def _check_request(request: ConvertRequest) -> dict:
                 )
             warnings = result.warnings + compiler_warnings
             if target == "shadowrocket":
-                _, policy_warnings = _render_output(
+                artifact, policy_warnings = _render_output(
                     "shadowrocket-config",
                     result.nodes,
                     result.config,
                     source_config=result.source_config,
                 )
                 warnings += policy_warnings
+            dependencies = collect_target_dependencies(
+                "shadowrocket-config" if target == "shadowrocket" else target, artifact,
+            )
             supported = {node.name for node in result.nodes} - incompatible_node_names(result.nodes, warnings)
             if not supported:
                 errors.append("该客户端没有可用节点（协议或参数不兼容）")
@@ -493,7 +499,7 @@ async def _check_request(request: ConvertRequest) -> dict:
         except (HTTPException, ValueError) as exc:
             errors.append(str(exc.detail if isinstance(exc, HTTPException) else exc))
         clients.append({"target": target, "status": "error" if errors else ("warning" if warnings else "passed"),
-                        "warnings": warnings, "errors": errors})
+                        "warnings": warnings, "errors": errors, "dependencies": dependencies})
     return {"can_publish": not any(f["severity"] == "error" for f in findings) and not any(c["errors"] for c in clients),
             "node_count": len(base_result.nodes), "findings": findings, "clients": clients,
             "services": service_report(base_result.config, base_result.nodes), "revision": catalog_revision(),

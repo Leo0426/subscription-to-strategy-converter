@@ -136,6 +136,10 @@ def test_mihomo_runtime_reads_configured_controller_and_probes_selected_node(cli
     def handler(req):
         calls.append(req)
         assert req.headers['Authorization']=='Bearer operator-secret'
+        if req.url.path == '/version':
+            return httpx.Response(200, json={'version': 'v1.19.0'})
+        if req.url.path == '/configs':
+            return httpx.Response(200, json={'mode': 'rule'})
         if req.url.path=='/proxies':
             return httpx.Response(200, json={'proxies':{'AI 服务':{'now':'TW01'},'TW01':{'type':'Shadowsocks'}}})
         assert req.method=='GET'
@@ -161,6 +165,10 @@ def test_runtime_samples_report_failures_spread_and_selection_changes(client, mo
     counts = {}
     def handler(req):
         nonlocal group_reads
+        if req.url.path == '/version':
+            return httpx.Response(200, json={'version': 'v1.19.0'})
+        if req.url.path == '/configs':
+            return httpx.Response(200, json={'mode': 'rule'})
         if req.url.path == '/proxies':
             group_reads += 1
             node = 'TW01' if group_reads < 6 else 'US01'
@@ -188,6 +196,10 @@ def test_surge_diagnostics_compare_mobile_domains_and_redact_rule_urls(client, m
     calls = []
     async def command(*args):
         calls.append(args)
+        if args[0] == '--raw':
+            return 1, 'unsupported --raw'
+        if args == ('mode', 'get'):
+            return 0, 'Mode: rule\n'
         if args[:2] == ('http', 'probe'):
             return 0, 'Status: 200\nDuration: 123\n'
         assert args[:2] == ('rule', 'explain')
@@ -207,6 +219,10 @@ def test_surge_probe_requires_successful_cli_exit_even_with_http_status_in_outpu
     monkeypatch.setenv('SUBFLOW_SURGE_CLI', __file__)
 
     async def command(*args):
+        if args[0] == '--raw':
+            return 1, 'unsupported --raw'
+        if args == ('mode', 'get'):
+            return 0, 'Mode: rule\n'
         if args[:2] == ('http', 'probe'):
             return 1, 'Status: 200\nDuration: 12\nprobe failed\n'
         return 0, 'Final policy: US01 (Shadowsocks)\n'

@@ -34,7 +34,7 @@ const document = {{
     if (selector === ".config-workbench input, .config-workbench select, .config-workbench button") return controls;
     return [];
   }},
-  createElement: () => ({{textContent: "", innerHTML: ""}}),
+  createElement: () => ({{textContent: "", get innerHTML() {{ return this.textContent.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;"); }} }}),
 }};
 const context = vm.createContext({{
   document,
@@ -71,8 +71,8 @@ def test_root_and_legacy_advanced_route_serve_the_same_simple_page() -> None:
     assert root.status_code == 200
     assert advanced.status_code == 200
     assert root.text == advanced.text
-    assert "/static/flow.js?v=53" in root.text
-    assert "/static/flow.css?v=52" in root.text
+    assert "/static/flow.js?v=54" in root.text
+    assert "/static/flow.css?v=53" in root.text
     assert "/static/assets/subflow-logo.png" in root.text
 
 
@@ -234,3 +234,24 @@ def test_system_status_reports_ready_dependencies(tmp_path, monkeypatch) -> None
     assert response.json()["app"]["status"] == "ok"
     assert response.json()["profile_db"]["status"] == "ok"
     assert "subconverter" not in response.json()
+
+
+def test_diagnosis_evidence_keeps_unknown_identity_and_escapes_client_text():
+    _run_flow_runtime('''
+const html = renderRuntimeEvidence({identity: {client: "surge", version: "<script>bad</script>", platform: "macos", mode: "rule", observed_at: "2026-10-03T00:00:00Z"}, evidence: [
+  {kind: "rule_match", status: "partial", reason: "<img onerror=bad>"},
+  {kind: "configuration_identity", status: "unknown", reason: "无法核对"},
+]});
+if (!html.includes("配置一致性") || !html.includes("未知") || !html.includes("服务器配置的实例")) throw Error(html);
+if (html.includes("<script>") || html.includes("<img")) throw Error("unescaped client response");
+if (!html.includes("&lt;script&gt;") || !html.includes("&lt;img")) throw Error("missing evidence");
+if (renderRuntimeEvidence({status: "not_tested"}).includes("已观测")) throw Error("unrequested evidence must stay absent");
+''')
+
+
+def test_dependency_counts_are_inventory_not_download_validation():
+    _run_flow_runtime('''
+const html = renderDependencySummary({summary: {total: 24, remote: 23, geodata: 1, unresolved: 1}});
+if (!html.includes("23") || !html.includes("1 项地址未解析") || !html.includes("未下载审计")) throw Error(html);
+if (renderDependencySummary(null) !== "") throw Error("old reports should still render");
+''')

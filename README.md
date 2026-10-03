@@ -36,6 +36,27 @@ uv run pytest -q
 uv run python scripts/sync-service-rules.py --check
 ```
 
+检查结果会列出各客户端最终产物的规则与地理数据依赖；Shadowrocket 使用配套配置统计。清单不下载远程内容，默认数据库地址无法从配置确定时保留未解析状态。维护者可用公共合成 Leo 配置执行独立审计：
+
+```sh
+uv run python -m app.core.target_dependencies --inventory-only --output .scratch/target-inventory.json
+uv run python -m app.core.target_dependencies --output .scratch/target-audit.json
+```
+
+审计区分文本格式验证、二进制获取和未验证项；下载成功不代表客户端能加载或规则语义正确。报告只使用公共模板，不读取已保存的私人订阅。审计失败返回退出码 1，仍有未核验项返回 2；两种情况都会保存报告。仅生成清单时返回 0。
+
+固定版本 Mihomo 的合成 Profile 契约可单独运行：
+
+```sh
+uv run python scripts/validate-client-contract.py \
+  --mihomo-binary /path/to/mihomo --expected-version v1.19.32 \
+  --output-dir .scratch/client-contract
+```
+
+工具记录版本和 SHA256，分别报告解析与本地模拟出口的路由行为，验证规则顺序及规则集反例；使用临时数据库和内核进程。缺少二进制返回退出码 2，验证失败返回 1。它不验证手机、真实服务登录或所有服务偏好组合。
+
+工作台诊断分别显示配置推断、客户端选择、规则解释、指定节点探测及配置一致性。运行态仅对应服务器配置的实例；Mihomo 根据实际 Rule/Global/Direct 模式读取选择，组选择不能证明请求命中规则。版本或模式不明、配置标识无法核对时，证据保持有限或未知。
+
 Surge 国内域名兜底与升级步骤见 [6.7 发布说明](docs/releases/6.7.md)。
 
 领域约束和规则维护见 [AGENTS.md](AGENTS.md)；启动后 `/docs` 查看 API，`/health` 查看状态。旧预设、规则包、意图、临时会话及无状态订阅接口已移除；已有策略快照可在工作台打开并升级。
