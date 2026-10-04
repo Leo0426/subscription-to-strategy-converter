@@ -71,8 +71,8 @@ def test_root_and_legacy_advanced_route_serve_the_same_simple_page() -> None:
     assert root.status_code == 200
     assert advanced.status_code == 200
     assert root.text == advanced.text
-    assert "/static/flow.js?v=54" in root.text
-    assert "/static/flow.css?v=53" in root.text
+    assert "/static/flow.js?v=55" in root.text
+    assert "/static/flow.css?v=54" in root.text
     assert "/static/assets/subflow-logo.png" in root.text
 
 
@@ -166,13 +166,177 @@ def test_opening_surge_profile_reenables_preference_after_busy_cleanup() -> None
     )
 
 
+def test_opening_profile_keeps_surge_preference_locked_until_busy_finishes() -> None:
+    _run_flow_runtime("""
+    (async () => {
+      renderServices = () => {}; updateActions = () => {}; setNotice = () => {};
+      let focused = false, unlockedWhileBusy = false;
+      const button = {textContent: "打开", classList: {add() {}, remove() {}}, focus() { focused = true; }};
+      await busy(button, "打开中…", async () => {
+        targets[1].checked = true;
+        restoreSurgePreferences({auto_test_protocols: ["anytls"]});
+        unlockedWhileBusy = !elements["#surge-auto-test-protocols"].disabled;
+      });
+      if (unlockedWhileBusy) throw Error("busy selector was reenabled");
+      if (elements["#surge-auto-test-protocols"].disabled) throw Error("selector did not unlock");
+      if (!focused) throw Error("action keyboard focus was lost");
+    })()
+    """)
+
+
+def test_failed_source_read_clears_node_readiness_and_exposes_local_error() -> None:
+    _run_flow_runtime("""
+    (async () => {
+      for (const id of ["#diagnose-result", "#check-results", "#publish-result", "#check-state", "#source-result"])
+        elements[id] = {textContent: "", hidden: false};
+      let focused = false;
+      elements["#subscription-url"].focus = () => { focused = true; };
+      renderServices = () => {}; updateActions = () => {};
+      state.nodes = [{name: "Previous source node"}];
+      globalThis.fetch = async () => ({ok: false, status: 500, json: async () => ({detail: "来源暂不可用"})});
+      await busy({textContent: "读取节点"}, "读取中…", loadNodes);
+      if (state.nodes.length) throw Error("old nodes survived failed read");
+      if (elements["#check-state"].textContent !== "先读取订阅节点") throw Error("stale readiness message");
+      if (elements["#source-result"].hidden || !elements["#source-result"].textContent.includes("来源暂不可用"))
+        throw Error("source error was not shown beside source");
+      if (!focused) throw Error("source correction target was not focused");
+    })()
+    """)
+
+
+def test_successful_action_focuses_visible_result_but_errors_keep_error_focus() -> None:
+    _run_flow_runtime("""
+    (async () => {
+      renderServices = () => {}; updateActions = () => {};
+      let focused, scroll;
+      globalThis.matchMedia = () => ({matches:true});
+      const result = {hidden:false, getClientRects:()=>[{}], focus(){focused='result';},
+        scrollIntoView(options){scroll=options;}};
+      elements['#check-results'] = result;
+      elements['#global-notice'].focus = () => {focused='error';};
+      const button = {textContent:'检查', dataset:{successTarget:'#check-results'}, focus(){focused='button';}};
+      await busy(button, '检查中…', async () => {});
+      if(focused!=='result'||scroll.block!=='start'||scroll.behavior!=='auto') throw Error('visible result was not located');
+      result.hidden=true;
+      await busy(button, '检查中…', async () => {});
+      if(focused!=='button') throw Error('hidden result received focus');
+      result.hidden=false; scroll=null;
+      await busy(button, '检查中…', async () => {throw Error('检查失败');});
+      if(focused!=='error'||scroll) throw Error('failure jumped to old success result');
+    })()
+    """)
+
+
+def test_workspace_summary_tracks_current_check_and_invalidated_draft() -> None:
+    _run_flow_runtime("""
+    (() => {
+      const makeElement = () => ({textContent:"", hidden:false, disabled:false});
+      for(const id of ["summary-nodes","summary-clients","summary-routes","summary-state","workspace-progress",
+        "refresh-publications-button","check-button","diagnose-button","generate-button","save-title","generate-hint",
+        "diagnose-result","check-results","publish-result","check-state"]) elements[`#${id}`]=makeElement();
+      const steps=["source","services","review"].map(step=>({dataset:{step}, classes:{}, attributes:{},
+        classList:{toggle(name,on){this.owner.classes[name]=on;}},
+        setAttribute(name,value){this.attributes[name]=value;}, removeAttribute(name){delete this.attributes[name];}}));
+      steps.forEach(step=>step.classList.owner=step);
+      const originalQuery=document.querySelectorAll;
+      document.querySelectorAll=selector=>selector==='[data-step]'?steps:originalQuery(selector);
+      updateActions();
+      if(steps[0].attributes['aria-current']!=='step') throw Error('missing source step');
+      state.nodes=[{name:'US01'},{name:'JP01'}];
+      state.serviceChoices={openai:{mode:'fixed',egress:'US01'},claude:{mode:'default'}};
+      updateActions();
+      if(!elements['#summary-nodes'].textContent.includes('2') || !elements['#summary-routes'].textContent.includes('1')) throw Error('summary not derived from draft');
+      if(steps[1].attributes['aria-current']!=='step' || !steps[0].classes['is-complete']) throw Error('source readiness not reflected');
+      state.check={can_publish:true}; state.checkedInput=JSON.stringify(payload()); updateActions();
+      if(elements['#generate-button'].disabled || steps[2].attributes['aria-current']!=='step') throw Error('current passed check not ready');
+      elements['#profile-name'].value='changed'; invalidate();
+      if(!elements['#generate-button'].disabled || !elements['#check-results'].hidden || steps[1].attributes['aria-current']!=='step') throw Error('stale check remained current');
+    })()
+    """)
+
+
+def test_service_cards_prioritize_ai_and_keep_field_focus_selection_and_search_count() -> None:
+    _run_flow_runtime("""
+    (() => {
+      const replacement={focus(){document.activeElement=this;},setSelectionRange(...range){this.range=range;}};
+      const card={dataset:{service:'openai'}};
+      document.activeElement={closest:()=>card,matches:selector=>selector==='[data-egress]',selectionStart:1,selectionEnd:3,selectionDirection:'forward'};
+      const root={html:'',get innerHTML(){return this.html;},set innerHTML(html){this.html=html;document.activeElement=null;},
+        querySelector:selector=>selector.includes('openai')&&selector.includes('data-egress')?replacement:null};
+      elements['#service-route-list']=root;
+      elements['#service-search']={value:''}; elements['#node-options']={innerHTML:''};
+      elements['#service-search-status']={textContent:''};
+      elements['#show-all-services']={textContent:'',setAttribute(name,value){this[name]=value;}};
+      state.nodes=[{name:'US01'}];
+      state.servicePacks=['netflix','youtube','claude','gemini','openai','github'].map(id=>({id,label:id,group:id,default_target:'默认代理',rules:[]}));
+      restoreChoices([{service:'openai',mode:'fixed',egress:'US01'}]);
+      renderServices();
+      const expected=['openai','claude','gemini','github','youtube'];
+      const positions=expected.map(id=>root.innerHTML.indexOf(`data-service="${id}"`));
+      if(positions.some((position,index)=>position<0||(index&&position<positions[index-1]))) throw Error('primary service order changed');
+      if(root.innerHTML.includes('data-service="netflix"')) throw Error('collapsed view showed unrelated default');
+      if(document.activeElement!==replacement || JSON.stringify(replacement.range)!=='[1,3,"forward"]') throw Error('service field focus/selection lost');
+      if(!elements['#service-search-status'].textContent.includes('5')) throw Error('visible service count missing');
+      state.showAll=true; renderServices();
+      if(elements['#show-all-services']['aria-expanded']!=='true'||!root.innerHTML.includes('data-service="netflix"')) throw Error('expanded state missing');
+      elements['#service-search'].value='not-a-service'; renderServices();
+      if(!root.innerHTML.includes('没有匹配')||!elements['#service-search-status'].textContent.includes('0')) throw Error('search empty state missing');
+    })()
+    """)
+
+
+def test_notice_focus_and_scroll_respect_reduced_motion_without_empty_notice_jumps() -> None:
+    _run_flow_runtime("""
+    (() => {
+      const notice=elements['#global-notice']; let focused=0, behavior;
+      notice.focus=()=>{focused++;}; notice.scrollIntoView=options=>{behavior=options.behavior;};
+      globalThis.matchMedia=()=>({matches:true});
+      setNotice(''); if(focused) throw Error('empty notice moved focus');
+      setNotice('请修正配置');
+      if(focused!==1||behavior!=='auto'||notice.hidden) throw Error('error not accessible with reduced motion');
+    })()
+    """)
+
+
+def test_committing_primary_node_keeps_backup_input_available_for_next_click() -> None:
+    _run_flow_runtime("""
+    (() => {
+      const makeElement=()=>({value:'',textContent:'',listeners:{},addEventListener(name,listener){this.listeners[name]=listener;}});
+      for(const element of Object.values(elements)) {element.listeners={};element.addEventListener=function(name,listener){this.listeners[name]=listener;};}
+      document.querySelector=selector=>elements[selector]||=makeElement();
+      const summary={textContent:''};
+      const card={dataset:{service:'gemini'},querySelector:()=>summary};
+      const field=(name,value)=>({value,connected:true,closest:()=>card,matches:selector=>selector===`[data-${name}]`||selector===`input[data-${name}]`});
+      const primary=field('egress','美国 US02'), backup=field('fallback','');
+      // A blur change can run while activeElement is BODY, before the next input receives focus.
+      document.activeElement={};
+      renderServices=()=>{primary.connected=false;backup.connected=false;};
+      updateActions=()=>{};
+      state.servicePacks=[{id:'gemini',default_target:'AI 服务'}];
+      restoreChoices([{service:'gemini',mode:'fallback',egress:'',fallback:''}]);
+      bindEvents();
+      const list=elements['#service-route-list'];
+      list.listeners.input({target:primary});
+      list.listeners.change({target:primary});
+      if(!backup.connected) throw Error('primary blur removed the pending backup click target');
+      backup.value='日本 JP01';
+      list.listeners.input({target:backup});
+      list.listeners.change({target:backup});
+      const route=payload().service_routes[0];
+      if(route.egress!=='美国 US02'||route.fallback!=='日本 JP01') throw Error('consecutive node edits lost an exit');
+      if(!summary.textContent.includes('美国 US02')||!summary.textContent.includes('日本 JP01')) throw Error('route summary did not follow editing');
+    })()
+    """)
+
+
 def test_late_service_catalog_keeps_profile_routes_opened_during_startup() -> None:
     _run_flow_runtime(
         """
         (async () => {
           const makeElement = () => ({
             value: "", textContent: "", innerHTML: "", hidden: false, disabled: false,
-            listeners: {}, classList: {toggle() {}},
+            listeners: {}, classList: {toggle() {}, add() {}, remove() {}},
+            setAttribute(name, value) { this[name] = value; },
             addEventListener(name, listener) { this.listeners[name] = listener; },
           });
           for (const element of Object.values(elements)) {

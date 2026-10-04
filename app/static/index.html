@@ -1,93 +1,124 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light" />
   <meta name="referrer" content="same-origin" />
   <title>Subflow 6.7.0 · 策略订阅工作台</title>
   <link rel="icon" type="image/png" href="/static/assets/subflow-logo.png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/static/flow.css?v=53" />
+  <link rel="stylesheet" href="/static/flow.css?v=54" />
 </head>
 <body>
+<a class="skip-link" href="#step-source">跳到订阅配置</a>
 <header class="simple-header">
-  <a class="simple-brand" href="/" aria-label="Subflow 首页"><span class="simple-logo"><img src="/static/assets/subflow-logo.png" alt="" /></span><strong>Subflow</strong><span class="version-badge">6.7.0</span></a>
-  <span class="simple-health" id="health-chip"><i></i><span>检查服务</span></span>
+  <div class="header-inner">
+    <a class="simple-brand" href="/" aria-label="Subflow 首页">
+      <span class="simple-logo"><img src="/static/assets/subflow-logo.png" alt="" /></span>
+      <strong>Subflow</strong><span class="version-badge">6.7.0</span>
+    </a>
+    <nav class="header-nav" aria-label="工作台导航">
+      <a href="#step-source" class="is-active">订阅配置</a>
+      <a href="#diagnostic-panel">服务诊断</a>
+    </nav>
+    <span class="simple-health" id="health-chip" role="status"><i aria-hidden="true"></i><span>检查服务</span></span>
+  </div>
 </header>
 <main class="simple-shell">
+  <header class="simple-intro">
+    <div><p class="eyebrow"><span aria-hidden="true"></span>个人网络 · 有序连接</p><h1>每个服务，都有合适的出口。</h1><span>一份订阅，连接你的设备。配置、检查与更新，在这里完成。</span></div>
+    <div class="intro-tag"><span class="intro-tag-symbol" aria-hidden="true">↗</span><div><b>你的连接，你来选择</b><small>Clash / OpenClash · Surge · Shadowrocket</small></div></div>
+  </header>
   <div class="workspace-grid">
     <div class="config-workbench">
-      <header class="simple-intro"><p>YOUR CONNECTION, YOUR CHOICE</p><h1>管理你的策略订阅</h1><span>选择服务出口，检查客户端兼容性，持续更新同一条订阅。</span></header>
-      <div id="global-notice" class="simple-notice" hidden role="alert"></div>
-      <section class="simple-section profile-section" aria-labelledby="profile-title">
-        <div class="section-heading"><h2 id="profile-title">订阅工作区</h2><button id="new-profile-button" class="text-button" type="button">新建订阅</button></div>
-        <details id="open-profile-panel"><summary>打开已有 Subflow 订阅</summary>
-          <div class="source-line"><label for="existing-profile-url"><span>粘贴已有 Subflow 订阅链接</span><input id="existing-profile-url" type="url" autocomplete="off" placeholder="https://你的服务/subscribe/…?token=…" /></label><button id="open-profile-button" class="simple-button secondary" type="button">打开编辑</button></div>
-          <p class="helper">在当前服务器校验链接。凭据仅保留在本页内存中，更新后原链接不变。</p>
-        </details>
-        <p id="profile-status" class="helper">正在新建订阅</p>
-        <label class="field" for="profile-name"><span>订阅名称（可选）</span><input id="profile-name" maxlength="80" placeholder="例如：家里的 OpenClash" /></label>
-        <div id="legacy-panel" class="upgrade-panel" hidden><b>这是旧版策略快照</b><p>可以按原规则检查和保存。采用当前 Leo 前，先预览将替换的规则与保留的出口。</p><button class="simple-button secondary" id="preview-upgrade-button" type="button">预览采用当前 Leo</button><div id="upgrade-result" hidden></div></div>
-      </section>
-      <section class="simple-section" aria-labelledby="source-title">
-        <div class="simple-section-title"><b>1</b><div><h2 id="source-title">客户端与来源</h2><p>检查所选客户端；保存后订阅来源保存在此服务器的私有 Profile 中。</p></div></div>
-        <fieldset class="client-picker"><legend>使用哪些客户端？</legend>
+      <nav class="workspace-steps" aria-label="配置步骤">
+        <a href="#step-source" data-step="source" class="is-current" aria-current="step"><b>01</b><span>读取来源<small>选择客户端与节点</small></span><i aria-hidden="true">→</i></a>
+        <a href="#step-services" data-step="services"><b>02</b><span>设置出口<small>按服务选择策略</small></span><i aria-hidden="true">→</i></a>
+        <a href="#step-review" data-step="review"><b>03</b><span>检查与保存<small>生成长期订阅</small></span></a>
+      </nav>
+      <p id="workspace-progress" class="workspace-progress" role="status">从读取订阅节点开始</p>
+      <div id="global-notice" class="simple-notice" hidden role="alert" tabindex="-1"></div>
+
+      <section class="simple-section" id="step-source" aria-labelledby="source-title" tabindex="-1">
+        <div class="simple-section-title"><b>01</b><div><h2 id="source-title">客户端与来源</h2><p>选择使用的客户端，再读取原始订阅中的节点。</p></div><span class="section-tag">SOURCE</span></div>
+        <div class="profile-section">
+          <div class="profile-strip"><p id="profile-status">正在新建订阅</p><button id="new-profile-button" class="text-button" type="button">新建订阅 <span aria-hidden="true">＋</span></button></div>
+          <details id="open-profile-panel"><summary>打开已有 Subflow 订阅</summary>
+            <div class="source-line"><label for="existing-profile-url"><span>已有 Subflow 订阅链接</span><input id="existing-profile-url" type="url" autocomplete="off" spellcheck="false" placeholder="https://你的服务/subscribe/…?token=…" /></label><button id="open-profile-button" class="simple-button secondary" type="button">打开编辑</button></div>
+            <p class="helper">在当前服务器校验链接。更新后原链接不变。</p>
+          </details>
+          <div id="legacy-panel" class="upgrade-panel" hidden><b>这是旧版策略快照</b><p>可以按原规则检查和保存。采用当前 Leo 前，先预览将替换的规则与保留的出口。</p><button class="simple-button secondary" id="preview-upgrade-button" type="button">预览采用当前 Leo</button><div id="upgrade-result" hidden></div></div>
+        </div>
+        <fieldset class="client-picker"><legend>使用哪些客户端？<span>可多选</span></legend>
           <label><input type="checkbox" name="target" value="mihomo" checked /><span>Clash / OpenClash<small>Mihomo 内核</small></span></label>
-          <label><input type="checkbox" name="target" value="surge" checked /><span>Surge<small>5.21+ 兼容输出</small></span></label>
+          <label><input type="checkbox" name="target" value="surge" checked /><span>Surge<small>iOS 5.21+ 兼容输出</small></span></label>
           <label><input type="checkbox" name="target" value="shadowrocket" /><span>Shadowrocket<small>节点 + 配套配置</small></span></label>
         </fieldset>
-        <label class="field surge-preference" id="surge-auto-test-row">
-          <span>Surge 自动测速节点</span>
-          <select id="surge-auto-test-protocols">
-            <option value="all">全部兼容节点</option>
-            <option value="anytls">仅 AnyTLS</option>
-            <option id="surge-auto-test-custom" value="custom" hidden>自定义（保持原值）</option>
-          </select>
-          <small>只影响自动测速组；手动选择仍保留全部节点。</small>
-        </label>
-        <div class="source-line"><label for="subscription-url"><span>原始订阅 URL</span><input id="subscription-url" type="url" autocomplete="off" placeholder="https://example.com/sub?token=…" /></label><button class="simple-button secondary" id="validate-source-button" type="button">读取节点</button></div>
-        <div id="source-result" class="inline-status" hidden></div>
+        <div class="source-line"><label for="subscription-url"><span>原始订阅 URL</span><input id="subscription-url" type="url" autocomplete="off" spellcheck="false" placeholder="粘贴你的原始订阅链接 https://…" aria-describedby="source-helper source-result" /></label><button class="simple-button primary" id="validate-source-button" type="button">读取节点</button></div>
+        <p id="source-helper" class="helper">来源和节点凭据仅保存在你的服务器。读取不会修改原始订阅。</p>
+        <div id="source-result" class="inline-status" hidden role="status" aria-live="polite"></div>
+        <details class="source-options"><summary>订阅名称与客户端偏好<span>可选设置</span></summary><div class="source-options-grid">
+          <label class="field" for="profile-name"><span>订阅名称</span><input id="profile-name" maxlength="80" placeholder="例如：家里的 OpenClash" /></label>
+          <label class="field surge-preference" id="surge-auto-test-row"><span>Surge 自动测速节点</span><select id="surge-auto-test-protocols"><option value="all">全部兼容节点</option><option value="anytls">仅 AnyTLS</option><option id="surge-auto-test-custom" value="custom" hidden>自定义（保持原值）</option></select><small>只影响自动测速组；手动选择保留全部节点。</small></label>
+        </div></details>
       </section>
-      <section class="simple-section" aria-labelledby="strategy-title">
-        <div class="simple-section-title"><b>2</b><div><h2 id="strategy-title">服务出口</h2><p>未修改的服务跟随 Leo。固定节点不会加入其他候选。</p></div></div>
-        <label class="field search-field" for="service-search"><span>查找服务</span><input id="service-search" type="search" placeholder="ChatGPT、Claude、YouTube…" /></label>
+
+      <section class="simple-section" id="step-services" aria-labelledby="strategy-title" tabindex="-1">
+        <div class="simple-section-title"><b>02</b><div><h2 id="strategy-title">服务出口</h2><p>常用服务单独设置，其余跟随 Leo。选择的是配置意图。</p></div><span class="section-tag">ROUTING</span></div>
+        <div class="service-toolbar"><label class="field search-field" for="service-search"><span class="visually-hidden">查找服务</span><span class="search-icon" aria-hidden="true">⌕</span><input id="service-search" type="search" placeholder="查找服务，如 ChatGPT、Claude、Gemini" /></label><small id="service-search-status" role="status" aria-live="polite">载入服务中</small></div>
         <datalist id="node-options"></datalist>
-        <div id="service-route-list" class="service-list"><div class="simple-loading">正在载入服务…</div></div><button id="show-all-services" class="text-button expand-services" type="button">展开全部服务</button>
+        <div id="service-route-list" class="service-list"><div class="simple-loading">正在载入服务…</div></div>
+        <button id="show-all-services" class="text-button expand-services" type="button" aria-expanded="false" aria-controls="service-route-list">展开全部服务</button>
       </section>
-      <section class="simple-section" aria-labelledby="check-title">
-        <div class="simple-section-title"><b>3</b><div><h2 id="check-title">检查与保存</h2><p>修改来源、客户端或出口后，需要重新检查。</p></div></div>
-        <div class="check-actions"><button id="check-button" class="simple-button secondary" type="button" disabled>检查所选客户端</button><span id="check-state" class="helper">先读取订阅节点</span></div>
-        <div id="check-results" hidden aria-live="polite"></div>
-        <div class="save-bar"><div><b id="save-title">生成订阅</b><p id="generate-hint">检查通过后可以保存。</p></div><button class="simple-button primary" id="generate-button" type="button" disabled>保存并生成链接</button></div>
+
+      <section class="simple-section" id="step-review" aria-labelledby="check-title" tabindex="-1">
+        <div class="simple-section-title"><b>03</b><div><h2 id="check-title">检查与保存</h2><p>先检查兼容性，再将配置同步到长期订阅。</p></div><span class="section-tag">PUBLISH</span></div>
+        <div class="check-actions"><button id="check-button" data-success-target="#check-results" class="simple-button secondary" type="button" disabled>检查所选客户端</button><span id="check-state" class="helper" role="status">先读取订阅节点</span></div>
+        <div id="check-results" hidden aria-live="polite" tabindex="-1"></div>
+        <div class="save-bar"><div><b id="save-title">生成订阅</b><p id="generate-hint">检查通过后可以保存。</p></div><button class="simple-button primary" id="generate-button" data-success-target="#publish-result" type="button" disabled>保存并生成链接</button></div>
       </section>
-      <section id="publish-result" class="simple-result" hidden aria-live="polite">
-        <div><b id="publish-title">已保存订阅</b><span>在客户端导入或刷新以下链接；实际联网状态请另行验证。</span></div>
+      <section id="publish-result" class="simple-result" hidden aria-live="polite" tabindex="-1">
+        <div><span class="result-eyebrow">SUBSCRIPTION READY</span><b id="publish-title">已保存订阅</b><span>在客户端导入或刷新以下链接；实际联网状态请另行验证。</span></div>
         <label class="result-line" data-output-target="mihomo"><span>Clash / Mihomo</span><input id="published-clash-url" readonly aria-label="Clash订阅链接" /><button data-copy-output="clash" type="button">复制</button></label>
-        <label class="result-line" data-output-target="surge"><span>Surge 5.21+</span><input id="published-surge-url" readonly aria-label="Surge订阅链接" /><button data-copy-output="surge" type="button">复制</button></label>
+        <label class="result-line" data-output-target="surge"><span>Surge iOS 5.21+</span><input id="published-surge-url" readonly aria-label="Surge订阅链接" /><button data-copy-output="surge" type="button">复制</button></label>
         <label class="result-line" data-output-target="shadowrocket"><span>Shadowrocket 节点</span><input id="published-shadowrocket-url" readonly aria-label="Shadowrocket节点链接" /><button data-copy-output="shadowrocket" type="button">复制</button></label>
         <label class="result-line" data-output-target="shadowrocket"><span>Shadowrocket 配置</span><input id="published-shadowrocket-config-url" readonly aria-label="Shadowrocket配置链接" /><button data-copy-output="shadowrocket-config" type="button">复制</button></label>
         <p data-output-target="shadowrocket" class="helper">Shadowrocket：先添加节点订阅，再在「配置 → 添加配置」导入并启用配套配置。更新时同步更新这两项。</p>
         <p id="publish-reach-warning" class="inline-status is-error" hidden></p>
       </section>
       <section id="publication-status-panel" class="simple-section" hidden aria-live="polite">
-        <h2>已保存订阅的刷新状态</h2>
+        <div class="section-heading"><h2>订阅刷新状态</h2><span class="section-tag">SYNC</span></div>
         <div id="publication-status"></div>
         <button id="refresh-publications-button" class="simple-button secondary" type="button" disabled>强制刷新已保存的订阅</button>
-        <p class="helper">此操作重新读取上游，不保存当前草稿。完成后仍需在电脑和手机客户端更新订阅；可核对配置首行的版本与生成时间。</p>
+        <p class="helper">重新读取上游，不保存当前草稿。完成后仍需在电脑和手机客户端更新订阅，可核对配置首行的版本与生成时间。</p>
       </section>
-      <section class="simple-section diagnostic-section" aria-labelledby="diagnose-title">
-        <div class="section-heading"><div><h2 id="diagnose-title">服务无法访问？</h2><p class="helper">先核对分流，再按需读取客户端与探测目标服务。</p></div></div>
+      <section class="simple-section diagnostic-section" id="diagnostic-panel" aria-labelledby="diagnose-title" tabindex="-1">
+        <div class="section-heading"><div><p class="section-eyebrow">连接诊断</p><h2 id="diagnose-title">服务无法访问？从这里排查。</h2><p class="helper">先核对分流，再按需读取客户端与探测目标服务。</p></div></div>
         <div class="diagnose-controls"><label class="field" for="diagnose-service"><span>服务</span><select id="diagnose-service"><option value="openai">ChatGPT / OpenAI</option></select></label><label class="field" for="diagnose-client"><span>客户端</span><select id="diagnose-client"><option value="mihomo">Mihomo / OpenClash</option><option value="surge">Surge Mac</option></select></label></div>
-        <label class="runtime-option"><input type="checkbox" id="diagnose-runtime" /><span>同时请求客户端实测（连续 3 轮，查看失败率与延迟波动，不修改选择）</span></label>
+        <label class="runtime-option"><input type="checkbox" id="diagnose-runtime" /><span>同时请求客户端实测<small>连续 3 轮，查看失败率与延迟波动，不修改选择。</small></span></label>
         <p id="runtime-state" class="helper">未连接客户端 · 实际节点与访问未验证</p>
-        <button id="diagnose-button" class="simple-button secondary" type="button" disabled>检查这个服务</button>
-        <div id="diagnose-result" hidden aria-live="polite"></div>
+        <button id="diagnose-button" data-success-target="#diagnose-result" class="simple-button secondary" type="button" disabled>检查这个服务</button>
+        <div id="diagnose-result" hidden aria-live="polite" tabindex="-1"></div>
         <details class="connection-help"><summary>如何连接客户端？</summary><p>本机运行时可使用已安装的 Surge CLI。Docker / 路由器场景由管理员设置 <code>SUBFLOW_MIHOMO_CONTROLLER</code> 和 <code>SUBFLOW_MIHOMO_SECRET</code> 后重启服务。Controller 必须能从 Subflow 所在环境访问，凭据不进入订阅或页面。</p><p>通用测速只验证探针。HTTP 探测可达也不等于完整登录、会话与对话正常。</p></details>
       </section>
     </div>
-    <aside class="reference-aside"><details class="leo-reference-panel"><summary class="ledger-toggle">Leo 策略与公开账本<span>查看规则、来源及质量证据</span></summary><div id="data-ledger" class="data-ledger"></div><div id="leo-reference" class="leo-reference"></div></details><p class="aside-note">配置意图 ≠ 客户端当前选择<br />编译通过 ≠ 服务可访问</p></aside>
+
+    <aside class="reference-aside" aria-label="配置摘要与规则参考">
+      <section id="workspace-summary" class="workspace-summary" aria-labelledby="summary-title">
+        <div class="summary-heading"><span class="section-eyebrow">当前草稿</span><span class="draft-indicator" aria-hidden="true"></span></div><h2 id="summary-title">配置一目了然</h2>
+        <p class="summary-description">从来源到出口，每一步都有据可查。</p>
+        <dl class="summary-metrics"><div><dt>已读取节点</dt><dd id="summary-nodes">0</dd></div><div><dt>目标客户端</dt><dd id="summary-clients">2</dd></div><div><dt>自定义出口</dt><dd id="summary-routes">0</dd></div></dl>
+        <div class="summary-next"><span>下一步</span><p id="summary-state" role="status">读取来源，查看可用节点。</p></div>
+        <a class="summary-link" href="#step-review">前往检查与保存 <span aria-hidden="true">↗</span></a>
+      </section>
+      <details class="leo-reference-panel"><summary class="ledger-toggle"><span class="ledger-icon" aria-hidden="true">L</span><b>Leo 策略与公开账本</b><span>查看规则、来源及质量证据</span></summary><div id="data-ledger" class="data-ledger"></div><div id="leo-reference" class="leo-reference"></div></details>
+      <div class="aside-note"><b>清楚区分配置与实测</b><p>配置意图 ≠ 客户端当前选择<br />编译通过 ≠ 服务可访问</p></div>
+    </aside>
   </div>
+  <footer class="workspace-footer"><span>Subflow · 让连接更有条理</span><a href="#step-source">回到配置起点 ↑</a></footer>
 </main>
 <div class="toast" id="toast" hidden role="status"></div>
-<script src="/static/flow.js?v=54"></script>
-</body></html>
+<script src="/static/flow.js?v=55"></script>
+</body>
+</html>

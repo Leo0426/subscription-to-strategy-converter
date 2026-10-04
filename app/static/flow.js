@@ -8,6 +8,8 @@ const state = {
   surgeProtocols: [],
 };
 const CLIENT_LABELS = {mihomo:"Clash / OpenClash",surge:"Surge",shadowrocket:"Shadowrocket"};
+const PRIMARY_SERVICES = ["openai","claude","gemini","github","youtube"];
+const SERVICE_SYMBOLS = {openai:"O",claude:"C",gemini:"G",github:"GH",youtube:"Y"};
 function escapeHtml(value) { const div=document.createElement("div"); div.textContent=String(value??""); return div.innerHTML.replaceAll('"', "&quot;").replaceAll("'", "&#39;"); }
 async function jsonRequest(path, options={}) {
   const response=await fetch(path, {...options, cache:"no-store"});
@@ -19,7 +21,15 @@ async function jsonRequest(path, options={}) {
   return body;
 }
 const postJson=(path,body)=>jsonRequest(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-function setNotice(message="") { $("#global-notice").textContent=message; $("#global-notice").hidden=!message; }
+function focusControl(element, scroll=false, block="center") {
+  if(!element||element.disabled) return;
+  if(scroll) element.scrollIntoView?.({behavior:globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block});
+  element.focus?.({preventScroll:true});
+}
+function setNotice(message="") {
+  const notice=$("#global-notice"); notice.textContent=message; notice.hidden=!message;
+  if(message) focusControl(notice,true);
+}
 function showToast(message) { const el=$("#toast"); el.textContent=message; el.hidden=false; clearTimeout(showToast.timer); showToast.timer=setTimeout(()=>{el.hidden=true;},2400); }
 async function copyToClipboard(value,input) {
   try { if(navigator.clipboard?.writeText) { await navigator.clipboard.writeText(value); return; } } catch {}
@@ -29,7 +39,7 @@ function selectedTargets() { return [...document.querySelectorAll('input[name="t
 function updateSurgePreferenceVisibility() {
   const selected=selectedTargets().includes("surge");
   $("#surge-auto-test-row").hidden=!selected;
-  $("#surge-auto-test-protocols").disabled=!selected;
+  $("#surge-auto-test-protocols").disabled=!selected||state.busy;
 }
 function restoreSurgePreferences(preferences={}) {
   const protocols=Array.isArray(preferences?.auto_test_protocols)?[...preferences.auto_test_protocols]:[];
@@ -48,6 +58,27 @@ function payload() {
   return {...common,service_routes:Object.entries(state.serviceChoices).filter(([,r])=>r.mode!=="default").map(([service,r])=>({service,mode:r.mode,egress:r.egress?.trim()||null,...(r.mode==="fallback"?{fallback:r.fallback?.trim()||null}:{})}))};
 }
 function invalidate() { $("#diagnose-result").hidden=true; state.epoch++; state.check=null; state.checkedInput=null; $("#check-results").hidden=true; $("#publish-result").hidden=true; $("#check-state").textContent=state.nodes.length?"配置已改变，请重新检查":"先读取订阅节点"; updateActions(); }
+function updateWorkspaceSummary() {
+  const targets=selectedTargets();
+  const sourceReady=state.nodes.length>0&&targets.length>0;
+  const checked=state.check&&state.checkedInput===JSON.stringify(payload());
+  const current=!sourceReady?"source":checked?"review":"services";
+  const steps=["source","services","review"];
+  document.querySelectorAll('[data-step]').forEach(link=>{
+    const active=link.dataset.step===current;
+    link.classList.toggle("is-current",active);
+    link.classList.toggle("is-complete",steps.indexOf(link.dataset.step)<steps.indexOf(current));
+    if(active) link.setAttribute("aria-current","step"); else link.removeAttribute("aria-current");
+  });
+  const values={
+    "summary-nodes":state.nodes.length?`${state.nodes.length} 个节点`:"尚未读取",
+    "summary-clients":targets.length?`${targets.length} 个客户端`:"尚未选择",
+    "summary-routes":state.legacy?"保留旧策略快照":`${Object.values(state.serviceChoices).filter(r=>r.mode!=="default").length} 项服务偏好`,
+    "summary-state":state.busy?"处理中":!sourceReady?"待读取来源":!checked?"待检查":state.check.can_publish?"可以保存":"有阻断项",
+    "workspace-progress":state.busy?"正在处理，请稍候":current==="source"?"第 1 步 · 读取来源与选择客户端":current==="services"?"第 2 步 · 确认服务出口，再检查配置":state.check.can_publish?"第 3 步 · 核对检查结果，保存订阅":"第 3 步 · 查看阻断项，修正后重新检查",
+  };
+  for(const [id,text] of Object.entries(values)) {const element=$("#"+id);if(element) element.textContent=text;}
+}
 function updateActions() {
   const ready=state.nodes.length>0 && selectedTargets().length>0 && !state.busy;
   $("#refresh-publications-button").disabled=!state.profile||state.busy;
@@ -57,15 +88,33 @@ function updateActions() {
   $("#generate-button").textContent=state.profile?"更新原订阅":"保存并生成链接";
   $("#save-title").textContent=state.profile?"保存到原订阅":"生成订阅";
   $("#generate-hint").textContent=state.profile?"更新保留原链接；客户端刷新后采用新配置。":"检查通过后，生成所选客户端的订阅。";
+  updateWorkspaceSummary();
 }
 async function busy(button,label,operation) {
   if(state.busy) return;
   const original=button.textContent; state.busy=true;
+  const workbench=$(".config-workbench"); workbench?.setAttribute?.("aria-busy","true"); button.classList?.add("is-loading");
   const controls=[...document.querySelectorAll(".config-workbench input, .config-workbench select, .config-workbench button")];
   const disabled=controls.map(el=>el.disabled); controls.forEach(el=>{el.disabled=true;}); button.textContent=label;
+  updateWorkspaceSummary();
+  let failed=false, errorFocus=null;
   setNotice("");
-  try { await operation(); } catch(error) { if(error.checks) renderCheck(error.checks); setNotice(error.message); }
-  finally { controls.forEach((el,i)=>{el.disabled=disabled[i];}); state.busy=false; button.textContent=original; renderServices(); updateSurgePreferenceVisibility(); updateActions(); }
+  try { await operation(); } catch(error) {
+    failed=true; errorFocus=error.focusTarget;
+    if(error.checks) renderCheck(error.checks);
+    if(!errorFocus) setNotice(error.message);
+  }
+  finally {
+    controls.forEach((el,i)=>{el.disabled=disabled[i];}); state.busy=false; button.textContent=original;
+    workbench?.setAttribute?.("aria-busy","false"); button.classList?.remove("is-loading");
+    renderServices(); updateSurgePreferenceVisibility(); updateActions();
+    if(errorFocus) focusControl($(errorFocus),true);
+    else if(!failed) {
+      const result=button.dataset?.successTarget?$(button.dataset.successTarget):null;
+      if(result&&!result.hidden&&result.getClientRects().length) focusControl(result,true,"start");
+      else focusControl(button);
+    }
+  }
 }
 function defaultServiceTarget(id) { return state.servicePacks.find(s=>s.id===id)?.default_target||"默认代理"; }
 function leoEgressGroups() {
@@ -179,11 +228,23 @@ function renderLeoReference() {
     </details>`;
 }
 
+function serviceRouteSummary(id,route) {
+  if(route.mode==="default") return `跟随 Leo · ${defaultServiceTarget(id)}`;
+  if(route.mode==="fixed") return `固定出口 · ${route.egress||"待选择节点"}`;
+  if(route.mode==="manual") return `客户端手选 · ${route.egress||"待选择策略或节点"}`;
+  return `主 ${route.egress||"待选择"} → 备 ${route.fallback||"待选择"}`;
+}
 function renderServices() {
   const root=$("#service-route-list"); if(!state.servicePacks.length) return;
+  const active=document.activeElement;
+  const focusedService=active?.closest?.('[data-service]')?.dataset.service;
+  const focusedField=["mode","egress","fallback"].find(field=>active?.matches?.(`[data-${field}]`));
+  const selection=typeof active?.selectionStart==="number"?[active.selectionStart,active.selectionEnd,active.selectionDirection]:null;
   const search=$("#service-search").value.trim().toLowerCase();
   const groups=leoEgressGroups();
-  root.innerHTML=state.servicePacks.filter(s=>`${s.label} ${s.id}`.toLowerCase().includes(search)).filter(s=>search||state.showAll||["openai","claude","github","youtube"].includes(s.id)||state.serviceChoices[s.id]?.mode!=="default").map(service=>{
+  const rank=id=>PRIMARY_SERVICES.includes(id)?PRIMARY_SERVICES.indexOf(id):PRIMARY_SERVICES.length;
+  const services=[...state.servicePacks].sort((a,b)=>rank(a.id)-rank(b.id)).filter(s=>`${s.label} ${s.id}`.toLowerCase().includes(search)).filter(s=>search||state.showAll||PRIMARY_SERVICES.includes(s.id)||(state.serviceChoices[s.id]?.mode||"default")!=="default");
+  root.innerHTML=services.map(service=>{
     const r=state.serviceChoices[service.id]||{mode:"default",egress:"",fallback:""};
     const options=[["default","跟随 Leo"],["fixed","固定节点"],["manual","交给客户端选择"],["fallback","主备故障切换"]];
     const locked=state.legacy||state.busy?" disabled":"";
@@ -194,22 +255,37 @@ function renderServices() {
     } else if(r.mode!=="default") {
       fields=`<div class="egress-fields"><label class="field"><span>${r.mode==="fallback"?"主节点":"固定到"}</span><input data-egress list="node-options" value="${escapeHtml(r.egress)}" placeholder="输入名称查找节点" autocomplete="off"${locked} /></label>${r.mode==="fallback"?`<label class="field"><span>备用节点</span><input data-fallback list="node-options" value="${escapeHtml(r.fallback)}" placeholder="选择另一个节点" autocomplete="off"${locked} /></label>`:""}</div><p class="helper">${r.mode==="fixed"?"仅保留这一目标；节点消失时检查会报错，不会默默改走其他出口。":"主节点通用连通性检查失败才切换备用；不代表目标服务已解锁。"}</p>`;
     }
-    return `<article class="service-card${r.mode!=="default"?" is-customized":""}" data-service="${escapeHtml(service.id)}"><div class="service-card-heading"><div><strong>${escapeHtml(service.label)}</strong><small>默认：${escapeHtml(service.default_target)} · ${service.rules.length} 条服务规则</small></div><select data-mode aria-label="${escapeHtml(service.label)}出口行为"${locked}>${options.map(([v,l])=>`<option value="${v}"${r.mode===v?" selected":""}>${l}</option>`).join("")}</select></div>${fields?`<div class="service-card-fields">${fields}</div>`:""}</article>`;
-  }).join("")||'<p class="helper">没有匹配的服务。</p>';
+    const intent=serviceRouteSummary(service.id,r);
+    return `<article class="service-card${r.mode!=="default"?" is-customized":""}" data-service="${escapeHtml(service.id)}"><div class="service-card-heading"><div class="service-identity"><span class="service-symbol" data-kind="${escapeHtml(service.id)}" aria-hidden="true">${escapeHtml(SERVICE_SYMBOLS[service.id]||service.label.slice(0,1))}</span><div><strong>${escapeHtml(service.label)}</strong><small>${service.rules.length} 条服务规则</small></div></div><select data-mode aria-label="${escapeHtml(service.label)}出口行为"${locked}>${options.map(([v,l])=>`<option value="${v}"${r.mode===v?" selected":""}>${l}</option>`).join("")}</select></div><p class="service-route-summary">${escapeHtml(intent)}</p>${fields?`<div class="service-card-fields">${fields}</div>`:""}</article>`;
+  }).join("")||'<p class="service-empty">没有匹配的服务。试试服务名称，或清空搜索查看常用服务。</p>';
   $("#node-options").innerHTML=[...state.nodes.map(n=>n.name),"DIRECT","REJECT"].map(n=>`<option value="${escapeHtml(n)}"></option>`).join("");
+  const searchStatus=$("#service-search-status");
+  if(searchStatus) searchStatus.textContent=search?`找到 ${services.length} 项服务`:`显示 ${services.length} / ${state.servicePacks.length} 项服务`;
+  const expand=$("#show-all-services");
+  if(expand) {expand.textContent=state.showAll?"收起其他服务":"展开全部服务";expand.setAttribute("aria-expanded",String(state.showAll));}
+  if(focusedService&&focusedField) {
+    const replacement=root.querySelector(`[data-service="${focusedService}"] [data-${focusedField}]`);
+    focusControl(replacement);
+    if(replacement&&!replacement.disabled&&selection) replacement.setSelectionRange?.(...selection);
+  }
 }
 function restoreChoices(routes=[]) {
   state.serviceChoices=Object.fromEntries(state.servicePacks.map(s=>[s.id,{mode:"default",egress:"",fallback:""}]));
   for(const r of routes) if(r.enabled!==false&&r.mode&&r.mode!=="legacy") state.serviceChoices[r.service]={...r};
 }
 async function loadNodes() {
-  if(!$("#subscription-url").value.trim()) throw new Error("请输入原始订阅地址。");
-  if(!selectedTargets().length) throw new Error("至少选择一个客户端。");
-  invalidate(); state.nodes=[];
+  state.nodes=[]; invalidate(); renderServices();
   try {
+    if(!$("#subscription-url").value.trim()) throw new Error("请输入原始订阅地址。");
+    if(!selectedTargets().length) throw new Error("至少选择一个客户端。");
     const body=await postJson("/preview",{subscription_url:$("#subscription-url").value.trim(),target:selectedTargets()[0]}); state.nodes=body.nodes||[];
     const result=$("#source-result"); result.hidden=false; result.className="inline-status"; result.textContent=`已读取 ${state.nodes.length} 个节点 · 读取成功不代表节点可访问目标服务`;
-  } catch(error) { $("#source-result").hidden=true; throw error; }
+  } catch(error) {
+    const result=$("#source-result"); result.hidden=false; result.className="inline-status is-error"; result.textContent=error.message;
+    error.focusTarget=selectedTargets().length?"#subscription-url":'input[name="target"]';
+    throw error;
+  }
+  $("#check-state").textContent=state.nodes.length?"节点已读取，可以检查所选客户端":"来源中没有节点，请核对订阅地址";
   renderServices(); updateActions();
 }
 function renderDependencySummary(inventory) {
@@ -348,20 +424,22 @@ function bindEvents() {
   const actions={"refresh-publications-button":["刷新中…",refreshPublications],"validate-source-button":["读取中…",loadNodes],"check-button":["检查中…",checkConfig],"generate-button":["保存中…",saveProfile],"open-profile-button":["打开中…",openProfile],"preview-upgrade-button":["比较中…",previewUpgrade],"diagnose-button":["检查中…",diagnose]};
   for(const [id,[label,fn]] of Object.entries(actions)) $("#"+id).addEventListener("click",event=>busy(event.currentTarget,label,fn));
   $("#new-profile-button").addEventListener("click",newProfile);
-  $("#subscription-url").addEventListener("input",()=>{state.nodes=[];$("#source-result").hidden=true;invalidate();});
+  $("#subscription-url").addEventListener("input",()=>{state.nodes=[];$("#source-result").hidden=true;invalidate();renderServices();});
   $("#profile-name").addEventListener("input",invalidate);
   document.querySelectorAll('input[name="target"]').forEach(el=>el.addEventListener("change",()=>{updateSurgePreferenceVisibility();invalidate();}));
   $("#surge-auto-test-protocols").addEventListener("change",invalidate);
   for(const id of ["diagnose-service","diagnose-client","diagnose-runtime"]) $("#"+id).addEventListener("change",()=>{$("#diagnose-result").hidden=true;});
   $("#service-search").addEventListener("input",renderServices);
-  $("#show-all-services").addEventListener("click",event=>{state.showAll=!state.showAll;event.target.textContent=state.showAll?"收起其他服务":"展开全部服务";renderServices();});
+  $("#show-all-services").addEventListener("click",()=>{state.showAll=!state.showAll;renderServices();});
   $("#service-route-list").addEventListener("change",event=>{
     const card=event.target.closest('[data-service]');if(!card||state.busy) return;
     const r=state.serviceChoices[card.dataset.service]||{mode:"default",egress:"",fallback:""};
     if(event.target.matches('[data-mode]')) {r.mode=event.target.value;r.fallback="";}
     if(event.target.matches('[data-egress]')) r.egress=event.target.value;
     if(event.target.matches('[data-fallback]')) r.fallback=event.target.value;
-    state.serviceChoices[card.dataset.service]=r;invalidate();renderServices();
+    state.serviceChoices[card.dataset.service]=r;invalidate();
+    if(event.target.matches('[data-mode]')) renderServices();
+    else $(".service-route-summary",card).textContent=serviceRouteSummary(card.dataset.service,r);
   });
   $("#service-route-list").addEventListener("input",event=>{
     const card=event.target.closest('[data-service]'); if(!card) return;
@@ -369,11 +447,12 @@ function bindEvents() {
     if(event.target.matches('input[data-egress]')) r.egress=event.target.value;
     else if(event.target.matches('input[data-fallback]')) r.fallback=event.target.value;
     else return;
+    $(".service-route-summary",card).textContent=serviceRouteSummary(card.dataset.service,r);
     invalidate();
   });
   $("#upgrade-result").addEventListener("click",event=>{if(event.target.id==="apply-upgrade-button")applyUpgrade();});
   $("#publish-result").addEventListener("click",async event=>{const b=event.target.closest('[data-copy-output]');if(!b)return;const input=$(`#published-${b.dataset.copyOutput}-url`);try{await copyToClipboard(input.value,input);showToast("链接已复制");}catch{showToast("请选中链接后手动复制");}});
-  $("#leo-reference").addEventListener("click",event=>{const b=event.target.closest('[data-reference-service]');if(!b)return;$("#service-search").value=b.dataset.referenceService;renderServices();$("#strategy-title").scrollIntoView({behavior:"smooth"});});
+  $("#leo-reference").addEventListener("click",event=>{const b=event.target.closest('[data-reference-service]');if(!b)return;$("#service-search").value=b.dataset.referenceService;renderServices();focusControl($(`[data-service="${b.dataset.referenceService}"] [data-mode]`),true);});
 }
 async function init() {
   bindEvents();
