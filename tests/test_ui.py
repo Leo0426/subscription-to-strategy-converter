@@ -71,8 +71,8 @@ def test_root_and_legacy_advanced_route_serve_the_same_simple_page() -> None:
     assert root.status_code == 200
     assert advanced.status_code == 200
     assert root.text == advanced.text
-    assert "/static/flow.js?v=56" in root.text
-    assert "/static/flow.css?v=55" in root.text
+    assert "/static/flow.js?v=57" in root.text
+    assert "/static/flow.css?v=56" in root.text
     assert "/static/assets/subflow-logo.png" in root.text
 
 
@@ -386,12 +386,18 @@ def test_service_cards_prioritize_ai_and_keep_field_focus_selection_and_search_c
       elements['#show-all-services']={textContent:'',setAttribute(name,value){this[name]=value;}};
       state.nodes=[{name:'US01'}];
       state.servicePacks=['netflix','youtube','claude','gemini','openai','github'].map(id=>({id,label:id,group:id,default_target:'默认代理',rules:[]}));
+      state.servicePacks.find(s=>s.id==='openai').category='ai';
+      state.servicePacks.find(s=>s.id==='claude').category='future-category';
+      state.serviceCategories.find(c=>c.id==='ai').label='AI <工具>';
       restoreChoices([{service:'openai',mode:'fixed',egress:'US01'}]);
       renderServices();
       const expected=['openai','claude','gemini','github','youtube'];
       const positions=expected.map(id=>root.innerHTML.indexOf(`data-service="${id}"`));
       if(positions.some((position,index)=>position<0||(index&&position<positions[index-1]))) throw Error('primary service order changed');
       if(root.innerHTML.includes('data-service="netflix"')) throw Error('collapsed view showed unrelated default');
+      if(!root.innerHTML.includes('class="service-category-label">AI &lt;工具&gt;</span>')||root.innerHTML.includes('AI <工具>')) throw Error('category label missing or unescaped');
+      if((root.innerHTML.match(/class="service-category-label">其他服务/g)||[]).length!==4) throw Error('unknown or missing category did not fall back');
+      if(!root.innerHTML.startsWith('<article ')||root.innerHTML.includes('</article><section')) throw Error('category introduced grouping instead of flat cards');
       if(document.activeElement!==replacement || JSON.stringify(replacement.range)!=='[1,3,"forward"]') throw Error('service field focus/selection lost');
       if(!elements['#service-search-status'].textContent.includes('5')) throw Error('visible service count missing');
       state.showAll=true; renderServices();
@@ -532,6 +538,57 @@ if (!html.includes("配置一致性") || !html.includes("未知") || !html.inclu
 if (html.includes("<script>") || html.includes("<img")) throw Error("unescaped client response");
 if (!html.includes("&lt;script&gt;") || !html.includes("&lt;img")) throw Error("missing evidence");
 if (renderRuntimeEvidence({status: "not_tested"}).includes("已观测")) throw Error("unrequested evidence must stay absent");
+''')
+
+
+def test_diagnose_collapses_only_details_and_keeps_uncertainty_and_failures_visible():
+    _run_flow_runtime(r'''
+(async () => {
+  elements['#diagnose-service']={value:'openai'};
+  elements['#diagnose-client']={value:'surge'};
+  elements['#diagnose-runtime']={checked:true};
+  elements['#diagnose-result']={hidden:true,innerHTML:''};
+  const report={
+    service:{label:'AI <service>',status:'needs_review',domains:[
+      {domain:'chat.example',path:['AI','US01'],status:'matched'},
+      {domain:'<domain>',path:['<node>'],status:'runtime_rules_required'},
+    ],evidence:{observed_at:'2026-10-05T00:00:00Z',reasons:['earlier_rule_requires_runtime']}},
+    warnings:[{message:'不要隐藏 <warning>'}],
+    runtime:{actual_node:null,message:'未完整验证 <runtime>',service_tested:false,
+      identity:{client:'surge',version:'test',platform:'unknown',mode:'unknown',observed_at:'2026-10-05T00:00:00Z'},
+      evidence:[{kind:'rule_match',status:'partial',reason:'部分证据 <partial>'},{kind:'configuration_identity',status:'unknown',reason:'未知证据'}],
+      domain_routes:[{domain:'chat.example',actual_node:'US01',rule:'DOMAIN,<rule>'},{domain:'<runtime-domain>',actual_node:null,rule:null}],
+      probes:[{status:'failed',url:'https://probe.example',sample_count:1,failure_rate:1}],
+    },
+  };
+  let request;
+  globalThis.fetch=async(path,options)=>{if(path!=='/diagnose') throw Error('wrong endpoint');request=JSON.parse(options.body);return {ok:true,json:async()=>report};};
+  for(const consistent of [undefined,false,null,'true',true]) {
+    report.runtime.consistent_exit=consistent;
+    await diagnose();
+    const html=elements['#diagnose-result'].innerHTML;
+    const configTag=html.match(/<details\b[^>]*id="diagnostic-config-paths"[^>]*>/)?.[0];
+    const runtimeTag=html.match(/<details\b[^>]*id="diagnostic-runtime-paths"[^>]*>/)?.[0];
+    if(!configTag||/\bopen(?:[\s=>])/.test(configTag)) throw Error('configuration detail should start closed');
+    if(!runtimeTag||/\bopen(?:[\s=>])/.test(runtimeTag)!==(consistent!==true)) throw Error('uncertain runtime detail was hidden');
+    if(!html.includes('diagnosis-summary-heading')||!html.includes('配置路径 · 2 个域名 · 1 个需运行态核实（不是客户端实时选择）')) throw Error('domain coverage and uncertainty count missing');
+    if(!html.includes('客户端规则解释 · 2 个域名')) throw Error('runtime coverage count missing');
+    const visible=html.replace(/<details\b[\s\S]*?<\/details>/g,'');
+    for(const text of ['不要隐藏 &lt;warning&gt;','证据有限','未知证据','前置规则需要运行态数据','探测未通过','仅检查通用连通性'])
+      if(!visible.includes(text)) throw Error(`evidence hidden by detail: ${text}`);
+    if(html.includes('<service>')||html.includes('<domain>')||html.includes('<node>')||html.includes('<rule>')||html.includes('<runtime-domain>')) throw Error('diagnosis text was not escaped');
+    if(html.includes('实际连通')||html.includes('服务可访问')) throw Error('configuration evidence became connectivity proof');
+    if(request.runtime!==true||request.samples!==3||request.client!=='surge') throw Error('diagnostic request changed');
+  }
+  elements['#diagnose-runtime'].checked=false;
+  report.service.domains.forEach(d=>{d.status='matched';}); report.service.status='consistent';
+  report.runtime={status:'not_tested',actual_node:null,message:'尚未请求客户端实测。'};
+  await diagnose();
+  const html=elements['#diagnose-result'].innerHTML;
+  if(html.includes('0 个需运行态核实')||html.includes('diagnostic-runtime-paths')) throw Error('absent runtime evidence was invented');
+  if(!html.includes('配置路径 · 2 个域名（不是客户端实时选择）')||!html.includes('尚未请求客户端实测')) throw Error('static-only boundary missing');
+  if(request.runtime!==false||request.samples!==1) throw Error('static diagnosis began probing');
+})()
 ''')
 
 
