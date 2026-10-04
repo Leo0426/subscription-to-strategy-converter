@@ -619,7 +619,7 @@ def test_leo_direct_cloud_routes_precede_broad_vendor_providers() -> None:
     assert rules.index("GEOSITE,microsoft@cn,DIRECT") < microsoft_provider
     assert rules.index("GEOSITE,apple@cn,DIRECT") < apple_provider
     assert rules.index("GEOSITE,icloud,DIRECT") < apple_provider
-    assert rules.index("DOMAIN,t-ring-fdv2.msedge.net,REJECT,no-resolve") < microsoft_provider
+    assert rules.index("DOMAIN,t-ring-fdv2.msedge.net,REJECT") < microsoft_provider
     assert rules.index("DOMAIN-SUFFIX,ls.apple.com,DIRECT") < apple_provider
     for rule in (
         "DOMAIN-SUFFIX,api.microsoftapp.net,AI 服务",

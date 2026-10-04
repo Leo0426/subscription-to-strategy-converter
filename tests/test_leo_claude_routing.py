@@ -88,3 +88,48 @@ def test_voice_ports_do_not_force_unrelated_or_domainless_traffic_direct(client,
     for port in (3478, 5349, 19302, 10000, 5350):
         assert f"{port_rule},{port},DIRECT" not in rules
     assert "DOMAIN,stun1.l.google.com,DIRECT" in rules
+
+
+@pytest.mark.parametrize("target", ("mihomo", "surge", "shadowrocket-config"))
+@pytest.mark.parametrize("mode", ("default", "fixed", "manual", "fallback"))
+def test_claude_widgets_and_desktop_previews_follow_the_selected_service(client, target, mode):
+    # Official Desktop network requirements include these service-owned suffixes.
+    # The example labels stand for dynamically generated widget/preview hosts.
+    routes = []
+    if mode != "default":
+        route = {"service": "claude", "mode": mode, "egress": "JP01"}
+        if mode == "fallback":
+            route["fallback"] = "US01"
+        routes.append(route)
+    response = client.post("/render", json={
+        "subscription_url": "https://example.com/synthetic",
+        "target": target,
+        "service_routes": routes,
+    })
+    assert response.status_code == 200, response.text
+    if target == "mihomo":
+        config = YAML(typ="safe").load(response.text)
+        rules = config["rules"]
+    else:
+        section = response.text.split("[Rule]\n", 1)[1].split("\n[", 1)[0]
+        rules = [line for line in section.splitlines() if line and not line.startswith("#")]
+
+    workspace = config_to_workspace({"rules": rules}, target=target)
+    for destination in (
+        "claudemcpcontent.com", "example.claudemcpcontent.com",
+        "claude.app", "example.livepreview.claude.app",
+    ):
+        trace = simulate_destination(workspace, destination)
+        assert trace.target == ("AI 服务" if mode == "default" else "Claude"), destination
+        assert not any(step.matched is None for step in trace.steps), destination
+
+    if mode != "default":
+        members = ["JP01", "US01"] if mode == "fallback" else ["JP01"]
+        group_type = "fallback" if mode == "fallback" else "select"
+        if target == "mihomo":
+            group = next(group for group in config["proxy-groups"] if group["name"] == "Claude")
+            assert (group["type"], group["proxies"]) == (group_type, members)
+        else:
+            group = next(line for line in response.text.splitlines() if line.startswith("Claude = "))
+            fields = [field.strip() for field in group.split("=", 1)[1].split(",")]
+            assert fields[:len(members) + 1] == [group_type, *members]

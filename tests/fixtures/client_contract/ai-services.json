@@ -1,0 +1,10 @@
+{
+  "services": [
+    {"id": "openai", "group": "OpenAI", "manual": "美国节点", "primary": "US Primary", "backup": "US Backup",
+     "hosts": ["api.openai.com", "chatgpt.com", "cdn.openaimerge.com", "accounts.google.com"]},
+    {"id": "claude", "group": "Claude", "manual": "新加坡节点", "primary": "SG Primary", "backup": "SG Backup",
+     "hosts": ["claude.ai", "api.anthropic.com", "bridge.claudeusercontent.com", "claude.app", "claudemcpcontent.com"]},
+    {"id": "gemini", "group": "Gemini", "manual": "台湾节点", "primary": "TW Primary", "backup": "TW Backup",
+     "hosts": ["gemini.google.com", "generativelanguage.googleapis.com", "aistudio.google.com", "gemini.gstatic.com"]}
+  ]
+}

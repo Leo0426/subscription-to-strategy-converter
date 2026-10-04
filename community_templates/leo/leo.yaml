@@ -227,8 +227,7 @@ proxy-groups:
   - 自动选择
   - 手动选择
 rule-providers:
-  # 内容按提交固定不会变化，每周刷新即可。
-  # 固定可信来源；Surge 使用原生映射，AI 裸列表由 Mihomo 加载。
+  # 固定可信提交，每周刷新；Surge 原生映射，Mihomo 加载 AI 裸列表。
   ai-4:
     type: http
     behavior: domain
@@ -298,7 +297,9 @@ rules:
 - DOMAIN-SUFFIX,anthropic.com,AI 服务
 - DOMAIN-SUFFIX,claude.ai,AI 服务
 - DOMAIN-SUFFIX,claude.com,AI 服务
+- DOMAIN-SUFFIX,claude.app,AI 服务
 - DOMAIN-SUFFIX,claudeusercontent.com,AI 服务
+- DOMAIN-SUFFIX,claudemcpcontent.com,AI 服务
 - DOMAIN-SUFFIX,openai.com,AI 服务
 - DOMAIN-SUFFIX,chatgpt.com,AI 服务
 - DOMAIN-SUFFIX,oaistatic.com,AI 服务
@@ -310,7 +311,7 @@ rules:
 - DOMAIN,images.workoscdn.com,AI 服务
 - DOMAIN,setup.workos.com,AI 服务
 - DOMAIN,workos.imgix.net,AI 服务
-- DOMAIN-SUFFIX,challenges.cloudflare.com,AI 服务
+- DOMAIN,challenges.cloudflare.com,AI 服务
 - DOMAIN,accounts.google.com,AI 服务
 - DOMAIN,oauth2.googleapis.com,AI 服务
 - DOMAIN,openidconnect.googleapis.com,AI 服务
@@ -362,7 +363,7 @@ rules:
 - GEOSITE,microsoft@cn,DIRECT
 - DOMAIN-SUFFIX,ls.apple.com,DIRECT
 # 精确例外先于广义厂商源。
-- DOMAIN,t-ring-fdv2.msedge.net,REJECT,no-resolve
+- DOMAIN,t-ring-fdv2.msedge.net,REJECT
 - DOMAIN-SUFFIX,api.microsoftapp.net,AI 服务
 - DOMAIN-SUFFIX,copilot.azure.com,AI 服务
 - DOMAIN-SUFFIX,openai.azure.com,AI 服务

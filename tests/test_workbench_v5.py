@@ -34,7 +34,7 @@ def test_fixed_service_uses_one_node_for_main_login_and_assets(client):
     group = next(g for g in config['proxy-groups'] if g['name'] == 'OpenAI')
     assert group['type'] == 'select'
     assert group['proxies'] == ['TW01']
-    for match in ['DOMAIN-SUFFIX,chatgpt.com', 'DOMAIN,cdn.openaimerge.com', 'DOMAIN-SUFFIX,challenges.cloudflare.com']:
+    for match in ['DOMAIN-SUFFIX,chatgpt.com', 'DOMAIN,cdn.openaimerge.com', 'DOMAIN,challenges.cloudflare.com']:
         assert f'{match},OpenAI' in config['rules']
     assert 'dns' not in config
 

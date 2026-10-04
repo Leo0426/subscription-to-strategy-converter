@@ -21,7 +21,15 @@
           "template_inline": true
         },
         {
+          "match": "DOMAIN-SUFFIX,claude.app",
+          "template_inline": true
+        },
+        {
           "match": "DOMAIN-SUFFIX,claudeusercontent.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN-SUFFIX,claudemcpcontent.com",
           "template_inline": true
         }
       ],
@@ -34,7 +42,9 @@
         "api.anthropic.com",
         "platform.claude.com",
         "downloads.claude.ai",
-        "bridge.claudeusercontent.com"
+        "bridge.claudeusercontent.com",
+        "claude.app",
+        "claudemcpcontent.com"
       ],
       "rule_providers": [
         "Claude"
@@ -44,7 +54,10 @@
         "claude.ai",
         "api.anthropic.com",
         "platform.claude.com",
-        "bridge.claudeusercontent.com"
+        "bridge.claudeusercontent.com",
+        "claude.app",
+        "claudemcpcontent.com",
+        "accounts.google.com"
       ]
     },
     {
@@ -99,7 +112,7 @@
           "template_inline": true
         },
         {
-          "match": "DOMAIN-SUFFIX,challenges.cloudflare.com",
+          "match": "DOMAIN,challenges.cloudflare.com",
           "template_inline": true
         },
         {
@@ -213,6 +226,10 @@
         {
           "match": "DOMAIN-SUFFIX,aistudio.google.com",
           "template_inline": false
+        },
+        {
+          "match": "DOMAIN,gemini.gstatic.com",
+          "template_inline": false
         }
       ],
       "probe_urls": [
@@ -222,10 +239,21 @@
         "generativeai.google",
         "generativelanguage.googleapis.com",
         "gemini.google.com",
-        "aistudio.google.com"
+        "aistudio.google.com",
+        "gemini.gstatic.com"
       ],
       "rule_providers": [],
-      "geosite_tags": []
+      "geosite_tags": [],
+      "diagnostic_destinations": [
+        "generativeai.google",
+        "generativelanguage.googleapis.com",
+        "gemini.google.com",
+        "aistudio.google.com",
+        "gemini.gstatic.com",
+        "accounts.google.com",
+        "oauth2.googleapis.com",
+        "openidconnect.googleapis.com"
+      ]
     },
     {
       "id": "perplexity",
@@ -630,6 +658,22 @@
         "Telegram"
       ],
       "geosite_tags": []
+    }
+  ],
+  "shared_dependencies": [
+    {
+      "id": "google-identity",
+      "label": "Google 登录",
+      "services": [
+        "openai",
+        "claude",
+        "gemini"
+      ],
+      "destinations": [
+        "accounts.google.com",
+        "oauth2.googleapis.com",
+        "openidconnect.googleapis.com"
+      ]
     }
   ]
 }

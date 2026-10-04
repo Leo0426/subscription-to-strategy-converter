@@ -81,3 +81,32 @@ def test_default_copilot_public_code_detection_has_a_definite_ai_route(client, t
 
     assert trace.target == "AI 服务"
     assert not any(step.matched is None for step in trace.steps)
+
+
+@pytest.mark.parametrize('target', ['mihomo', 'surge', 'shadowrocket-config'])
+def test_gemini_route_keeps_official_script_assets_on_its_exit(client, target):
+    workspace = compiled_workspace(client, target, 'gemini')
+    trace = simulate_destination(workspace, 'gemini.gstatic.com')
+    assert trace.target == 'Gemini', trace.matched_rule
+    assert not any(step.matched is None for step in trace.steps)
+    for unrelated in ('fonts.gstatic.com', 'other.gemini.gstatic.com'):
+        assert simulate_destination(workspace, unrelated).target != 'Gemini'
+
+
+@pytest.mark.parametrize('target', ['surge', 'shadowrocket-config'])
+def test_ini_default_gemini_assets_keep_ai_provider_semantics(client, target):
+    workspace = compiled_workspace(client, target)
+    trace = simulate_destination(workspace, 'gemini.gstatic.com')
+    assert trace.target == 'AI 服务', trace.matched_rule
+    assert trace.matched_rule.type == 'DOMAIN'
+    # The earlier Claude provider also targets AI; its contents are deliberately
+    # unknown to the simulator. The broad Google provider must remain later.
+    google = next(rule for rule in workspace.rules if '/Google/' in rule.match)
+    assert trace.matched_rule.index < google.index
+
+
+@pytest.mark.parametrize('target', ['mihomo', 'surge', 'shadowrocket-config'])
+def test_openai_challenge_exception_is_an_exact_shared_host(client, target):
+    workspace = compiled_workspace(client, target, 'openai')
+    assert simulate_destination(workspace, 'challenges.cloudflare.com').target == 'OpenAI'
+    assert simulate_destination(workspace, 'unrelated.challenges.cloudflare.com').target != 'OpenAI'

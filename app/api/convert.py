@@ -10,7 +10,7 @@ from pydantic import ValidationError
 
 from app.core.config_tree import build_config_tree
 from app.core.service_catalog import catalog_revision, service_catalog
-from app.core.workbench import service_report, profile_mode
+from app.core.workbench import service_report, profile_mode, shared_dependency_warnings
 from app.core.runtime_diagnostics import diagnose_runtime, runtime_capabilities
 from app.models.workbench import DiagnoseRequest
 from app.core.parsers.clash import AnyTLSOptionError, ir_to_clash_dict
@@ -193,7 +193,9 @@ async def _build_config(
     except (TemplateError, TemplatePolicyTransformError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    warnings: list[dict] = []
+    warnings = shared_dependency_warnings(
+        config, {route.service for route in request.service_routes if route.enabled and route.mode != 'legacy'},
+    )
     if request.target == "surge":
         warnings.extend(
             filter_auto_test_protocols(
@@ -545,7 +547,8 @@ async def diagnose(request: DiagnoseRequest) -> dict:
     if request.runtime:
         expected = report["domains"][0]["target"]
         runtime = await diagnose_runtime(request.client, service, expected, samples=request.samples)
-    return {"service":report,"runtime":runtime}
+    return {"service":report,"runtime":runtime,
+            "warnings": [warning for warning in result.warnings if request.service in warning.get("services", [])]}
 
 
 @router.post("/check")

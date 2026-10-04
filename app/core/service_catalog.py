@@ -12,6 +12,10 @@ def service_catalog() -> list[dict]:
     return json.loads(CATALOG_PATH.read_text(encoding='utf-8'))['services']
 
 
+def shared_service_dependencies() -> list[dict]:
+    return json.loads(CATALOG_PATH.read_text(encoding='utf-8')).get('shared_dependencies', [])
+
+
 def catalog_revision() -> str:
     return hashlib.sha256(CATALOG_PATH.read_bytes() + CATALOG_PATH.with_name("leo.yaml").read_bytes()).hexdigest()
 

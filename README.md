@@ -29,6 +29,10 @@ docker compose up -d --build
 
 保留原生连接设置，跨格式限制在检查时提示；测速通过不代表服务可用。订阅 token 同时授权读取和编辑，请妥善保管。
 
+OpenAI、Claude、Gemini 可分别指定固定节点或手选策略。三个服务均可使用 Google 登录并共用其身份域名；若希望这类登录与主站保持同一出口，请为它们选择同一固定节点，或共用同一手选策略组。检查会提示可能的出口差异。主备模式仅使用两个明确节点，通用探针成功仍需配合真实登录和对话验证。
+
+更新规则后刷新订阅，在手机和电脑分别验证登录、连续对话、附件和所需的语音功能；手机还应比较 Wi-Fi 与蜂窝网络。手机 Surge 和路由器 OpenClash 同时工作时，也要核对最终出口，服务器端诊断不能替代设备上的请求记录。
+
 ## 开发
 
 ```sh
@@ -54,6 +58,18 @@ uv run python scripts/validate-client-contract.py \
 ```
 
 工具记录版本和 SHA256，分别报告解析与本地模拟出口的路由行为，验证规则顺序及规则集反例；使用临时数据库和内核进程。缺少二进制返回退出码 2，验证失败返回 1。它不验证手机、真实服务登录或所有服务偏好组合。
+
+三项 AI 服务的固定、手选和两节点主备模式可用完整 Leo 订阅单独验证：
+
+```sh
+uv run python scripts/validate-ai-client-contract.py \
+  --mihomo-binary /path/to/mihomo --expected-version v1.19.32 \
+  --output-dir .scratch/ai-client-contract \
+  --dependency-cache .scratch/ai-client-dependencies \
+  --download-dependencies --timeout 120
+```
+
+首次下载固定公共规则与地理库并记录摘要，后续可去掉 `--download-dependencies` 离线重用。运行副本使用本地规则文件与合成探针，流量在本地出口终止；报告区分解析、路由和反例结果。这项验证不覆盖真实 TLS、流式会话、服务账号或 OpenClash 设备集成。
 
 工作台诊断分别显示配置推断、客户端选择、规则解释、指定节点探测及配置一致性。运行态仅对应服务器配置的实例；Mihomo 根据实际 Rule/Global/Direct 模式读取选择，组选择不能证明请求命中规则。版本或模式不明、配置标识无法核对时，证据保持有限或未知。
 
