@@ -97,8 +97,11 @@ function updateWorkspaceSummary() {
     "workspace-progress":state.busy?"正在处理，请稍候":saved?"已保存 · 复制订阅链接，在客户端导入或刷新":current==="source"?"第 1 步 · 读取来源与选择客户端":current==="services"?"第 2 步 · 确认服务出口，再检查配置":state.check.can_publish?"第 3 步 · 核对检查结果，保存订阅":"第 3 步 · 查看阻断项，修正后重新检查",
   };
   for(const [id,text] of Object.entries(values)) {const element=$("#"+id);if(element) element.textContent=text;}
+  const [destination,label]=saved?["#publish-result","查看订阅链接"]:!sourceReady?["#step-source","前往读取来源"]:!checked?["#step-services","继续设置出口"]:["#step-review","查看检查结果"];
   const link=$("#summary-link");
-  if(link) {link.href=saved?"#publish-result":"#step-review";link.innerHTML=`${saved?"查看订阅链接":"前往检查与保存"} <span aria-hidden="true">↗</span>`;}
+  if(link) {link.href=destination;link.innerHTML=`${label} <span aria-hidden="true">↗</span>`;}
+  for(const id of ["source-next","services-next"]) {const navigation=$("#"+id);if(navigation) navigation.hidden=!sourceReady||state.busy;}
+  $("#workspace-summary")?.classList?.toggle("is-saved",saved);
 }
 function updateActions() {
   const ready=state.nodes.length>0 && selectedTargets().length>0 && !state.busy;
@@ -369,7 +372,7 @@ function renderPublicationStatus(body) {
   const rows=Object.entries(body.publications||{});
   const labels={...CLIENT_LABELS,"shadowrocket-config":"Shadowrocket 配置"};
   const status=m=>m.last_status==="stale"?"上次刷新失败，使用上次成功配置":m.revision!==body.current_publication_revision?"基础配置已变化，等待刷新":"已生成，设备更新状态需在客户端核对";
-  $("#publication-status").innerHTML=`<p>已保存版本 ${escapeHtml(body.generation)} · ${escapeHtml(body.cache_ttl_seconds)} 秒内重复请求可复用服务器缓存</p>${rows.length?`<div class="table-scroll"><table><thead><tr><th>客户端</th><th>配置标识 / 生成时间</th><th>状态</th></tr></thead><tbody>${rows.map(([target,m])=>`<tr><td>${escapeHtml(labels[target]||target)}</td><td>${escapeHtml((m.revision||"").slice(0,12))}<br>${escapeHtml(auditTime(m.generated_at))}</td><td>${escapeHtml(status(m))}</td></tr>`).join("")}</tbody></table></div>`:"<p>此版本尚未生成配置；客户端下次更新时生成。</p>"}`;
+  $("#publication-status").innerHTML=`<p>已保存版本 ${escapeHtml(body.generation)} · ${escapeHtml(body.cache_ttl_seconds)} 秒内重复请求可复用服务器缓存</p>${rows.length?`<div class="table-scroll"><table><thead><tr><th>客户端</th><th>配置标识 / 生成时间</th><th>状态</th></tr></thead><tbody>${rows.map(([target,m])=>`<tr><td>${escapeHtml(labels[target]||target)}</td><td>${escapeHtml((m.revision||"").slice(0,12))}<br>${escapeHtml(auditTime(m.generated_at))}</td><td>${escapeHtml(status(m))}</td></tr>`).join("")}</tbody></table></div>`:"<p>配置已保存，等待客户端拉取并生成本版本配置。</p>"}`;
 }
 async function loadPublicationStatus() {
   const p=state.profile;

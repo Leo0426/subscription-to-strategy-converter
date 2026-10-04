@@ -71,8 +71,8 @@ def test_root_and_legacy_advanced_route_serve_the_same_simple_page() -> None:
     assert root.status_code == 200
     assert advanced.status_code == 200
     assert root.text == advanced.text
-    assert "/static/flow.js?v=57" in root.text
-    assert "/static/flow.css?v=56" in root.text
+    assert "/static/flow.js?v=58" in root.text
+    assert "/static/flow.css?v=57" in root.text
     assert "/static/assets/subflow-logo.png" in root.text
 
 
@@ -102,6 +102,7 @@ def test_page_exposes_the_current_workbench_contract() -> None:
         "diagnose-runtime", "diagnose-result", "surge-auto-test-protocols",
         "filter-customized-services", "clear-service-filter", "summary-label",
         "summary-next-label", "summary-link",
+        "source-next", "services-next",
     )
     assert all(f'id="{control}"' in page for control in controls)
     assert 'class="config-workbench"' in page
@@ -231,11 +232,19 @@ def test_successful_action_focuses_visible_result_but_errors_keep_error_focus() 
 
 def test_workspace_summary_tracks_current_check_and_invalidated_draft() -> None:
     _run_flow_runtime("""
-    (() => {
+    (async () => {
       const makeElement = () => ({textContent:"", hidden:false, disabled:false});
       for(const id of ["summary-nodes","summary-clients","summary-routes","summary-state","workspace-progress",
         "refresh-publications-button","check-button","diagnose-button","generate-button","save-title","generate-hint",
-        "diagnose-result","check-results","publish-result","check-state"]) elements[`#${id}`]=makeElement();
+        "diagnose-result","check-results","publish-result","check-state","source-result","summary-link","source-next","services-next"]) elements[`#${id}`]=makeElement();
+      let isSaved=false, requests=0;
+      elements['#workspace-summary']={classList:{toggle(name,on){if(name==='is-saved') isSaved=on;}}};
+      const assertNext=(href,text,visible,saved=false)=>{
+        const link=elements['#summary-link'];
+        if(link.href!==href||!link.innerHTML.includes(text)) throw Error(`wrong next step: ${link.href}`);
+        if(elements['#source-next'].hidden===visible||elements['#services-next'].hidden===visible) throw Error('section navigation bypassed readiness or busy state');
+        if(isSaved!==saved) throw Error('saved styling disagrees with current draft');
+      };
       const steps=["source","services","review"].map(step=>({dataset:{step}, classes:{}, attributes:{},
         classList:{toggle(name,on){this.owner.classes[name]=on;}},
         setAttribute(name,value){this.attributes[name]=value;}, removeAttribute(name){delete this.attributes[name];}}));
@@ -244,15 +253,32 @@ def test_workspace_summary_tracks_current_check_and_invalidated_draft() -> None:
       document.querySelectorAll=selector=>selector==='[data-step]'?steps:originalQuery(selector);
       updateActions();
       if(steps[0].attributes['aria-current']!=='step') throw Error('missing source step');
-      state.nodes=[{name:'US01'},{name:'JP01'}];
+      assertNext('#step-source','前往读取来源',false);
+      globalThis.fetch=async path=>{requests++;if(path!=='/preview') throw Error('navigation triggered a check or save');return {ok:true,json:async()=>({nodes:[{name:'US01'},{name:'JP01'}]})};};
+      await loadNodes();
       state.serviceChoices={openai:{mode:'fixed',egress:'US01'},claude:{mode:'default'}};
       updateActions();
       if(!elements['#summary-nodes'].textContent.includes('2') || !elements['#summary-routes'].textContent.includes('1')) throw Error('summary not derived from draft');
       if(steps[1].attributes['aria-current']!=='step' || !steps[0].classes['is-complete']) throw Error('source readiness not reflected');
+      assertNext('#step-services','继续设置出口',true);
+      targets[0].checked=false; invalidate();
+      assertNext('#step-source','前往读取来源',false);
+      targets[0].checked=true; invalidate();
+      state.busy=true; updateActions();
+      assertNext('#step-services','继续设置出口',false);
+      state.busy=false;
+      state.check={can_publish:false}; state.checkedInput=JSON.stringify(payload()); updateActions();
+      assertNext('#step-review','查看检查结果',true);
+      if(!elements['#generate-button'].disabled) throw Error('blocking check enabled saving');
       state.check={can_publish:true}; state.checkedInput=JSON.stringify(payload()); updateActions();
       if(elements['#generate-button'].disabled || steps[2].attributes['aria-current']!=='step') throw Error('current passed check not ready');
+      assertNext('#step-review','查看检查结果',true);
+      state.savedInput=state.checkedInput; updateActions();
+      assertNext('#publish-result','查看订阅链接',true,true);
       elements['#profile-name'].value='changed'; invalidate();
       if(!elements['#generate-button'].disabled || !elements['#check-results'].hidden || steps[1].attributes['aria-current']!=='step') throw Error('stale check remained current');
+      assertNext('#step-services','继续设置出口',true);
+      if(requests!==1) throw Error('state navigation started a request');
     })()
     """)
 
