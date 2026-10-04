@@ -134,6 +134,7 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .simple-button.is-loading::before, .simple-loading::before { content: ''; display: inline-block; width: 13px; height: 13px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
 .simple-notice, .inline-status { padding: 12px 14px; margin: 12px 0; border: 1px solid #cce3d4; border-radius: 8px; background: var(--green-soft); color: var(--green-dark); font-size: 12px; line-height: 1.75; overflow-wrap: anywhere; }
 .simple-notice, .inline-status.is-error { color: var(--red); background: #fff3f0; border-color: #efd0c8; }
+.inline-status.is-pending { color: var(--amber); background: #fffbf2; border-color: #eadcbc; }
 
 /* Services are easy to scan before revealing their detailed settings. */
 .service-toolbar { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }

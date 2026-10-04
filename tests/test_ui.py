@@ -62,6 +62,37 @@ Promise.resolve(result).catch(error => {{ console.error(error); process.exitCode
     assert completed.returncode == 0, completed.stderr
 
 
+def _run_interactive_flow_runtime(assertions: str) -> None:
+    """Drive bound UI actions with synthetic responses and usable DOM controls."""
+    _run_flow_runtime(r"""
+const makeElement=()=>({value:'',textContent:'',innerHTML:'',hidden:false,disabled:false,dataset:{},listeners:{},
+  classList:{add(){},remove(){},toggle(){}},setAttribute(name,value){this[name]=value;},removeAttribute(name){delete this[name];},
+  addEventListener(name,listener){this.listeners[name]=listener;},focus(){document.activeElement=this;},
+  scrollIntoView(){},getClientRects(){return this.hidden?[]:[{}];},querySelector(){return null;}});
+for(const element of Object.values(elements)) Object.assign(element,{...makeElement(),...element});
+for(const target of targets) Object.assign(target,{...makeElement(),...target});
+document.querySelector=selector=>elements[selector]||=makeElement();
+const previousQueryAll=document.querySelectorAll;
+document.querySelectorAll=selector=>selector==='input[name="target"]'?targets:
+  selector==='.config-workbench input, .config-workbench select, .config-workbench button'?
+  [...targets,...Object.entries(elements).filter(([id])=>id.endsWith('-button')||['#subscription-url','#profile-name','#surge-auto-test-protocols'].includes(id)).map(([,element])=>element)]:previousQueryAll(selector);
+for(const id of ['check-results','diagnose-result','diagnose-status','publish-result']) document.querySelector('#'+id).hidden=true;
+for(const [id,target] of [['validate-source-button','#source-next'],['check-button','#check-results'],['diagnose-button','#diagnose-result'],['generate-button','#publish-result']]) document.querySelector('#'+id).dataset.successTarget=target;
+state.servicePacks=[{id:'openai',label:'OpenAI',group:'OpenAI',default_target:'AI 服务',category:'ai',rules:[]}];
+restoreChoices();
+document.querySelector('#diagnose-service').value='openai';
+document.querySelector('#diagnose-client').value='mihomo';
+const syntheticNodes=[{name:'Fixture US01'},{name:'Fixture JP01'}];
+const passedCheck={can_publish:true,node_count:2,findings:[],clients:[{target:'mihomo',errors:[],warnings:[]}]};
+const publication={id:'fixture',token:'synthetic',subscribe_urls:{clash:'/subscribe/fixture?token=synthetic&target=mihomo',surge:'/subscribe/fixture?token=synthetic&target=surge',shadowrocket:'/subscribe/fixture?token=synthetic&target=shadowrocket'},config_urls:{shadowrocket:'/subscribe/fixture?token=synthetic&target=shadowrocket-config'}};
+const ok=body=>({ok:true,json:async()=>body});
+const unavailable=message=>({ok:false,status:503,json:async()=>({detail:message})});
+bindEvents();
+const click=id=>elements['#'+id].listeners.click({currentTarget:elements['#'+id]});
+const toggleTarget=(value,checked)=>{const target=targets.find(item=>item.value===value);target.checked=checked;target.listeners.change({target});};
+""" + assertions)
+
+
 def test_root_and_legacy_advanced_route_serve_the_same_simple_page() -> None:
     client = TestClient(app)
 
@@ -71,8 +102,8 @@ def test_root_and_legacy_advanced_route_serve_the_same_simple_page() -> None:
     assert root.status_code == 200
     assert advanced.status_code == 200
     assert root.text == advanced.text
-    assert "/static/flow.js?v=58" in root.text
-    assert "/static/flow.css?v=57" in root.text
+    assert "/static/flow.js?v=59" in root.text
+    assert "/static/flow.css?v=58" in root.text
     assert "/static/assets/subflow-logo.png" in root.text
 
 
@@ -99,7 +130,7 @@ def test_page_exposes_the_current_workbench_contract() -> None:
         "leo-reference", "data-ledger", "subscription-url", "validate-source-button",
         "service-route-list", "generate-button", "existing-profile-url", "open-profile-button",
         "check-button", "check-results", "preview-upgrade-button", "diagnose-service",
-        "diagnose-runtime", "diagnose-result", "surge-auto-test-protocols",
+        "diagnose-runtime", "diagnose-result", "diagnose-status", "surge-auto-test-protocols",
         "filter-customized-services", "clear-service-filter", "summary-label",
         "summary-next-label", "summary-link",
         "source-next", "services-next",
@@ -396,6 +427,113 @@ def test_copy_button_confirms_success_locally_and_keeps_failure_honest() -> None
       if(button.textContent==='已复制'||copiedClass||focused!==button) throw Error('copy failure claimed success or lost button focus');
     })()
     """)
+
+
+def test_source_target_family_changes_retire_nodes_but_keep_service_intent() -> None:
+    _run_interactive_flow_runtime("""
+(async()=>{
+  const previews=[];
+  globalThis.fetch=async(path,options)=>{if(path!=='/preview') throw Error('target navigation made an unexpected request');previews.push(JSON.parse(options.body));return ok({nodes:syntheticNodes});};
+  await click('validate-source-button');
+  restoreChoices([{service:'openai',mode:'fixed',egress:'Fixture US01'}]); renderServices();
+  const intent=JSON.stringify(payload().service_routes);
+  const assertInventory=()=>{if(state.nodes.length!==2||!elements['#node-options'].innerHTML.includes('Fixture US01')) throw Error('same-family inventory was discarded');};
+  toggleTarget('surge',true); toggleTarget('mihomo',false); assertInventory();
+  if(elements['#check-button'].disabled) throw Error('Surge cannot reuse the Mihomo source family');
+  toggleTarget('surge',false); assertInventory();
+  for(const id of ['check-button','diagnose-button','generate-button']) if(!elements['#'+id].disabled) throw Error('zero targets remained ready');
+  toggleTarget('surge',true); assertInventory();
+  toggleTarget('shadowrocket',true); assertInventory();
+  toggleTarget('surge',false);
+  if(state.nodes.length||elements['#node-options'].innerHTML.includes('Fixture US01')) throw Error('Shadowrocket inherited nodes read for a different source family');
+  if(elements['#source-result'].hidden||!elements['#source-result'].textContent.includes('重新读取')) throw Error('source family change did not explain required reread');
+  for(const id of ['check-button','diagnose-button','generate-button']) if(!elements['#'+id].disabled) throw Error('cross-family switch remained ready');
+  if(JSON.stringify(payload().service_routes)!==intent||previews.length!==1) throw Error('target switch altered intent or fetched automatically');
+  await click('validate-source-button'); assertInventory();
+  if(previews[1].target!=='shadowrocket') throw Error('reread did not use Shadowrocket identity');
+  toggleTarget('mihomo',true);
+  if(state.nodes.length||elements['#node-options'].innerHTML.includes('Fixture US01')||!elements['#check-button'].disabled) throw Error('Mihomo inherited Shadowrocket source nodes');
+  if(JSON.stringify(payload().service_routes)!==intent||previews.length!==2) throw Error('return switch mutated service intent or fetched automatically');
+  await click('validate-source-button');await click('new-profile-button');toggleTarget('surge',true);
+  if(state.nodes.length||elements['#node-options'].innerHTML.includes('Fixture US01')||!elements['#source-result'].hidden||elements['#source-result'].textContent.includes('已读取')) throw Error('new profile restored the previous source success');
+})()
+""")
+
+
+def test_recheck_retires_previous_result_and_preserves_confirmed_profile_links() -> None:
+    _run_interactive_flow_runtime("""
+(async()=>{
+  let checkMode='pass',finishCheck,writes=0;
+  globalThis.fetch=async(path,options={})=>{
+    if(path==='/preview') return ok({nodes:syntheticNodes});
+    if(path==='/check') return checkMode==='pending'?new Promise(resolve=>{finishCheck=resolve;}):ok(passedCheck);
+    if(path.startsWith('/profiles')&&['POST','PUT'].includes(options.method)) {writes++;return ok(publication);}
+    if(path.startsWith('/profiles/')) return ok({generation:1,cache_ttl_seconds:30,publications:{}});
+    throw Error('unexpected request '+path);
+  };
+  await click('validate-source-button'); await click('check-button');
+  if(elements['#generate-button'].disabled) throw Error('initial check did not permit saving');
+  checkMode='pending';let pending=click('check-button');
+  if(!state.busy||state.check||state.checkedInput||!elements['#check-results'].hidden||!elements['#generate-button'].disabled) throw Error('pending recheck retained old publish readiness');
+  finishCheck(unavailable('Synthetic check unavailable'));await pending;
+  if(state.busy||state.check||!elements['#check-results'].hidden||!elements['#generate-button'].disabled||elements['#check-button'].disabled) throw Error('failed recheck reused old success or left retry disabled');
+  if(!elements['#check-state'].textContent.includes('失败')||elements['#summary-state'].textContent==='可以保存') throw Error('failed recheck remained described as publishable');
+  checkMode='pass';await click('check-button');await click('generate-button');
+  const profile=state.profile,link=elements['#published-clash-url'].value;
+  if(writes!==1||!link||elements['#publish-result'].hidden) throw Error('synthetic profile was not saved');
+  checkMode='pending';pending=click('check-button');
+  if(state.profile!==profile||elements['#publish-result'].hidden||elements['#published-clash-url'].value!==link) throw Error('pending recheck erased confirmed publication');
+  finishCheck(unavailable('Synthetic recheck unavailable'));await pending;
+  if(state.profile!==profile||elements['#publish-result'].hidden||elements['#published-clash-url'].value!==link||!elements['#generate-button'].disabled) throw Error('failed recheck erased links or reopened saving');
+  checkMode='pass';await click('check-button');await click('generate-button');
+  if(writes!==1||!elements['#generate-button'].disabled||elements['#generate-button'].textContent!=='已保存') throw Error('same-payload recheck rewrote the confirmed profile');
+})()
+""")
+
+
+def test_diagnosis_retry_clears_old_evidence_and_exposes_local_failure() -> None:
+    _run_interactive_flow_runtime("""
+(async()=>{
+  const diagnosis={service:{label:'Fixture service',status:'consistent',domains:[{domain:'chat.example',path:['AI','Fixture US01'],status:'matched'}]},runtime:{actual_node:'Fixture US01',message:'Synthetic result',probes:[{status:'reachable',url:'https://probe.example',latency_ms:30,sample_count:1,failure_rate:0}]}};
+  let diagnosisMode='pass',finishDiagnosis;
+  globalThis.fetch=async path=>path==='/preview'?ok({nodes:syntheticNodes}):diagnosisMode==='pending'?new Promise(resolve=>{finishDiagnosis=resolve;}):diagnosisMode==='fail'?unavailable('Synthetic diagnosis unavailable'):ok(diagnosis);
+  await click('validate-source-button');await click('diagnose-button');
+  if(elements['#diagnose-result'].hidden||!elements['#diagnose-result'].innerHTML.includes('探测可达')) throw Error('initial evidence missing');
+  diagnosisMode='pending';const pending=click('diagnose-button');
+  if(!elements['#diagnose-result'].hidden||elements['#diagnose-result'].innerHTML.includes('探测可达')) throw Error('pending diagnosis retained old reachable evidence');
+  if(elements['#diagnose-status'].hidden||!elements['#diagnose-status'].textContent.includes('检查')) throw Error('pending diagnosis has no local status');
+  finishDiagnosis(unavailable('Synthetic diagnosis unavailable'));await pending;
+  if(state.busy||elements['#diagnose-button'].disabled||!elements['#diagnose-result'].hidden||elements['#diagnose-status'].hidden||!elements['#diagnose-status'].textContent.includes('失败')) throw Error('diagnosis failure kept old evidence or lost retry feedback');
+  elements['#diagnose-client'].listeners.change();
+  if(!elements['#diagnose-status'].hidden) throw Error('changed diagnostic option retained unrelated failure');
+  diagnosisMode='fail';await click('diagnose-button');elements['#profile-name'].listeners.input();
+  if(!elements['#diagnose-status'].hidden) throw Error('edited draft retained old diagnostic status');
+  diagnosisMode='pass';await click('diagnose-button');
+  if(elements['#diagnose-result'].hidden||!elements['#diagnose-status'].hidden) throw Error('successful retry did not replace local error with new evidence');
+})()
+""")
+
+
+def test_save_revalidation_failure_replaces_prior_publish_readiness() -> None:
+    _run_interactive_flow_runtime("""
+(async()=>{
+  const blocked={...passedCheck,can_publish:false,findings:[{severity:'error',message:'Synthetic target blocked'}]};
+  let writes=0;
+  globalThis.fetch=async path=>{
+    if(path==='/preview') return ok({nodes:syntheticNodes});
+    if(path==='/check') return ok(passedCheck);
+    if(path==='/profiles') {writes++;return {ok:false,status:400,json:async()=>({detail:{message:'目标客户端检查未通过',checks:blocked}})};}
+    throw Error('unexpected request '+path);
+  };
+  await click('validate-source-button');await click('check-button');await click('generate-button');
+  if(writes!==1||state.busy||state.profile) throw Error('blocked save was confirmed or left busy');
+  if(elements['#check-results'].hidden||!elements['#check-results'].innerHTML.includes('Synthetic target blocked')) throw Error('new backend finding is missing');
+  if(!elements['#generate-button'].disabled||elements['#summary-state'].textContent!=='有阻断项'||elements['#summary-link'].href!=='#step-review') throw Error('blocking report disagrees with current publish readiness');
+  if(elements['#check-button'].disabled||!elements['#check-state'].textContent.includes('阻断')) throw Error('blocked save lost corrective check state');
+  await click('check-button');
+  if(elements['#generate-button'].disabled) throw Error('successful corrective check cannot restore saving');
+})()
+""")
 
 
 def test_service_cards_prioritize_ai_and_keep_field_focus_selection_and_search_count() -> None:

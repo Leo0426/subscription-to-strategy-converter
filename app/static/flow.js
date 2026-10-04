@@ -3,7 +3,7 @@ const LEO_TEMPLATE = "local:community_templates/leo/leo.yaml";
 const state = {
   leoGroups: [], leoSummary: null, leoAudit: null, publicData: [],
   serviceCategories: [{id:"ai",label:"AI 工具"},{id:"developer",label:"开发与系统"},{id:"streaming",label:"影音与通讯"}],
-  servicePacks: [], serviceChoices: {}, nodes: [], profile: null, legacy: null,
+  servicePacks: [], serviceChoices: {}, nodes: [], sourceFamily: null, profile: null, legacy: null,
   upgrade: null, check: null, checkedInput: null, savedInput: null, epoch: 0, busy: false,
   showAll: false, showCustomized: false,
   surgeProtocols: [],
@@ -31,6 +31,10 @@ function setNotice(message="") {
   const notice=$("#global-notice"); notice.textContent=message; notice.hidden=!message;
   if(message) focusControl(notice,true);
 }
+function setDiagnoseStatus(message="",kind="") {
+  const status=$("#diagnose-status");
+  if(status) {status.textContent=message;status.hidden=!message;status.className=`inline-status${kind?` is-${kind}`:""}`;}
+}
 function showToast(message) { const el=$("#toast"); el.textContent=message; el.hidden=false; clearTimeout(showToast.timer); showToast.timer=setTimeout(()=>{el.hidden=true;},2400); }
 async function copyToClipboard(value,input) {
   try { if(navigator.clipboard?.writeText) { await navigator.clipboard.writeText(value); return; } } catch {}
@@ -51,6 +55,19 @@ async function copyPublishedLink(button) {
   finally {focusControl(button);}
 }
 function selectedTargets() { return [...document.querySelectorAll('input[name="target"]:checked')].map(x=>x.value); }
+function sourceFamilyFor(target) { return target?(["shadowrocket","shadowrocket-config"].includes(target)?"shadowrocket":"mihomo"):null; }
+function targetSelectionChanged() {
+  const family=sourceFamilyFor(selectedTargets()[0]);
+  const result=$("#source-result");
+  if(family&&state.sourceFamily&&family!==state.sourceFamily) {
+    state.nodes=[];state.sourceFamily=null;
+    result.className="inline-status is-pending";
+    result.textContent="客户端来源类型已改变，请重新读取节点。";
+    renderServices();
+  }
+  result.hidden=!family||!result.textContent;
+  updateSurgePreferenceVisibility();invalidate();
+}
 function updateSurgePreferenceVisibility() {
   const selected=selectedTargets().includes("surge");
   $("#surge-auto-test-row").hidden=!selected;
@@ -72,7 +89,7 @@ function payload() {
   if(state.legacy) return {...structuredClone(state.legacy),...common};
   return {...common,service_routes:Object.entries(state.serviceChoices).filter(([,r])=>r.mode!=="default").map(([service,r])=>({service,mode:r.mode,egress:r.egress?.trim()||null,...(r.mode==="fallback"?{fallback:r.fallback?.trim()||null}:{})}))};
 }
-function invalidate() { $("#diagnose-result").hidden=true; state.epoch++; state.check=null; state.checkedInput=null; state.savedInput=null; $("#check-results").hidden=true; $("#publish-result").hidden=true; $("#check-state").textContent=state.nodes.length?"配置已改变，请重新检查":"先读取订阅节点"; updateActions(); }
+function invalidate() { $("#diagnose-result").hidden=true; setDiagnoseStatus(); state.epoch++; state.check=null; state.checkedInput=null; state.savedInput=null; $("#check-results").hidden=true; $("#publish-result").hidden=true; $("#check-state").textContent=state.nodes.length?"配置已改变，请重新检查":"先读取订阅节点"; updateActions(); }
 function currentDraftSaved() { return Boolean(state.check?.can_publish&&state.savedInput&&state.savedInput===state.checkedInput&&state.savedInput===JSON.stringify(payload())); }
 function updateWorkspaceSummary() {
   const targets=selectedTargets();
@@ -310,13 +327,18 @@ function restoreChoices(routes=[]) {
 }
 function resetServiceView() {state.showCustomized=false;state.showAll=false;$("#service-search").value="";}
 async function loadNodes() {
-  state.nodes=[]; invalidate(); renderServices();
+  state.nodes=[];state.sourceFamily=null;
+  $("#source-result").hidden=true;$("#source-result").textContent="";
+  invalidate(); renderServices();
   try {
     if(!$("#subscription-url").value.trim()) throw new Error("请输入原始订阅地址。");
-    if(!selectedTargets().length) throw new Error("至少选择一个客户端。");
-    const body=await postJson("/preview",{subscription_url:$("#subscription-url").value.trim(),target:selectedTargets()[0]}); state.nodes=body.nodes||[];
+    const target=selectedTargets()[0];
+    if(!target) throw new Error("至少选择一个客户端。");
+    const body=await postJson("/preview",{subscription_url:$("#subscription-url").value.trim(),target});
+    state.nodes=body.nodes||[];state.sourceFamily=sourceFamilyFor(target);
     const result=$("#source-result"); result.hidden=false; result.className="inline-status"; result.textContent=`已读取 ${state.nodes.length} 个节点 · 读取成功不代表节点可访问目标服务`;
   } catch(error) {
+    state.sourceFamily=null;
     const result=$("#source-result"); result.hidden=false; result.className="inline-status is-error"; result.textContent=error.message;
     error.focusTarget=selectedTargets().length?"#subscription-url":'input[name="target"]';
     throw error;
@@ -349,11 +371,21 @@ function renderCheck(report) {
   $("#check-results").innerHTML=`<div class="check-grid"><div class="check-card ${errors.length?"is-error":""}"><b>配置结构</b><strong>${errors.length?`${errors.length} 个错误`:"通过"}</strong><small>${report.node_count} 个节点 · 仅验证生成配置</small></div>${report.clients.map(c=>`<div class="check-card ${c.errors.length?"is-error":c.warnings.length?"is-warning":""}"><b>${escapeHtml(CLIENT_LABELS[c.target]||c.target)}</b><strong>${c.errors.length?"无法发布":c.warnings.length?`${c.warnings.length} 项兼容提示`:"编译通过"}</strong><small>${c.target==="shadowrocket"?"已检查节点与配套配置":"未替代客户端导入验证"}</small>${renderDependencySummary(c.dependencies)}</div>`).join("")}<div class="check-card neutral"><b>实际访问</b><strong>未验证</strong><small>可在下方按需进行客户端实测</small></div></div>${errors.map(e=>`<p class="inline-status is-error">${escapeHtml(e.message)}</p>`).join("")}${report.clients.map(c=>[...c.errors,...c.warnings.map(w=>w.suggestion||w.message||w.code)].map(m=>`<p class="compatibility-note"><b>${escapeHtml(CLIENT_LABELS[c.target]||c.target)}</b> ${escapeHtml(m)}</p>`).join("")).join("")}${notices.length?`<details class="check-details"><summary>${notices.length} 项结构与运行条件提示</summary>${notices.map(n=>`<p>${escapeHtml(n.message)}</p>`).join("")}</details>`:""}<p class="helper">服务规则与节点选择可在下方逐项诊断。远程规则集的运行态匹配不属于静态检查结果。</p>`;
 }
 async function checkConfig() {
-  const key=JSON.stringify(payload()); const epoch=state.epoch;
-  const report=await postJson("/check",payload());
-  if(epoch!==state.epoch) return;
-  state.check=report; state.checkedInput=key; renderCheck(report);
-  $("#check-state").textContent=report.can_publish?"检查完成，请查看兼容提示后保存":"存在阻断项，请修正后重新检查";
+  const request=payload(),key=JSON.stringify(request),epoch=state.epoch;
+  state.check=null;state.checkedInput=null;
+  $("#check-results").hidden=true;$("#check-results").innerHTML="";
+  $("#check-state").textContent="正在检查当前配置…";
+  updateActions();
+  try {
+    const report=await postJson("/check",request);
+    if(epoch!==state.epoch) return;
+    state.check=report; state.checkedInput=key; renderCheck(report);
+    $("#check-state").textContent=report.can_publish?"检查完成，请查看兼容提示后保存":"存在阻断项，请修正后重新检查";
+    updateActions();
+  } catch(error) {
+    if(epoch===state.epoch) {$("#check-state").textContent="本次检查失败，请重试";updateActions();}
+    throw error;
+  }
 }
 const LOOPBACK_HOSTS=new Set(["127.0.0.1","localhost","::1","[::1]","0.0.0.0"]);
 function showReachWarning(hostname) {
@@ -403,7 +435,17 @@ async function saveProfile() {
   if(!state.check?.can_publish||state.checkedInput!==key) throw new Error("配置已变化，请重新检查。");
   if(state.savedInput===key) return;
   const editing=Boolean(state.profile);
-  const body=editing ? await jsonRequest(`/profiles/${encodeURIComponent(state.profile.id)}?token=${encodeURIComponent(state.profile.token)}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:key}) : await postJson("/profiles",request);
+  let body;
+  try {
+    body=editing ? await jsonRequest(`/profiles/${encodeURIComponent(state.profile.id)}?token=${encodeURIComponent(state.profile.token)}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:key}) : await postJson("/profiles",request);
+  } catch(error) {
+    if(error.checks) {
+      state.check=error.checks;state.checkedInput=key;
+      $("#check-state").textContent="存在阻断项，请修正后重新检查";
+      updateActions();
+    }
+    throw error;
+  }
   if(!editing) state.profile={id:body.id,token:body.token};
   state.savedInput=key;
   showPublished(body); $("#publish-title").textContent=editing?"已更新，原订阅链接保持不变":"已保存订阅";
@@ -447,20 +489,27 @@ function applyUpgrade() {
 }
 async function diagnose() {
   const service=$("#diagnose-service").value;
-  const report=await postJson("/diagnose",{request:payload(),service,runtime:$("#diagnose-runtime").checked,client:$("#diagnose-client").value,samples:$("#diagnose-runtime").checked?3:1});
+  $("#diagnose-result").hidden=true;$("#diagnose-result").innerHTML="";
+  setDiagnoseStatus("正在检查服务，请稍候…","pending");
+  let report;
+  try {
+    report=await postJson("/diagnose",{request:payload(),service,runtime:$("#diagnose-runtime").checked,client:$("#diagnose-client").value,samples:$("#diagnose-runtime").checked?3:1});
+  } catch(error) {setDiagnoseStatus("本次诊断失败，请重试","error");throw error;}
   const actual=report.runtime;
   const domainCount=report.service.domains.length;
   const needsRuntime=report.service.domains.filter(domain=>domain.status!=="matched").length;
   const observed=actual.domain_routes?`<details id="diagnostic-runtime-paths" class="check-details diagnostic-details"${actual.consistent_exit===true?"":" open"}><summary>客户端规则解释 · ${escapeHtml(actual.domain_routes.length)} 个域名（域名 / TCP 443）</summary><p>${actual.consistent_exit===true?"已检查域名出口一致":"存在出口差异或未能读取，请逐项核对"}</p><div class="table-scroll"><table><thead><tr><th>域名</th><th>解释得到的节点</th><th>解释规则</th></tr></thead><tbody>${actual.domain_routes.map(d=>`<tr><td>${escapeHtml(d.domain)}</td><td>${escapeHtml(d.actual_node||"未读取")}</td><td>${escapeHtml(d.rule||"未读取")}</td></tr>`).join("")}</tbody></table></div></details>`:"";
   $("#diagnose-result").hidden=false;
   $("#diagnose-result").innerHTML=`<div class="diagnosis-summary"><div class="diagnosis-summary-heading"><b>${escapeHtml(report.service.label)}</b><span>${escapeHtml(domainCount)} 个域名</span></div><p>配置分流：${report.service.status==="consistent"?"已检查的服务域名使用同一策略":"部分域名需要客户端规则数据，或存在出口差异"}</p><p>客户端选择：${escapeHtml(actual.actual_node||"未验证")}</p><p>${escapeHtml(actual.message)}</p>${actual.service_tested===false?'<p>该服务尚未配置专用探测地址，本次仅检查通用连通性。</p>':""}</div>${(report.warnings||[]).map(w=>`<p class="compatibility-note">${escapeHtml(w.suggestion||w.message)}</p>`).join("")}${renderRuntimeEvidence(actual)}${renderStaticEvidence(report.service.evidence)}<details id="diagnostic-config-paths" class="check-details diagnostic-details"><summary>配置路径 · ${escapeHtml(domainCount)} 个域名${needsRuntime?` · ${escapeHtml(needsRuntime)} 个需运行态核实`:""}（不是客户端实时选择）</summary><div class="table-scroll"><table><thead><tr><th>域名</th><th>配置路径</th></tr></thead><tbody>${report.service.domains.map(d=>`<tr><td>${escapeHtml(d.domain)}</td><td>${escapeHtml(d.path.join(" → "))}${d.status!=="matched"?" · 需运行态规则":""}</td></tr>`).join("")}</tbody></table></div></details>${observed}${actual.probes?`<div class="probe-list">${actual.probes.map(p=>`<p><b>${p.status==="reachable"?"探测可达":p.status==="degraded"?"间歇失败":"探测未通过"}</b><span>${escapeHtml(p.url)}</span><small>${p.http_status?`HTTP ${p.http_status} · `:""}${p.latency_ms!=null?`${Math.round(p.latency_ms)} ms`:"未取得成功响应"} · ${p.sample_count||1} 次采样 · 失败 ${Math.round((p.failure_rate||0)*100)}%${p.latency_spread_ms!=null?` · 延迟波动 ${Math.round(p.latency_spread_ms)} ms`:""} · ${escapeHtml(p.node||"未读取节点")}</small></p>`).join("")}</div><p class="helper">此结果只对应本次探测，不代表完整登录、对话或长期可用。</p>`:""}`;
+  setDiagnoseStatus();
 }
 function newProfile() {
-  state.profile=null;state.savedInput=null;state.legacy=null;state.upgrade=null;state.nodes=[];restoreChoices();
+  state.profile=null;state.savedInput=null;state.legacy=null;state.upgrade=null;state.nodes=[];state.sourceFamily=null;restoreChoices();
   resetServiceView();
   restoreSurgePreferences();
   for(const id of ["subscription-url","profile-name","existing-profile-url"]) $("#"+id).value="";
   $("#profile-status").textContent="正在新建订阅";$("#legacy-panel").hidden=true;$("#source-result").hidden=true;$("#diagnose-result").hidden=true;
+  $("#source-result").textContent="";
   $("#publication-status-panel").hidden=true;
   invalidate();renderServices();setNotice("");
 }
@@ -471,11 +520,11 @@ function bindEvents() {
   const actions={"refresh-publications-button":["刷新中…",refreshPublications],"validate-source-button":["读取中…",loadNodes],"check-button":["检查中…",checkConfig],"generate-button":["保存中…",saveProfile],"open-profile-button":["打开中…",openProfile],"preview-upgrade-button":["比较中…",previewUpgrade],"diagnose-button":["检查中…",diagnose]};
   for(const [id,[label,fn]] of Object.entries(actions)) $("#"+id).addEventListener("click",event=>busy(event.currentTarget,label,fn));
   $("#new-profile-button").addEventListener("click",newProfile);
-  $("#subscription-url").addEventListener("input",()=>{state.nodes=[];$("#source-result").hidden=true;invalidate();renderServices();});
+  $("#subscription-url").addEventListener("input",()=>{state.nodes=[];state.sourceFamily=null;$("#source-result").hidden=true;$("#source-result").textContent="";invalidate();renderServices();});
   $("#profile-name").addEventListener("input",invalidate);
-  document.querySelectorAll('input[name="target"]').forEach(el=>el.addEventListener("change",()=>{updateSurgePreferenceVisibility();invalidate();}));
+  document.querySelectorAll('input[name="target"]').forEach(el=>el.addEventListener("change",targetSelectionChanged));
   $("#surge-auto-test-protocols").addEventListener("change",invalidate);
-  for(const id of ["diagnose-service","diagnose-client","diagnose-runtime"]) $("#"+id).addEventListener("change",()=>{$("#diagnose-result").hidden=true;});
+  for(const id of ["diagnose-service","diagnose-client","diagnose-runtime"]) $("#"+id).addEventListener("change",()=>{$("#diagnose-result").hidden=true;setDiagnoseStatus();});
   $("#service-search").addEventListener("input",renderServices);
   $("#show-all-services").addEventListener("click",()=>{
     if($("#service-search").value.trim()||state.showCustomized) {$("#service-search").value="";state.showCustomized=false;state.showAll=true;}

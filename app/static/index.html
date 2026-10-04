@@ -8,7 +8,7 @@
   <title>Subflow 6.7.0 · 策略订阅工作台</title>
   <link rel="icon" type="image/png" href="/static/assets/subflow-logo.png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/static/flow.css?v=57" />
+  <link rel="stylesheet" href="/static/flow.css?v=58" />
 </head>
 <body>
 <a class="skip-link" href="#step-source">跳到订阅配置</a>
@@ -115,6 +115,7 @@
         <label class="runtime-option"><input type="checkbox" id="diagnose-runtime" /><span>同时请求客户端实测<small>连续 3 轮，查看失败率与延迟波动，不修改选择。</small></span></label>
         <p id="runtime-state" class="helper">未连接客户端 · 实际节点与访问未验证</p>
         <button id="diagnose-button" data-success-target="#diagnose-result" class="simple-button secondary" type="button" disabled>检查这个服务</button>
+        <p id="diagnose-status" class="inline-status" hidden role="status" aria-live="polite"></p>
         <div id="diagnose-result" hidden aria-live="polite" tabindex="-1"></div>
         <details class="connection-help"><summary>如何连接客户端？</summary><p>本机运行时可使用已安装的 Surge CLI。Docker / 路由器场景由管理员设置 <code>SUBFLOW_MIHOMO_CONTROLLER</code> 和 <code>SUBFLOW_MIHOMO_SECRET</code> 后重启服务。Controller 必须能从 Subflow 所在环境访问，凭据不进入订阅或页面。</p><p>通用测速只验证探针。HTTP 探测可达也不等于完整登录、会话与对话正常。</p></details>
       </section>
@@ -135,6 +136,6 @@
   <footer class="workspace-footer"><span>Subflow · 让连接更有条理</span><a href="#step-source">回到配置起点 ↑</a></footer>
 </main>
 <div class="toast" id="toast" hidden role="status"></div>
-<script src="/static/flow.js?v=58"></script>
+<script src="/static/flow.js?v=59"></script>
 </body>
 </html>
