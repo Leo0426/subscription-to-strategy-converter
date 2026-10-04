@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import json
-import re
 from collections import Counter, defaultdict
 
+from app.core.policy_workspace import parse_policy_rule, rule_provider_references
 from app.core.provider_egress import needs_egress, resolve_egress_group
 from app.ir import AnalyzerFinding, BUILTIN_POLICY_TARGETS, PolicyWorkspace
 
-
-_RULE_SET_REFERENCE = re.compile(r"\bRULE-SET,\s*([^(),]+)", re.IGNORECASE)
 
 #: Providers are downloaded on every cold start. Past this many, a client on
 #: modest hardware (router, OpenClash) risks a startup timeout.
@@ -36,9 +34,7 @@ def _rule_key(raw: object) -> str:
 
 
 def _rule_provider_references(raw: object) -> tuple[str, ...]:
-    if not isinstance(raw, str):
-        return ()
-    return tuple(dict.fromkeys(match.strip() for match in _RULE_SET_REFERENCE.findall(raw)))
+    return rule_provider_references(parse_policy_rule(raw, 0))
 
 
 def analyze_workspace(workspace: PolicyWorkspace) -> list[AnalyzerFinding]:
@@ -49,7 +45,7 @@ def analyze_workspace(workspace: PolicyWorkspace) -> list[AnalyzerFinding]:
     valid_targets = BUILTIN_POLICY_TARGETS | group_names | proxy_names
 
     for rule in workspace.rules:
-        for provider in _rule_provider_references(rule.raw):
+        for provider in rule_provider_references(rule):
             if provider not in provider_names:
                 findings.append(
                     AnalyzerFinding(

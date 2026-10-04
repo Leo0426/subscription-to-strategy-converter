@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.core.policy_workspace import rule_provider_references
 from app.ir import BUILTIN_POLICY_TARGETS, PolicyGraph, PolicyGraphEdge, PolicyGraphNode, PolicyWorkspace
 
 
@@ -53,10 +54,10 @@ def build_policy_graph(workspace: PolicyWorkspace) -> PolicyGraph:
     for rule in workspace.rules:
         rule_id = f"rule:{rule.index}"
         add_node(rule_id, "rule", rule.type, match=rule.match, target=rule.target, provider=rule.provider)
-        if rule.provider:
-            provider_id = f"provider:{rule.provider}" if rule.provider in provider_names else f"missing:{rule.provider}"
-            if rule.provider not in provider_names:
-                add_node(provider_id, "missing", rule.provider)
+        for provider in rule_provider_references(rule):
+            provider_id = f"provider:{provider}" if provider in provider_names else f"missing:{provider}"
+            if provider not in provider_names:
+                add_node(provider_id, "missing", provider)
             add_edge(rule_id, provider_id, "rule-provider")
         if rule.target:
             target_id = _target_node_id(rule.target, group_names, proxy_names)

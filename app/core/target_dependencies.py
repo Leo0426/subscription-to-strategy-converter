@@ -21,7 +21,7 @@ from urllib.parse import urlparse
 
 from ruamel.yaml import YAML
 
-from app.core.policy_workspace import _split_rule
+from app.core.policy_workspace import _split_rule, parse_policy_rule, rule_expression_matches
 from app.core.platforms.surge_capabilities import SURGE_IOS_RULE_TYPES
 from app.core.rule_source_audit import (
     COLD_START_BYTE_BUDGET, PROVIDER_COUNT_BUDGET, FetchRuleSource,
@@ -35,21 +35,8 @@ _GEO_RULES = {"GEOSITE": "geosite", "GEOIP": "geoip", "SRC-GEOIP": "geoip", "IP-
 
 def _clauses(rule: str) -> Iterator[tuple[str, str]]:
     """Walk logical clauses without interpreting commas in URLs or regexes."""
-    rule = rule.strip()
-    if rule.startswith("(") and rule.endswith(")"):
-        rule = rule[1:-1]
-    parts = [part.strip() for part in _split_rule(rule)]
-    if not parts:
-        return
-    if parts[0].upper() in {"AND", "OR", "NOT", "SUB-RULE"}:
-        for part in parts[1:]:
-            if part.startswith("("):
-                yield from _clauses(part)
-    elif parts[0].startswith("("):
-        for part in parts:
-            yield from _clauses(part)
-    elif len(parts) >= 2:
-        yield parts[0].upper(), parts[1].strip('\"\'')
+    for kind, match in rule_expression_matches(parse_policy_rule(rule, 0)):
+        yield kind, match.strip('\"\'')
 
 
 class _Inventory:

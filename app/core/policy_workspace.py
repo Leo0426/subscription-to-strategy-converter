@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import asdict, is_dataclass
 from typing import Any
 
@@ -9,6 +10,8 @@ from app.ir import PolicyRule, PolicyWorkspace, ProxyGroup, ProxyNode, RuleProvi
 
 
 POLICY_SECTIONS = {"proxies", "proxy-groups", "rules", "rule-providers"}
+_LOGICAL_RULE_TYPES = {"AND", "OR", "NOT", "SUB-RULE"}
+_REGEX_RULE_TYPES = {"DOMAIN-REGEX", "PROCESS-NAME-REGEX", "PROCESS-PATH-REGEX"}
 
 
 def _jsonable(value: Any) -> Any:
@@ -25,7 +28,7 @@ def _jsonable(value: Any) -> Any:
 
 def _rule_parts(rule: Any) -> tuple[str, str, str, list[str]]:
     if isinstance(rule, str):
-        parts = [part.strip() for part in _split_rule(rule)]
+        parts = [part.strip() for part in _rule_segments(rule)]
         rule_type = parts[0].upper() if parts else ""
         if rule_type in {"MATCH", "FINAL"}:
             match = ""
@@ -49,7 +52,18 @@ def _rule_parts(rule: Any) -> tuple[str, str, str, list[str]]:
     return type(rule).__name__.upper(), "", "", []
 
 
-def _split_rule(rule: str) -> list[str]:
+def _rule_segments(rule: str) -> list[str]:
+    kind, separator, remainder = rule.partition(",")
+    rule_type = kind.strip().upper()
+    if separator and rule_type in _REGEX_RULE_TYPES:
+        # Mihomo regex rules have no options: only the last comma separates
+        # the target; regex punctuation belongs to the payload.
+        match, target_separator, target = remainder.rpartition(",")
+        return [kind, match, target] if target_separator else [kind, remainder]
+    return _split_rule(rule, quoted=rule_type not in _LOGICAL_RULE_TYPES, nested=rule_type != "URL-REGEX")
+
+
+def _split_rule(rule: str, *, quoted: bool = True, nested: bool = True) -> list[str]:
     """Split top-level rule fields without splitting nested logical expressions."""
     parts: list[str] = []
     start = 0
@@ -64,11 +78,11 @@ def _split_rule(rule: str) -> list[str]:
         elif quote:
             if char == quote:
                 quote = ""
-        elif char in {'"', "'"}:
+        elif quoted and char in {'"', "'"}:
             quote = char
-        elif char == "(":
+        elif nested and char == "(":
             depth += 1
-        elif char == ")":
+        elif nested and char == ")":
             depth = max(0, depth - 1)
         elif char == "," and depth == 0:
             parts.append(rule[start:index])
@@ -90,6 +104,53 @@ def parse_policy_rule(rule: Any, index: int) -> PolicyRule:
         options=options,
         raw=_jsonable(rule),
     )
+
+
+def _logical_clauses(payload: str) -> list[str]:
+    """Return outer parenthesized clauses using Mihomo's logical grammar."""
+    clauses = []
+    depth = 0
+    start = 0
+    for index, char in enumerate(payload):
+        if char == "(":
+            if depth == 0:
+                start = index + 1
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth < 0:
+                return []
+            if depth == 0:
+                clauses.append(payload[start:index].strip())
+    return [] if depth else clauses
+
+
+def rule_expression_matches(rule: PolicyRule) -> Iterator[tuple[str, str]]:
+    """Walk effective logical leaves without treating regex text as clauses."""
+    pending = [(rule.type.upper(), rule.match or rule.provider)]
+    while pending:
+        kind, payload = pending.pop()
+        if kind in _LOGICAL_RULE_TYPES:
+            children = []
+            for body in _logical_clauses(payload):
+                if body.startswith("("):
+                    children.append((kind, body))
+                else:
+                    child_kind, separator, child_payload = body.partition(",")
+                    if separator:
+                        child_kind = child_kind.strip().upper()
+                        if child_kind not in _LOGICAL_RULE_TYPES | _REGEX_RULE_TYPES:
+                            child_payload = _split_rule(child_payload)[0]
+                        children.append((child_kind, child_payload.strip()))
+            pending.extend(reversed(children))
+        else:
+            yield kind, payload
+
+
+def rule_provider_references(rule: PolicyRule) -> tuple[str, ...]:
+    """Read effective RULE-SET clauses, never regex payloads or stale raw text."""
+    return tuple(dict.fromkeys(match for kind, match in rule_expression_matches(rule)
+                               if kind == "RULE-SET" and match))
 
 
 def config_to_workspace(config: dict[str, Any], nodes: list[ProxyNode] | None = None, target: str = "mihomo") -> PolicyWorkspace:
@@ -312,7 +373,7 @@ def _compiled_rule(rule: PolicyRule) -> Any:
     if (raw_type in {"MATCH", "FINAL"}) != (rule.type in {"MATCH", "FINAL"}):
         return _render_rule_fields(rule)
 
-    parts = _split_rule(raw)
+    parts = _rule_segments(raw)
     target_index = 1 if raw_type in {"MATCH", "FINAL"} else 2
     while len(parts) <= target_index:
         parts.append("")

@@ -228,8 +228,7 @@ proxy-groups:
   - 手动选择
 rule-providers:
   # 内容按提交固定不会变化，每周刷新即可。
-  # 轻量核心：每项只保留一个固定版本的可信来源；classical YAML 可由
-  # Surge 转换，AI domain 裸列表保留为 Mihomo 的广覆盖来源。
+  # 固定可信来源；Surge 使用原生映射，AI 裸列表由 Mihomo 加载。
   ai-4:
     type: http
     behavior: domain
@@ -316,13 +315,14 @@ rules:
 - DOMAIN,oauth2.googleapis.com,AI 服务
 - DOMAIN,openidconnect.googleapis.com,AI 服务
 - DOMAIN,humb.apple.com,AI 服务
-- DOMAIN-SUFFIX,intercom.io,AI 服务
-- DOMAIN-SUFFIX,intercomcdn.com,AI 服务
+- DOMAIN,api-iam.intercom.io,AI 服务
+- DOMAIN,js.intercomcdn.com,AI 服务
 - DOMAIN,js.stripe.com,AI 服务
 - DOMAIN,o207216.ingest.sentry.io,AI 服务
 - DOMAIN,o33249.ingest.sentry.io,AI 服务
 - DOMAIN,rum.browser-intake-datadoghq.com,AI 服务
 - DOMAIN-SUFFIX,ct.sendgrid.net,AI 服务
+- DOMAIN,origin-tracker.githubusercontent.com,AI 服务
 # End managed service rules
 - DOMAIN-SUFFIX,tokfinity.com,DIRECT
 - DOMAIN-SUFFIX,hcaptcha.com,AI 服务

@@ -5,6 +5,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Callable
 
+from app.core.policy_workspace import parse_policy_rule
 from app.ir import ProxyNode
 
 _BUILTIN_TARGETS = frozenset({"DIRECT", "REJECT", "REJECT-DROP"})
@@ -147,13 +148,11 @@ def close_group_members(
 def redirect_unavailable_target(line: str, unavailable_targets: set[str]) -> str:
     if not unavailable_targets:
         return line
-    parts = [part.strip() for part in line.split(",")]
-    if len(parts) < 2:
+    rule = parse_policy_rule(line, 0)
+    if rule.target not in unavailable_targets:
         return line
-    target_index = -2 if parts[-1].lower() == "no-resolve" else -1
-    if parts[target_index] in unavailable_targets:
-        parts[target_index] = "REJECT"
-    return ",".join(parts)
+    fields = [rule.type] if rule.type in {"MATCH", "FINAL"} else [rule.type, rule.match]
+    return ",".join([*fields, "REJECT", *rule.options])
 
 
 def _china_fallback_rules(rules: list[Any], rule_types: frozenset[str]) -> tuple[list[Any], bool]:

@@ -16,9 +16,11 @@ import json
 from dataclasses import dataclass
 from ipaddress import ip_address
 from typing import Any
+from urllib.parse import urlsplit
 
 from app.ir import ProxyNode
 from app.core.parsers.clash import ir_to_clash_dict
+from app.core.policy_workspace import parse_policy_rule
 from app.core.platforms.surge_profile import replace_surge_routing
 from app.core.platforms.surge_capabilities import SURGE_IOS_RULE_TYPES
 from app.core.platforms.surge_audit import (
@@ -178,7 +180,7 @@ def _resolve_skk_ruleset(url: str) -> ResolvedRuleSet | None:
     return ResolvedRuleSet(directive, surge_url)
 
 
-def _resolve_surge_ruleset(url: str, behavior: str) -> ResolvedRuleSet:
+def _resolve_surge_ruleset(url: str, behavior: str, source_format: str = "") -> ResolvedRuleSet:
     """Resolve a Clash rule-provider URL to a Surge-loadable rule set.
 
     Rewrites URLs from repositories that publish a Surge-native variant
@@ -188,25 +190,35 @@ def _resolve_surge_ruleset(url: str, behavior: str) -> ResolvedRuleSet:
     cannot parse by URL: Clash `payload:` YAML, MRS with no text equivalent, or
     Clash `domain`/`ipcidr` provider bare-lists (`+.`/wildcards/bare CIDR).
     """
-    surge_list = _resolve_blackmatrix7_url(url)
+    # Match the resource path while preserving the original query/fragment
+    # byte-for-byte when an audited mapping changes its host or path.
+    resource_url = re.split(r"[?#]", url, maxsplit=1)[0]
+    suffix = url[len(resource_url):]
+    surge_list = _resolve_blackmatrix7_url(resource_url)
     if surge_list is not None:
-        return surge_list
+        return ResolvedRuleSet(surge_list.directive, surge_list.url + suffix)
 
-    skk = _resolve_skk_ruleset(url)
+    skk = _resolve_skk_ruleset(resource_url)
     if skk is not None:
-        return skk
+        return ResolvedRuleSet(skk.directive, skk.url + suffix)
 
-    if url.endswith(".yaml"):
+    path = urlsplit(url).path.lower()
+    if path.endswith(".mrs"):
+        try:
+            mapped = _resolve_mrs_url(resource_url)
+        except UnsupportedRuleTypeError:
+            pass
+        else:
+            if mapped != resource_url:
+                return ResolvedRuleSet("RULE-SET", mapped + suffix)
+
+    if source_format in {"yaml", "mrs"} or path.endswith((".yaml", ".yml", ".mrs")):
         raise UnsupportedRuleTypeError(
             code="unsupported_rule_type",
             field="rule_set_url",
             value=url,
-            suggestion="Surge 无法解析 Clash payload YAML 规则集，请替换为 Surge 原生规则源",
+            suggestion="Surge 无法解析未映射的 Clash YAML/MRS 规则集，请替换为 Surge 原生规则源",
         )
-
-    if url.endswith(".mrs"):
-        # _resolve_mrs_url substitutes known MRS repos or raises for the rest.
-        return ResolvedRuleSet("RULE-SET", _resolve_mrs_url(url))
 
     if behavior in {"domain", "ipcidr"}:
         # Clash domain/ipcidr providers ship bare-domain (`+.`/wildcard) or
@@ -594,23 +606,22 @@ def _rule_to_surge_line(
     MATCH is converted to FINAL.
     RULE-SET resolves the provider name to a URL via rule_providers.
     """
-    parts = [p.strip() for p in rule.split(",")]
-    if not parts or not parts[0]:
+    parsed = parse_policy_rule(rule, 0)
+    rule_type = parsed.type
+    if not rule_type:
         return None
-
-    rule_type = parts[0].upper()
 
     if rule_type in {"MATCH", "FINAL"}:
-        target = parts[1].strip() if len(parts) > 1 else "DIRECT"
-        dns_failed = rule_type == "FINAL" and "dns-failed" in (part.lower() for part in parts[2:])
+        target = parsed.target or "DIRECT"
+        dns_failed = rule_type == "FINAL" and "dns-failed" in (option.lower() for option in parsed.options)
         return f"FINAL,{target}{',dns-failed' if dns_failed else ''}"
 
-    if len(parts) < 3:
+    if not parsed.target:
         return None
 
-    no_resolve = len(parts) >= 4 and parts[-1].strip().lower() == "no-resolve"
-    target = parts[-2].strip() if no_resolve else parts[-1].strip()
-    value = parts[1].strip()
+    no_resolve = "no-resolve" in (option.lower() for option in parsed.options)
+    target = parsed.target
+    value = parsed.match
 
     if rule_type == "RULE-SET":
         provider = rule_providers.get(value)
@@ -620,8 +631,9 @@ def _rule_to_surge_line(
         if not raw_url:
             return None
         behavior = str(provider.get("behavior") or "").strip().lower()
+        source_format = str(provider.get("format") or "").strip().lower()
         # raises UnsupportedRuleTypeError for formats Surge cannot parse
-        resolved = _resolve_surge_ruleset(raw_url, behavior)
+        resolved = _resolve_surge_ruleset(raw_url, behavior, source_format)
         # no-resolve only applies to IP matching; DOMAIN-SET has no IP rules.
         suffix = ",no-resolve" if (no_resolve and resolved.directive == "RULE-SET") else ""
         return f"{resolved.directive},{resolved.url},{target}{suffix}"

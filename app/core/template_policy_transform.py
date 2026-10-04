@@ -7,7 +7,7 @@ import re
 from typing import Any
 from urllib.parse import urlparse
 
-from app.ir import ProxyNode
+from app.ir import BUILTIN_POLICY_TARGETS, ProxyNode
 from app.models.strategy import ClaudePolicy, ServiceRoute
 from app.core.platforms.surge_capabilities import SURGE_IOS_RULE_TYPES
 from app.core.service_catalog import service_catalog, service_rules
@@ -55,11 +55,38 @@ def transform_service_routes(
             target=target,
         )
     if current_services:
-        result["rules"] = _prioritize_service_domains(result["rules"], current_services)
+        # A vendor's provider can also contain a separate AI service. Materialize
+        # that service's declared defaults before promoted providers, preserving
+        # explicit preferences and existing domain targets.
+        active_services = {route.service for route in routes if route.enabled}
+        available_targets = {group["name"] for group in result["proxy-groups"]} | BUILTIN_POLICY_TARGETS
+        existing_matches = {
+            ",".join(part.strip() for part in rule.split(",")[:2])
+            for rule in result["rules"] if isinstance(rule, str)
+        }
+        defaults: list[str] = []
+        protected_matches: set[str] = set()
+        for service in service_catalog():
+            if service.get("category") != "ai" or service["id"] in active_services:
+                continue
+            default_target = service.get("default_target")
+            if default_target not in available_targets:
+                continue
+            for rule in service["rules"]:
+                match = rule["match"]
+                protected_matches.add(match)
+                if match not in existing_matches:
+                    defaults.append(f"{match},{default_target}")
+                    existing_matches.add(match)
+        result["rules"] = _prioritize_service_domains(
+            defaults + result["rules"], current_services, protected_matches,
+        )
     return result
 
 
-def _prioritize_service_domains(rules: list, current_services: set[str]) -> list:
+def _prioritize_service_domains(
+    rules: list, current_services: set[str], protected_matches: set[str] | None = None,
+) -> list:
     """Keep explicit service domains ahead of broader selected service rules."""
     selected_matches = {
         rule["match"]
@@ -67,6 +94,7 @@ def _prioritize_service_domains(rules: list, current_services: set[str]) -> list
         if service["id"] in current_services
         for rule in service["rules"]
     }
+    selected_matches |= protected_matches or set()
     selected_suffixes = {
         match.split(",", 1)[1].lower()
         for match in selected_matches

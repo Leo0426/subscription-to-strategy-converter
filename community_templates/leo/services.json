@@ -119,11 +119,11 @@
           "template_inline": true
         },
         {
-          "match": "DOMAIN-SUFFIX,intercom.io",
+          "match": "DOMAIN,api-iam.intercom.io",
           "template_inline": true
         },
         {
-          "match": "DOMAIN-SUFFIX,intercomcdn.com",
+          "match": "DOMAIN,js.intercomcdn.com",
           "template_inline": true
         },
         {
@@ -280,11 +280,21 @@
         {
           "match": "DOMAIN-SUFFIX,githubcopilot.com",
           "template_inline": false
+        },
+        {
+          "match": "DOMAIN,copilot-proxy.githubusercontent.com",
+          "template_inline": false
+        },
+        {
+          "match": "DOMAIN,origin-tracker.githubusercontent.com",
+          "template_inline": true
         }
       ],
       "probe_urls": [],
       "destinations": [
-        "githubcopilot.com"
+        "githubcopilot.com",
+        "copilot-proxy.githubusercontent.com",
+        "origin-tracker.githubusercontent.com"
       ],
       "rule_providers": [],
       "geosite_tags": []
