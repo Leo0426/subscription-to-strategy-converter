@@ -4,7 +4,8 @@ const state = {
   leoGroups: [], leoSummary: null, leoAudit: null, publicData: [],
   serviceCategories: [{id:"ai",label:"AI 工具"},{id:"developer",label:"开发与系统"},{id:"streaming",label:"影音与通讯"}],
   servicePacks: [], serviceChoices: {}, nodes: [], profile: null, legacy: null,
-  upgrade: null, check: null, checkedInput: null, epoch: 0, busy: false, showAll: false,
+  upgrade: null, check: null, checkedInput: null, savedInput: null, epoch: 0, busy: false,
+  showAll: false, showCustomized: false,
   surgeProtocols: [],
 };
 const CLIENT_LABELS = {mihomo:"Clash / OpenClash",surge:"Surge",shadowrocket:"Shadowrocket"};
@@ -35,6 +36,20 @@ async function copyToClipboard(value,input) {
   try { if(navigator.clipboard?.writeText) { await navigator.clipboard.writeText(value); return; } } catch {}
   input.focus(); input.select(); if(!document.execCommand("copy")) throw new Error("复制失败"); input.blur();
 }
+async function copyPublishedLink(button) {
+  const input=$(`#published-${button.dataset.copyOutput}-url`);
+  const label=button.dataset.copyLabel||button.textContent;
+  button.dataset.copyLabel=label;
+  clearTimeout(button.copyFeedbackTimer);
+  const restore=()=>{button.textContent=label;button.classList.remove("is-copied");};
+  try {
+    await copyToClipboard(input.value,input);
+    button.textContent="已复制";button.classList.add("is-copied");
+    button.copyFeedbackTimer=setTimeout(restore,1800);
+    showToast("链接已复制");
+  } catch {restore();showToast("请选中链接后手动复制");}
+  finally {focusControl(button);}
+}
 function selectedTargets() { return [...document.querySelectorAll('input[name="target"]:checked')].map(x=>x.value); }
 function updateSurgePreferenceVisibility() {
   const selected=selectedTargets().includes("surge");
@@ -57,11 +72,13 @@ function payload() {
   if(state.legacy) return {...structuredClone(state.legacy),...common};
   return {...common,service_routes:Object.entries(state.serviceChoices).filter(([,r])=>r.mode!=="default").map(([service,r])=>({service,mode:r.mode,egress:r.egress?.trim()||null,...(r.mode==="fallback"?{fallback:r.fallback?.trim()||null}:{})}))};
 }
-function invalidate() { $("#diagnose-result").hidden=true; state.epoch++; state.check=null; state.checkedInput=null; $("#check-results").hidden=true; $("#publish-result").hidden=true; $("#check-state").textContent=state.nodes.length?"配置已改变，请重新检查":"先读取订阅节点"; updateActions(); }
+function invalidate() { $("#diagnose-result").hidden=true; state.epoch++; state.check=null; state.checkedInput=null; state.savedInput=null; $("#check-results").hidden=true; $("#publish-result").hidden=true; $("#check-state").textContent=state.nodes.length?"配置已改变，请重新检查":"先读取订阅节点"; updateActions(); }
+function currentDraftSaved() { return Boolean(state.check?.can_publish&&state.savedInput&&state.savedInput===state.checkedInput&&state.savedInput===JSON.stringify(payload())); }
 function updateWorkspaceSummary() {
   const targets=selectedTargets();
   const sourceReady=state.nodes.length>0&&targets.length>0;
   const checked=state.check&&state.checkedInput===JSON.stringify(payload());
+  const saved=currentDraftSaved();
   const current=!sourceReady?"source":checked?"review":"services";
   const steps=["source","services","review"];
   document.querySelectorAll('[data-step]').forEach(link=>{
@@ -71,23 +88,29 @@ function updateWorkspaceSummary() {
     if(active) link.setAttribute("aria-current","step"); else link.removeAttribute("aria-current");
   });
   const values={
+    "summary-label":saved?"已保存配置":"当前草稿",
+    "summary-next-label":saved?"下一步 · 导入 / 刷新":"下一步",
     "summary-nodes":state.nodes.length?`${state.nodes.length} 个节点`:"尚未读取",
     "summary-clients":targets.length?`${targets.length} 个客户端`:"尚未选择",
     "summary-routes":state.legacy?"保留旧策略快照":`${Object.values(state.serviceChoices).filter(r=>r.mode!=="default").length} 项服务偏好`,
-    "summary-state":state.busy?"处理中":!sourceReady?"待读取来源":!checked?"待检查":state.check.can_publish?"可以保存":"有阻断项",
-    "workspace-progress":state.busy?"正在处理，请稍候":current==="source"?"第 1 步 · 读取来源与选择客户端":current==="services"?"第 2 步 · 确认服务出口，再检查配置":state.check.can_publish?"第 3 步 · 核对检查结果，保存订阅":"第 3 步 · 查看阻断项，修正后重新检查",
+    "summary-state":state.busy?"处理中":saved?"已保存，请在客户端导入或刷新":!sourceReady?"待读取来源":!checked?"待检查":state.check.can_publish?"可以保存":"有阻断项",
+    "workspace-progress":state.busy?"正在处理，请稍候":saved?"已保存 · 复制订阅链接，在客户端导入或刷新":current==="source"?"第 1 步 · 读取来源与选择客户端":current==="services"?"第 2 步 · 确认服务出口，再检查配置":state.check.can_publish?"第 3 步 · 核对检查结果，保存订阅":"第 3 步 · 查看阻断项，修正后重新检查",
   };
   for(const [id,text] of Object.entries(values)) {const element=$("#"+id);if(element) element.textContent=text;}
+  const link=$("#summary-link");
+  if(link) {link.href=saved?"#publish-result":"#step-review";link.innerHTML=`${saved?"查看订阅链接":"前往检查与保存"} <span aria-hidden="true">↗</span>`;}
 }
 function updateActions() {
   const ready=state.nodes.length>0 && selectedTargets().length>0 && !state.busy;
+  const saved=currentDraftSaved();
   $("#refresh-publications-button").disabled=!state.profile||state.busy;
   $("#check-button").disabled=!ready;
   $("#diagnose-button").disabled=!ready;
-  $("#generate-button").disabled=!ready||!state.check?.can_publish||state.checkedInput!==JSON.stringify(payload());
-  $("#generate-button").textContent=state.profile?"更新原订阅":"保存并生成链接";
-  $("#save-title").textContent=state.profile?"保存到原订阅":"生成订阅";
-  $("#generate-hint").textContent=state.profile?"更新保留原链接；客户端刷新后采用新配置。":"检查通过后，生成所选客户端的订阅。";
+  $("#generate-button").disabled=!ready||saved||!state.check?.can_publish||state.checkedInput!==JSON.stringify(payload());
+  $("#generate-button").textContent=saved?"已保存":state.profile?"更新原订阅":"保存并生成链接";
+  $("#save-title").textContent=saved?"订阅已保存":state.profile?"保存到原订阅":"生成订阅";
+  $("#generate-hint").textContent=saved?"当前配置已保存；请复制下方链接，或在客户端刷新原订阅。":state.profile?"更新保留原链接；客户端刷新后采用新配置。":"检查通过后，生成所选客户端的订阅。";
+  if(saved) $("#check-state").textContent="已保存，请在客户端导入或刷新订阅";
   updateWorkspaceSummary();
 }
 async function busy(button,label,operation) {
@@ -243,7 +266,8 @@ function renderServices() {
   const search=$("#service-search").value.trim().toLowerCase();
   const groups=leoEgressGroups();
   const rank=id=>PRIMARY_SERVICES.includes(id)?PRIMARY_SERVICES.indexOf(id):PRIMARY_SERVICES.length;
-  const services=[...state.servicePacks].sort((a,b)=>rank(a.id)-rank(b.id)).filter(s=>`${s.label} ${s.id}`.toLowerCase().includes(search)).filter(s=>search||state.showAll||PRIMARY_SERVICES.includes(s.id)||(state.serviceChoices[s.id]?.mode||"default")!=="default");
+  const customized=id=>(state.serviceChoices[id]?.mode||"default")!=="default";
+  const services=[...state.servicePacks].sort((a,b)=>rank(a.id)-rank(b.id)).filter(s=>`${s.label} ${s.id}`.toLowerCase().includes(search)).filter(s=>!state.showCustomized||customized(s.id)).filter(s=>search||state.showAll||PRIMARY_SERVICES.includes(s.id)||customized(s.id));
   root.innerHTML=services.map(service=>{
     const r=state.serviceChoices[service.id]||{mode:"default",egress:"",fallback:""};
     const options=[["default","跟随 Leo"],["fixed","固定节点"],["manual","交给客户端选择"],["fallback","主备故障切换"]];
@@ -257,22 +281,30 @@ function renderServices() {
     }
     const intent=serviceRouteSummary(service.id,r);
     return `<article class="service-card${r.mode!=="default"?" is-customized":""}" data-service="${escapeHtml(service.id)}"><div class="service-card-heading"><div class="service-identity"><span class="service-symbol" data-kind="${escapeHtml(service.id)}" aria-hidden="true">${escapeHtml(SERVICE_SYMBOLS[service.id]||service.label.slice(0,1))}</span><div><strong>${escapeHtml(service.label)}</strong><small>${service.rules.length} 条服务规则</small></div></div><select data-mode aria-label="${escapeHtml(service.label)}出口行为"${locked}>${options.map(([v,l])=>`<option value="${v}"${r.mode===v?" selected":""}>${l}</option>`).join("")}</select></div><p class="service-route-summary">${escapeHtml(intent)}</p>${fields?`<div class="service-card-fields">${fields}</div>`:""}</article>`;
-  }).join("")||'<p class="service-empty">没有匹配的服务。试试服务名称，或清空搜索查看常用服务。</p>';
+  }).join("")||`<p class="service-empty">${state.showCustomized?"没有匹配的已设置服务。清除筛选可查看其他服务。":"没有匹配的服务。试试服务名称，或清空搜索查看常用服务。"}</p>`;
   $("#node-options").innerHTML=[...state.nodes.map(n=>n.name),"DIRECT","REJECT"].map(n=>`<option value="${escapeHtml(n)}"></option>`).join("");
   const searchStatus=$("#service-search-status");
   if(searchStatus) searchStatus.textContent=search?`找到 ${services.length} 项服务`:`显示 ${services.length} / ${state.servicePacks.length} 项服务`;
   const expand=$("#show-all-services");
-  if(expand) {expand.textContent=state.showAll?"收起其他服务":"展开全部服务";expand.setAttribute("aria-expanded",String(state.showAll));}
+  if(expand) {expand.textContent=search?"清除搜索，查看全部":state.showCustomized?"查看全部服务":state.showAll?"收起其他服务":"展开全部服务";expand.setAttribute("aria-expanded",String(state.showAll&&!search&&!state.showCustomized));}
+  const filter=$("#filter-customized-services");
+  if(filter) filter.setAttribute("aria-pressed",String(state.showCustomized));
+  const clear=$("#clear-service-filter");
+  if(clear) clear.hidden=!search&&!state.showCustomized;
+  const filterStatus=$("#service-filter-status");
+  if(filterStatus) filterStatus.textContent=state.showCustomized?"仅显示已设置出口的服务；筛选不会修改配置。":search?"按名称搜索；清除后可查看其他服务。":"筛选只影响显示，不改变服务出口。";
   if(focusedService&&focusedField) {
     const replacement=root.querySelector(`[data-service="${focusedService}"] [data-${focusedField}]`);
     focusControl(replacement);
     if(replacement&&!replacement.disabled&&selection) replacement.setSelectionRange?.(...selection);
+    if(!replacement) focusControl(state.showCustomized?filter:$("#service-search"));
   }
 }
 function restoreChoices(routes=[]) {
   state.serviceChoices=Object.fromEntries(state.servicePacks.map(s=>[s.id,{mode:"default",egress:"",fallback:""}]));
   for(const r of routes) if(r.enabled!==false&&r.mode&&r.mode!=="legacy") state.serviceChoices[r.service]={...r};
 }
+function resetServiceView() {state.showCustomized=false;state.showAll=false;$("#service-search").value="";}
 async function loadNodes() {
   state.nodes=[]; invalidate(); renderServices();
   try {
@@ -363,13 +395,20 @@ async function refreshPublications() {
   showToast(outcomes.some(r=>r.value)?"上游暂不可用，部分输出使用上次成功配置":"服务器配置已刷新，请在各客户端更新订阅");
 }
 async function saveProfile() {
-  if(!state.check?.can_publish||state.checkedInput!==JSON.stringify(payload())) throw new Error("配置已变化，请重新检查。");
+  const request=payload(),key=JSON.stringify(request);
+  if(!state.check?.can_publish||state.checkedInput!==key) throw new Error("配置已变化，请重新检查。");
+  if(state.savedInput===key) return;
   const editing=Boolean(state.profile);
-  const body=editing ? await jsonRequest(`/profiles/${encodeURIComponent(state.profile.id)}?token=${encodeURIComponent(state.profile.token)}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload())}) : await postJson("/profiles",payload());
+  const body=editing ? await jsonRequest(`/profiles/${encodeURIComponent(state.profile.id)}?token=${encodeURIComponent(state.profile.token)}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:key}) : await postJson("/profiles",request);
   if(!editing) state.profile={id:body.id,token:body.token};
+  state.savedInput=key;
   showPublished(body); $("#publish-title").textContent=editing?"已更新，原订阅链接保持不变":"已保存订阅";
   $("#profile-status").textContent=`正在编辑：${$("#profile-name").value.trim()||state.profile.id.slice(0,8)}`;
-  await loadPublicationStatus();
+  try {await loadPublicationStatus();}
+  catch(error) {
+    $("#publication-status-panel").hidden=false;
+    $("#publication-status").textContent=`订阅已保存，刷新状态读取失败：${error.message}。可稍后重试刷新状态。`;
+  }
   showToast(editing?"原订阅已更新，请在客户端刷新":"订阅已保存");
 }
 async function openProfile() {
@@ -377,7 +416,8 @@ async function openProfile() {
   const match=url.pathname.match(/^\/subscribe\/([a-zA-Z0-9_-]+)$/); const token=url.searchParams.get("token");
   if(!match||!token) throw new Error("请粘贴带 token 的 /subscribe/… 链接。");
   const body=await jsonRequest(`/profiles/${encodeURIComponent(match[1])}/draft?token=${encodeURIComponent(token)}`);
-  state.profile={id:match[1],token}; state.legacy=body.mode==="legacy_snapshot"?body.request:null;
+  state.profile={id:match[1],token}; state.savedInput=null; state.legacy=body.mode==="legacy_snapshot"?body.request:null;
+  resetServiceView();
   $("#subscription-url").value=body.request.subscription_url; $("#profile-name").value=body.request.profile_name||"";
   const targets=body.request.publication_targets||[body.request.target==="clash"?"mihomo":body.request.target];
   document.querySelectorAll('input[name="target"]').forEach(el=>{el.checked=targets.includes(el.value)||targets.includes(el.value+"-config");});
@@ -410,7 +450,8 @@ async function diagnose() {
   $("#diagnose-result").innerHTML=`<div class="diagnosis-summary"><b>${escapeHtml(report.service.label)}</b><p>配置分流：${report.service.status==="consistent"?"已检查的服务域名使用同一策略":"部分域名需要客户端规则数据，或存在出口差异"}</p><p>客户端选择：${escapeHtml(actual.actual_node||"未验证")}</p><p>${escapeHtml(actual.message)}</p>${actual.service_tested===false?'<p>该服务尚未配置专用探测地址，本次仅检查通用连通性。</p>':""}</div>${(report.warnings||[]).map(w=>`<p class="compatibility-note">${escapeHtml(w.suggestion||w.message)}</p>`).join("")}${renderRuntimeEvidence(actual)}${renderStaticEvidence(report.service.evidence)}<details class="check-details" open><summary>配置路径（不是客户端实时选择）</summary><div class="table-scroll"><table><thead><tr><th>域名</th><th>配置路径</th></tr></thead><tbody>${report.service.domains.map(d=>`<tr><td>${escapeHtml(d.domain)}</td><td>${escapeHtml(d.path.join(" → "))}${d.status!=="matched"?" · 需运行态规则":""}</td></tr>`).join("")}</tbody></table></div></details>${observed}${actual.probes?`<div class="probe-list">${actual.probes.map(p=>`<p><b>${p.status==="reachable"?"探测可达":p.status==="degraded"?"间歇失败":"探测未通过"}</b><span>${escapeHtml(p.url)}</span><small>${p.http_status?`HTTP ${p.http_status} · `:""}${p.latency_ms!=null?`${Math.round(p.latency_ms)} ms`:"未取得成功响应"} · ${p.sample_count||1} 次采样 · 失败 ${Math.round((p.failure_rate||0)*100)}%${p.latency_spread_ms!=null?` · 延迟波动 ${Math.round(p.latency_spread_ms)} ms`:""} · ${escapeHtml(p.node||"未读取节点")}</small></p>`).join("")}</div><p class="helper">此结果只对应本次探测，不代表完整登录、对话或长期可用。</p>`:""}`;
 }
 function newProfile() {
-  state.profile=null;state.legacy=null;state.upgrade=null;state.nodes=[];restoreChoices();
+  state.profile=null;state.savedInput=null;state.legacy=null;state.upgrade=null;state.nodes=[];restoreChoices();
+  resetServiceView();
   restoreSurgePreferences();
   for(const id of ["subscription-url","profile-name","existing-profile-url"]) $("#"+id).value="";
   $("#profile-status").textContent="正在新建订阅";$("#legacy-panel").hidden=true;$("#source-result").hidden=true;$("#diagnose-result").hidden=true;
@@ -430,7 +471,13 @@ function bindEvents() {
   $("#surge-auto-test-protocols").addEventListener("change",invalidate);
   for(const id of ["diagnose-service","diagnose-client","diagnose-runtime"]) $("#"+id).addEventListener("change",()=>{$("#diagnose-result").hidden=true;});
   $("#service-search").addEventListener("input",renderServices);
-  $("#show-all-services").addEventListener("click",()=>{state.showAll=!state.showAll;renderServices();});
+  $("#show-all-services").addEventListener("click",()=>{
+    if($("#service-search").value.trim()||state.showCustomized) {$("#service-search").value="";state.showCustomized=false;state.showAll=true;}
+    else state.showAll=!state.showAll;
+    renderServices();
+  });
+  $("#filter-customized-services").addEventListener("click",()=>{state.showCustomized=!state.showCustomized;renderServices();});
+  $("#clear-service-filter").addEventListener("click",()=>{$("#service-search").value="";state.showCustomized=false;renderServices();focusControl($("#service-search"));});
   $("#service-route-list").addEventListener("change",event=>{
     const card=event.target.closest('[data-service]');if(!card||state.busy) return;
     const r=state.serviceChoices[card.dataset.service]||{mode:"default",egress:"",fallback:""};
@@ -451,8 +498,8 @@ function bindEvents() {
     invalidate();
   });
   $("#upgrade-result").addEventListener("click",event=>{if(event.target.id==="apply-upgrade-button")applyUpgrade();});
-  $("#publish-result").addEventListener("click",async event=>{const b=event.target.closest('[data-copy-output]');if(!b)return;const input=$(`#published-${b.dataset.copyOutput}-url`);try{await copyToClipboard(input.value,input);showToast("链接已复制");}catch{showToast("请选中链接后手动复制");}});
-  $("#leo-reference").addEventListener("click",event=>{const b=event.target.closest('[data-reference-service]');if(!b)return;$("#service-search").value=b.dataset.referenceService;renderServices();focusControl($(`[data-service="${b.dataset.referenceService}"] [data-mode]`),true);});
+  $("#publish-result").addEventListener("click",event=>{const b=event.target.closest('[data-copy-output]');if(b)return copyPublishedLink(b);});
+  $("#leo-reference").addEventListener("click",event=>{const b=event.target.closest('[data-reference-service]');if(!b)return;state.showCustomized=false;$("#service-search").value=b.dataset.referenceService;renderServices();focusControl($(`[data-service="${b.dataset.referenceService}"] [data-mode]`),true);});
 }
 async function init() {
   bindEvents();

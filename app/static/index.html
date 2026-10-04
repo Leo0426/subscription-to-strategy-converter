@@ -8,7 +8,7 @@
   <title>Subflow 6.7.0 · 策略订阅工作台</title>
   <link rel="icon" type="image/png" href="/static/assets/subflow-logo.png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/static/flow.css?v=54" />
+  <link rel="stylesheet" href="/static/flow.css?v=55" />
 </head>
 <body>
 <a class="skip-link" href="#step-source">跳到订阅配置</a>
@@ -27,7 +27,7 @@
 </header>
 <main class="simple-shell">
   <header class="simple-intro">
-    <div><p class="eyebrow"><span aria-hidden="true"></span>个人网络 · 有序连接</p><h1>每个服务，都有合适的出口。</h1><span>一份订阅，连接你的设备。配置、检查与更新，在这里完成。</span></div>
+    <div><p class="eyebrow"><span aria-hidden="true"></span>个人网络 · 有序连接</p><h1>每个服务，都有合适的出口。</h1><span>一份订阅，连接手机与电脑。</span></div>
     <div class="intro-tag"><span class="intro-tag-symbol" aria-hidden="true">↗</span><div><b>你的连接，你来选择</b><small>Clash / OpenClash · Surge · Shadowrocket</small></div></div>
   </header>
   <div class="workspace-grid">
@@ -41,7 +41,7 @@
       <div id="global-notice" class="simple-notice" hidden role="alert" tabindex="-1"></div>
 
       <section class="simple-section" id="step-source" aria-labelledby="source-title" tabindex="-1">
-        <div class="simple-section-title"><b>01</b><div><h2 id="source-title">客户端与来源</h2><p>选择使用的客户端，再读取原始订阅中的节点。</p></div><span class="section-tag">SOURCE</span></div>
+        <div class="simple-section-title"><b>01</b><div><h2 id="source-title">客户端与来源</h2><p>读取节点，再为服务选择出口。</p></div><span class="section-tag">SOURCE</span></div>
         <div class="profile-section">
           <div class="profile-strip"><p id="profile-status">正在新建订阅</p><button id="new-profile-button" class="text-button" type="button">新建订阅 <span aria-hidden="true">＋</span></button></div>
           <details id="open-profile-panel"><summary>打开已有 Subflow 订阅</summary>
@@ -67,6 +67,7 @@
       <section class="simple-section" id="step-services" aria-labelledby="strategy-title" tabindex="-1">
         <div class="simple-section-title"><b>02</b><div><h2 id="strategy-title">服务出口</h2><p>常用服务单独设置，其余跟随 Leo。选择的是配置意图。</p></div><span class="section-tag">ROUTING</span></div>
         <div class="service-toolbar"><label class="field search-field" for="service-search"><span class="visually-hidden">查找服务</span><span class="search-icon" aria-hidden="true">⌕</span><input id="service-search" type="search" placeholder="查找服务，如 ChatGPT、Claude、Gemini" /></label><small id="service-search-status" role="status" aria-live="polite">载入服务中</small></div>
+        <div class="service-filters" role="group" aria-label="服务显示范围"><button id="filter-customized-services" class="filter-button" type="button" aria-pressed="false" aria-controls="service-route-list">只看已设置</button><button id="clear-service-filter" class="text-button" type="button" hidden>清除筛选</button><span id="service-filter-status" class="visually-hidden" role="status"></span></div>
         <datalist id="node-options"></datalist>
         <div id="service-route-list" class="service-list"><div class="simple-loading">正在载入服务…</div></div>
         <button id="show-all-services" class="text-button expand-services" type="button" aria-expanded="false" aria-controls="service-route-list">展开全部服务</button>
@@ -106,11 +107,11 @@
 
     <aside class="reference-aside" aria-label="配置摘要与规则参考">
       <section id="workspace-summary" class="workspace-summary" aria-labelledby="summary-title">
-        <div class="summary-heading"><span class="section-eyebrow">当前草稿</span><span class="draft-indicator" aria-hidden="true"></span></div><h2 id="summary-title">配置一目了然</h2>
+        <div class="summary-heading"><span id="summary-label" class="section-eyebrow">当前草稿</span><span class="draft-indicator" aria-hidden="true"></span></div><h2 id="summary-title">配置一目了然</h2>
         <p class="summary-description">从来源到出口，每一步都有据可查。</p>
         <dl class="summary-metrics"><div><dt>已读取节点</dt><dd id="summary-nodes">0</dd></div><div><dt>目标客户端</dt><dd id="summary-clients">2</dd></div><div><dt>自定义出口</dt><dd id="summary-routes">0</dd></div></dl>
-        <div class="summary-next"><span>下一步</span><p id="summary-state" role="status">读取来源，查看可用节点。</p></div>
-        <a class="summary-link" href="#step-review">前往检查与保存 <span aria-hidden="true">↗</span></a>
+        <div class="summary-next"><span id="summary-next-label">下一步</span><p id="summary-state" role="status">读取来源，查看可用节点。</p></div>
+        <a id="summary-link" class="summary-link" href="#step-review">前往检查与保存 <span aria-hidden="true">↗</span></a>
       </section>
       <details class="leo-reference-panel"><summary class="ledger-toggle"><span class="ledger-icon" aria-hidden="true">L</span><b>Leo 策略与公开账本</b><span>查看规则、来源及质量证据</span></summary><div id="data-ledger" class="data-ledger"></div><div id="leo-reference" class="leo-reference"></div></details>
       <div class="aside-note"><b>清楚区分配置与实测</b><p>配置意图 ≠ 客户端当前选择<br />编译通过 ≠ 服务可访问</p></div>
@@ -119,6 +120,6 @@
   <footer class="workspace-footer"><span>Subflow · 让连接更有条理</span><a href="#step-source">回到配置起点 ↑</a></footer>
 </main>
 <div class="toast" id="toast" hidden role="status"></div>
-<script src="/static/flow.js?v=55"></script>
+<script src="/static/flow.js?v=56"></script>
 </body>
 </html>

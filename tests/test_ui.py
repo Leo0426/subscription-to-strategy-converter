@@ -71,8 +71,8 @@ def test_root_and_legacy_advanced_route_serve_the_same_simple_page() -> None:
     assert root.status_code == 200
     assert advanced.status_code == 200
     assert root.text == advanced.text
-    assert "/static/flow.js?v=55" in root.text
-    assert "/static/flow.css?v=54" in root.text
+    assert "/static/flow.js?v=56" in root.text
+    assert "/static/flow.css?v=55" in root.text
     assert "/static/assets/subflow-logo.png" in root.text
 
 
@@ -100,6 +100,8 @@ def test_page_exposes_the_current_workbench_contract() -> None:
         "service-route-list", "generate-button", "existing-profile-url", "open-profile-button",
         "check-button", "check-results", "preview-upgrade-button", "diagnose-service",
         "diagnose-runtime", "diagnose-result", "surge-auto-test-protocols",
+        "filter-customized-services", "clear-service-filter", "summary-label",
+        "summary-next-label", "summary-link",
     )
     assert all(f'id="{control}"' in page for control in controls)
     assert 'class="config-workbench"' in page
@@ -255,6 +257,121 @@ def test_workspace_summary_tracks_current_check_and_invalidated_draft() -> None:
     """)
 
 
+def test_saved_profile_disables_duplicate_writes_until_edited_and_checked_again() -> None:
+    _run_flow_runtime("""
+    (async () => {
+      document.querySelector=selector=>elements[selector]||={value:'',textContent:'',hidden:false,disabled:false};
+      showPublished=()=>{}; loadPublicationStatus=async()=>{}; showToast=()=>{}; renderCheck=()=>{}; renderServices=()=>{};
+      state.nodes=[{name:'US01'}]; state.check={can_publish:true}; state.checkedInput=JSON.stringify(payload());
+      const writes=[];
+      globalThis.fetch=async (path,options)=>{
+        if(path==='/check') return {ok:true,json:async()=>({can_publish:true})};
+        writes.push({path,method:options.method});
+        return {ok:true,json:async()=>({id:'saved',token:'session'})};
+      };
+      await saveProfile(); updateActions();
+      if(elements['#generate-button'].textContent!=='已保存'||!elements['#generate-button'].disabled) throw Error('saved draft still invites a duplicate write');
+      if(elements['#summary-label'].textContent!=='已保存配置'||elements['#summary-link'].href!=='#publish-result') throw Error('saved summary does not lead to output');
+      if(!elements['#save-title'].textContent.includes('已保存')||!elements['#check-state'].textContent.includes('已保存')) throw Error('save section disagrees with saved summary');
+      await saveProfile();
+      if(writes.length!==1) throw Error('unchanged saved draft was written twice');
+      elements['#profile-name'].value='Edited'; invalidate();
+      let refused=false; try {await saveProfile();} catch {refused=true;}
+      if(!refused||!elements['#generate-button'].disabled) throw Error('edit skipped recheck gate');
+      await checkConfig(); updateActions();
+      if(elements['#generate-button'].disabled) throw Error('checked edit cannot be saved');
+      await saveProfile();
+      if(writes.length!==2||writes[1].method!=='PUT') throw Error('checked edit did not update the existing profile');
+      state.showCustomized=true; state.showAll=true; elements['#service-search']={value:'old search'};
+      newProfile();
+      if(state.savedInput||state.check) throw Error('new draft inherited saved or check state');
+      if(state.showCustomized||state.showAll||elements['#service-search'].value) throw Error('new draft inherited a hidden service view');
+    })()
+    """)
+
+
+def test_save_failure_is_not_confirmed_but_later_status_failure_keeps_save_confirmation() -> None:
+    _run_flow_runtime("""
+    (async () => {
+      document.querySelector=selector=>elements[selector]||={value:'',textContent:'',hidden:false,disabled:false};
+      showPublished=()=>{}; showToast=()=>{};
+      state.nodes=[{name:'US01'}]; state.check={can_publish:true}; state.checkedInput=JSON.stringify(payload());
+      globalThis.fetch=async()=>({ok:false,status:503,json:async()=>({detail:'保存不可用'})});
+      let rejected=false; try {await saveProfile();} catch {rejected=true;}
+      updateActions();
+      if(!rejected||state.savedInput||elements['#generate-button'].disabled) throw Error('failed save was marked confirmed');
+      globalThis.fetch=async()=>({ok:true,json:async()=>({id:'saved',token:'session'})});
+      loadPublicationStatus=async()=>{throw Error('状态暂不可用');};
+      await saveProfile(); updateActions();
+      if(!elements['#generate-button'].disabled||elements['#generate-button'].textContent!=='已保存') throw Error('confirmed write was lost with status read failure');
+      if(!elements['#publication-status'].textContent.includes('已保存')||!elements['#publication-status'].textContent.includes('暂不可用')) throw Error('partial success was not explained');
+    })()
+    """)
+
+
+def test_view_filters_preserve_checked_payload_and_return_focus_when_card_disappears() -> None:
+    _run_flow_runtime("""
+    (() => {
+      const makeElement=()=>({value:'',textContent:'',innerHTML:'',hidden:false,listeners:{},
+        addEventListener(name,listener){this.listeners[name]=listener;},setAttribute(name,value){this[name]=value;},
+        focus(){document.activeElement=this;},querySelector(){return null;}});
+      for(const element of Object.values(elements)) {element.listeners={};element.addEventListener=function(name,listener){this.listeners[name]=listener;};}
+      document.querySelector=selector=>elements[selector]||=makeElement();
+      state.servicePacks=['openai','gemini','netflix'].map(id=>({id,label:id,group:id,default_target:'默认代理',rules:[]}));
+      restoreChoices([{service:'netflix',mode:'fixed',egress:'US01'}]);
+      state.check={can_publish:true}; state.checkedInput=JSON.stringify(payload());
+      const key=state.checkedInput,epoch=state.epoch;
+      updateActions=()=>{};
+      bindEvents(); renderServices();
+      const list=elements['#service-route-list'];
+      elements['#filter-customized-services'].listeners.click();
+      if(!list.innerHTML.includes('data-service="netflix"')||list.innerHTML.includes('data-service="openai"')) throw Error('customized filter included defaults');
+      elements['#service-search'].value='missing'; elements['#service-search'].listeners.input();
+      if(!elements['#show-all-services'].textContent.includes('清除搜索')) throw Error('show all concealed active search');
+      elements['#show-all-services'].listeners.click();
+      if(elements['#service-search'].value||!list.innerHTML.includes('data-service="openai"')||!list.innerHTML.includes('data-service="netflix"')) throw Error('show all failed to clear view filters');
+      elements['#filter-customized-services'].listeners.click();
+      elements['#clear-service-filter'].listeners.click();
+      if(document.activeElement!==elements['#service-search']||elements['#filter-customized-services']['aria-pressed']!=='false') throw Error('clear filters lost focus or kept customization filter');
+      if(JSON.stringify(payload())!==key||state.checkedInput!==key||state.epoch!==epoch) throw Error('view-only filtering invalidated configuration');
+      elements['#filter-customized-services'].listeners.click();
+      const card={dataset:{service:'netflix'}};
+      const mode={value:'default',closest:()=>card,matches:selector=>selector==='[data-mode]'};
+      document.activeElement=mode;
+      list.listeners.change({target:mode});
+      if(list.innerHTML.includes('data-service="netflix"')||document.activeElement!==elements['#filter-customized-services']) throw Error('hidden default card stranded keyboard focus');
+    })()
+    """)
+
+
+def test_copy_button_confirms_success_locally_and_keeps_failure_honest() -> None:
+    _run_flow_runtime("""
+    (async () => {
+      const makeElement=()=>({value:'',textContent:'',listeners:{},addEventListener(name,listener){this.listeners[name]=listener;}});
+      for(const element of Object.values(elements)) {element.listeners={};element.addEventListener=function(name,listener){this.listeners[name]=listener;};}
+      document.querySelector=selector=>elements[selector]||=makeElement();
+      let restore, copied, focused, copiedClass=false;
+      globalThis.setTimeout=callback=>{restore=callback;return 1;}; globalThis.clearTimeout=()=>{};
+      globalThis.navigator={clipboard:{writeText:async value=>{copied=value;}}};
+      showToast=()=>{};
+      const button={dataset:{copyOutput:'clash'},textContent:'复制',focus(){focused=this;},
+        classList:{add(){copiedClass=true;},remove(){copiedClass=false;}}};
+      const input={value:'https://subflow.example/subscribe/synthetic',focus(){},select(){},blur(){}};
+      elements['#published-clash-url']=input;
+      bindEvents();
+      const event={target:{closest:()=>button}};
+      await elements['#publish-result'].listeners.click(event);
+      if(copied!==input.value||button.textContent!=='已复制'||!copiedClass||focused!==button) throw Error('copy success was not visible beside the link');
+      restore();
+      if(button.textContent!=='复制'||copiedClass) throw Error('temporary feedback did not restore the button');
+      globalThis.navigator.clipboard.writeText=async()=>{throw Error('clipboard unavailable');};
+      document.execCommand=()=>false;
+      await elements['#publish-result'].listeners.click(event);
+      if(button.textContent==='已复制'||copiedClass||focused!==button) throw Error('copy failure claimed success or lost button focus');
+    })()
+    """)
+
+
 def test_service_cards_prioritize_ai_and_keep_field_focus_selection_and_search_count() -> None:
     _run_flow_runtime("""
     (() => {
@@ -375,6 +492,9 @@ def test_late_service_catalog_keeps_profile_routes_opened_during_startup() -> No
           elements["#existing-profile-url"].value = "https://subflow.example/subscribe/p?token=t";
           const boot = init();
           await Promise.resolve();
+          state.savedInput = 'previously saved'; state.check = {can_publish: true};
+          state.checkedInput = 'previously saved'; state.showCustomized = true; state.showAll = true;
+          elements['#service-search'].value = 'old search';
           const button = elements["#open-profile-button"];
           await button.listeners.click({currentTarget: button});
           finishServices({services: [{id: "openai", label: "OpenAI", group: "OpenAI", default_target: "默认代理", rules: []}]});
@@ -383,6 +503,8 @@ def test_late_service_catalog_keeps_profile_routes_opened_during_startup() -> No
           if (routes.length !== 1 || routes[0].service !== "openai" || routes[0].egress !== "US01") {
             throw new Error(`opened Profile route was lost after catalog load: ${JSON.stringify(routes)}`);
           }
+          if (state.savedInput || state.check || state.checkedInput) throw Error('opened Profile inherited compile or save confirmation');
+          if (state.showCustomized || state.showAll || elements['#service-search'].value) throw Error('opened Profile inherited a hidden service view');
         })()
         """
     )
