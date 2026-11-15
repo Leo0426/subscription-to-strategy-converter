@@ -87,19 +87,21 @@ def _split_fields(value: str, line_number: int) -> list[str]:
 
 
 def _anytls_extra(options: dict[str, str], line_number: int) -> dict[str, Any]:
-    supported = {"password", "reuse", "sni", "skip-cert-verify", "alpn",
+    supported = {"password", "reuse", "sni", "skip-cert-verify", "alpn", "tfo",
                  "server-cert-verify-name", "server-cert-fingerprint-sha256"}
     if options.keys() - supported:
         # Do not silently discard wrappers, client certificates or proxy chains.
         raise SurgeParseError(f"unsupported AnyTLS options at line {line_number}; use a Mihomo subscription for this node")
     if not options.get("password"):
         raise SurgeParseError(f"AnyTLS password is required at line {line_number}")
-    for field in ("reuse", "skip-cert-verify"):
+    for field in ("reuse", "skip-cert-verify", "tfo"):
         if field in options and options[field].lower() not in {"true", "false", "1", "0", "yes", "no", "on", "off"}:
             raise SurgeParseError(f"invalid AnyTLS {field} at line {line_number}")
     if options.get("sni", "").lower() == "off":
         raise SurgeParseError(f"AnyTLS sni=off has no equivalent Mihomo setting at line {line_number}")
     passthrough: dict[str, Any] = {"udp": True}
+    if "tfo" in options:
+        passthrough["tfo"] = _as_bool(options["tfo"])
     if options.get("server-cert-verify-name"):
         passthrough["name-cert-verify"] = options["server-cert-verify-name"]
     extra: dict[str, Any] = {"password": options["password"], "_clash_passthrough": passthrough}

@@ -119,7 +119,7 @@ def clash_to_ir(proxy: dict) -> ProxyNode:
     if protocol == "socks":
         protocol = "socks5"
     if protocol == "anytls":
-        for field in ("skip-cert-verify", "udp", "disable-reuse"):
+        for field in ("skip-cert-verify", "udp", "disable-reuse", "tfo"):
             if field in proxy and not isinstance(proxy[field], bool):
                 raise AnyTLSOptionError(f"AnyTLS {field} must be a YAML boolean")
 

@@ -61,7 +61,7 @@ def test_anytls_workspace_from_older_versions_keeps_passthrough_password():
     assert parse_surge_nodes(conf)[0].extra["password"] == "old-workspace-password"
 
 
-@pytest.mark.parametrize("field", ("skip-cert-verify", "udp", "disable-reuse"))
+@pytest.mark.parametrize("field", ("skip-cert-verify", "udp", "disable-reuse", "tfo"))
 def test_anytls_rejects_quoted_booleans_instead_of_coercing_security_settings(field):
     with pytest.raises(ValueError, match=field):
         clash_to_ir(source(**{field: "false"}))
@@ -74,11 +74,35 @@ def test_anytls_numeric_zero_password_is_preserved():
     assert parse_surge_nodes(conf)[0].extra["password"] == "0"
 
 
-@pytest.mark.parametrize("name", ("#US-AnyTLS", ";US-AnyTLS"))
+@pytest.mark.parametrize("name", ("#US-AnyTLS", ";US-AnyTLS", "//US-AnyTLS"))
 def test_anytls_comment_prefixed_names_are_not_counted_as_emitted_nodes(name):
     conf, warnings = build_surge_config([clash_to_ir(source(name=name))], [], [f"MATCH,{name}"], {})
     assert any(w["code"] == "unsupported_node_options" and w["node"] == name for w in warnings)
     assert "FINAL,REJECT" in conf
+
+
+@pytest.mark.parametrize("tfo", (True, False))
+def test_anytls_tfo_survives_client_and_workspace_roundtrips(tfo):
+    proxy = source(tfo=tfo)
+    original = deepcopy(proxy)
+    restored = workspace_from_dict(workspace_to_dict(config_to_workspace({"proxies": [proxy]}))).proxies[0]
+    assert ir_to_clash_dict(restored) == original
+    conf, warnings = build_surge_config([restored], [], ["MATCH,US-AnyTLS"], {})
+    assert f"tfo={str(tfo).lower()}" in conf
+    assert not any(w["code"] == "unsupported_node_options" for w in warnings)
+    assert ir_to_clash_dict(parse_surge_nodes(conf)[0])["tfo"] is tfo
+    assert proxy == original
+
+
+@pytest.mark.parametrize("sni", ("off", "OFF"))
+def test_anytls_sni_off_does_not_silently_disable_surge_sni(sni):
+    proxy = source(sni=sni)
+    node = clash_to_ir(proxy)
+    assert ir_to_clash_dict(node) == proxy
+    conf, warnings = build_surge_config([node], [], ["MATCH,US-AnyTLS"], {})
+    assert "US-AnyTLS = anytls," not in conf
+    assert "FINAL,REJECT" in conf
+    assert any(w["code"] == "unsupported_node_options" and "sni" in w["fields"] for w in warnings)
 
 
 def test_anytls_surge_import_preserves_auth_tls_reuse_and_udp():
@@ -101,7 +125,8 @@ US-AnyTLS = anytls, proxy.example.com, 443, password="test,with=comma", reuse=fa
 
 
 @pytest.mark.parametrize("options", ("", "password=", "password=test-only, reuse=maybe",
-                                    "password=test-only, sni=off", "password=test-only, client-cert=private-keystore"))
+                                    "password=test-only, sni=off", "password=test-only, tfo=maybe",
+                                    "password=test-only, client-cert=private-keystore"))
 def test_anytls_surge_import_rejects_missing_auth_or_unrepresentable_options(options):
     with pytest.raises(SurgeParseError):
         parse_surge_nodes(f"[Proxy]\nUS-AnyTLS = anytls, proxy.example.com, 443, {options}")
@@ -183,8 +208,8 @@ def client(tmp_path, monkeypatch):
 @pytest.mark.parametrize("input_format", ("mihomo", "surge"))
 def test_anytls_only_profile_keeps_fixed_ai_nodes_in_all_clients(client, input_format):
     client, state = client
-    state["content"] = ("proxies:\n  - " + json.dumps(source(sni="edge.example.com"))) if input_format == "mihomo" else (
-        "[Proxy]\nUS-AnyTLS = anytls, proxy.example.com, 443, password=test-only, sni=edge.example.com, reuse=false")
+    state["content"] = ("proxies:\n  - " + json.dumps(source(sni="edge.example.com", tfo=True))) if input_format == "mihomo" else (
+        "[Proxy]\nUS-AnyTLS = anytls, proxy.example.com, 443, password=test-only, sni=edge.example.com, reuse=false, tfo=true")
     request = {"subscription_url": "https://example.com/sub", "publication_targets": ["mihomo", "surge", "shadowrocket"],
                "service_routes": [{"service": s, "mode": "fixed", "egress": "US-AnyTLS"} for s in ("claude", "openai")]}
     checked = client.post("/check", json=request)
@@ -198,6 +223,7 @@ def test_anytls_only_profile_keeps_fixed_ai_nodes_in_all_clients(client, input_f
         assert response.status_code == 200, response.text
         if target == "surge":
             assert "US-AnyTLS = anytls," in response.text
+            assert "tfo=true" in response.text
             assert "Claude = select, US-AnyTLS" in response.text
             assert "OpenAI = select, US-AnyTLS" in response.text
             assert "DOMAIN-SUFFIX,claude.com,Claude" in response.text
@@ -207,6 +233,7 @@ def test_anytls_only_profile_keeps_fixed_ai_nodes_in_all_clients(client, input_f
             proxy = YAML(typ="safe").load(response.text)["proxies"][0]
             assert proxy["type"] == "anytls"
             assert proxy["password"] == "test-only"
+            assert proxy["tfo"] is True
             if input_format == "surge":
                 assert proxy["disable-reuse"] is True
     paired = client.get(links["config_urls"]["shadowrocket"])

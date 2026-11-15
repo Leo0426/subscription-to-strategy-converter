@@ -265,7 +265,7 @@ _ANYTLS_TUNING = frozenset({
 })
 _ANYTLS_MAPPED = frozenset({
     "name", "type", "server", "port", "password", "tls", "sni", "skip-cert-verify",
-    "alpn", "fingerprint", "name-cert-verify", "disable-reuse", "udp",
+    "alpn", "fingerprint", "name-cert-verify", "disable-reuse", "udp", "tfo",
 })
 
 
@@ -274,7 +274,7 @@ def _anytls_line(node: ProxyNode) -> str:
     unsupported = set(proxy) - _ANYTLS_MAPPED - _ANYTLS_TUNING
     if not proxy.get("password"):
         unsupported.add("password")
-    for field in ("disable-reuse", "skip-cert-verify", "udp"):
+    for field in ("disable-reuse", "skip-cert-verify", "udp", "tfo"):
         if field in proxy and not isinstance(proxy[field], bool):
             unsupported.add(field)
     if not 1 <= node.port <= 65535:
@@ -282,8 +282,11 @@ def _anytls_line(node: ProxyNode) -> str:
     for field, value in (("name", node.name), ("server", node.server)):
         if not value or any(char in value for char in ',=\r\n"'):
             unsupported.add(field)
-    if node.name.lstrip().startswith(("#", ";")):
+    if node.name.lstrip().startswith(("#", ";", "//")):
         unsupported.add("name")
+    # Mihomo treats this as a hostname; Surge reserves it to disable SNI.
+    if str(proxy.get("sni", "")).lower() == "off":
+        unsupported.add("sni")
     for field in ("password", "sni", "name-cert-verify", "fingerprint"):
         if any(ord(char) < 32 for char in str(proxy.get(field, ""))):
             unsupported.add(field)
@@ -314,6 +317,8 @@ def _anytls_line(node: ProxyNode) -> str:
         parts.append("server-cert-fingerprint-sha256=" + fingerprint)
     if "disable-reuse" in proxy:
         parts.append("reuse=" + ("false" if proxy["disable-reuse"] else "true"))
+    if "tfo" in proxy:
+        parts.append("tfo=" + ("true" if proxy["tfo"] else "false"))
     return f"{node.name} = {', '.join(parts)}"
 
 
