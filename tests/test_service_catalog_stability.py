@@ -110,3 +110,25 @@ def test_openai_challenge_exception_is_an_exact_shared_host(client, target):
     workspace = compiled_workspace(client, target, 'openai')
     assert simulate_destination(workspace, 'challenges.cloudflare.com').target == 'OpenAI'
     assert simulate_destination(workspace, 'unrelated.challenges.cloudflare.com').target != 'OpenAI'
+
+
+@pytest.mark.parametrize("target", ["mihomo", "surge", "shadowrocket-config"])
+def test_streaming_social_and_game_downloads_keep_distinct_routes(client, target):
+    workspace = compiled_workspace(client, target)
+    for host, expected in {
+        "voice.discord.media": "社交通讯",
+        "www.primevideo.com": "流媒体",
+        "assets.hulustream.com": "流媒体",
+        "www.bilibili.tv": "流媒体",
+        "cache.steamcontent.com": "游戏下载",
+        "epicgames-download1.akamaized.net": "游戏下载",
+        "packagespc.xboxlive.com": "游戏下载",
+    }.items():
+        assert simulate_destination(workspace, host).target == expected
+
+    for other in ("tenant.akamaized.net", "store.epicgames.com", "login.xboxlive.com"):
+        assert simulate_destination(workspace, other).target != "游戏下载"
+
+    custom = compiled_workspace(client, target, "prime-video")
+    assert simulate_destination(custom, "www.primevideo.com").target == "Prime Video"
+    assert simulate_destination(custom, "assets.hulustream.com").target == "流媒体"

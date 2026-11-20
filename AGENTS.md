@@ -53,4 +53,4 @@ uv run python -m app.core.rule_source_audit --publish
 - 可信上游以 [rule_consolidation.py](app/core/rule_consolidation.py) 为准，使用源站或官方 CDN，优先固定版本，不使用第三方代理前置。下载出口由 provider_egress.py 统一判定。新源审计语法/格式、重复或 ≥95% 高重叠、REJECT/DIRECT 冲突与成本；HTTP 200/评分不能证明规则正确。
 - IP 服务规则只用于无域名裸 IP 流量，带 no-resolve；共享基础设施不做 IP 服务分流，地理/私网 DIRECT 豁免。Google/YouTube 既有 IP 条目属技术债，两层 no-resolve 不能成为新增先例。
 - 来源合并按双目标可用性、可信度、覆盖、成本排名；保留代表域名目标，Mihomo/Surge 均编译，更新审计并按可回退批次落地（原 ADR 0011）。按可用性删除需要多轮失败；增加同服务来源须说明理由。
-- 通用预算：200 来源、16 MiB 冷启动。Leo：9 Provider（国内域名兜底见 docs/adr/0017-surge-ios-domestic-domain-fallback.md）、185 规则、16 KiB 模板；固定 144 节点 SS 夹具：17 组、6 健康检查组、425 成员边、235 探针成员、37 KiB 输出。超预算须明确决策和冷启动证据。
+- 通用预算为 200 来源、16 MiB 冷启动。Leo 限 9 Provider、200 条规则、16 KiB 模板。固定 144 节点 SS 夹具限 20 组、6 个健康检查组、440 条成员边、235 个探针成员和 37 KiB 输出。超预算须明确决策和冷启动证据。见[国内域名兜底](docs/adr/0017-surge-ios-domestic-domain-fallback.md)及[服务分组预算](docs/adr/0018-leo-service-groups.md)。

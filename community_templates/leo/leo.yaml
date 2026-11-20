@@ -99,21 +99,19 @@ proxy-groups:
   proxies:
   - 香港自动
   - 自动选择
-  url: https://cp.cloudflare.com/generate_204
-  expected-status: 204
-  timeout: 5000
-  lazy: true
+  <<: &probe
+    url: https://cp.cloudflare.com/generate_204
+    expected-status: 204
+    timeout: 5000
+    lazy: true
   interval: 300
 - name: 自动选择
   type: url-test
   include-all: true
   # 排除流量、到期、官网等订阅信息条目。
-  exclude-filter: &info_nodes (?i)(剩余|剩餘|到期|过期|過期|流量|官网|官網|套餐|重置|expire|traffic)
-  url: https://cp.cloudflare.com/generate_204
-  expected-status: 204
-  timeout: 5000
+  exclude-filter: &info_nodes (?i)(剩余|剩餘|到期|过期|過期|流量|官\s*[网網]|套餐|重置|expire|traffic)
+  <<: *probe
   max-failed-times: 2
-  lazy: true
   interval: 600
   tolerance: 100
 - name: 手动选择
@@ -124,11 +122,9 @@ proxy-groups:
   type: url-test
   include-all: true
   filter: (?i)(香港|🇭🇰|Hong Kong|(^|[^A-Za-z])(HK|HKG)([^A-Za-z]|$))
-  url: https://cp.cloudflare.com/generate_204
-  expected-status: 204
-  timeout: 5000
+  exclude-filter: *info_nodes
+  <<: *probe
   max-failed-times: 2
-  lazy: true
   interval: 600
   tolerance: 100
 - name: AI 服务
@@ -139,34 +135,27 @@ proxy-groups:
   - 新加坡节点
   - 手动选择
 - name: 美国节点
-  # 手动固定所选美国节点；健康检查只更新连通性和延迟，不参与选路。
+  # 美、新、台手选组的健康检查只更新延迟和连通性。
   type: select
   include-all: true
   filter: (?i)(美国|美國|🇺🇸|United States|(^|[^A-Za-z])(US|USA|LAX|SJC|SFO)([^A-Za-z]|$))
-  url: https://cp.cloudflare.com/generate_204
-  expected-status: 204
-  timeout: 5000
-  lazy: true
+  exclude-filter: *info_nodes
+  <<: *probe
   interval: 600
 - name: 新加坡节点
-  # 手动固定所选新加坡节点；健康检查只更新连通性和延迟，不参与选路。
   type: select
   include-all: true
-  filter: (?i)(新加坡|🇸🇬|Singapore|(^|[^A-Za-z])SG([^A-Za-z]|$))
-  url: https://cp.cloudflare.com/generate_204
-  expected-status: 204
-  timeout: 5000
-  lazy: true
+  filter: (?i)(新加坡|[狮獅]城|🇸🇬|Singapore|(^|[^A-Za-z])SG([^A-Za-z]|$))
+  exclude-filter: *info_nodes
+  <<: *probe
   interval: 600
 - name: 台湾节点
   # 巴哈姆特仅限台湾 IP；无匹配节点时裁剪并回落默认代理。
   type: select
   include-all: true
   filter: (?i)(台湾|台灣|🇹🇼|Taiwan|(^|[^A-Za-z])(TW|TWN|TPE)([^A-Za-z]|$))
-  url: https://cp.cloudflare.com/generate_204
-  expected-status: 204
-  timeout: 5000
-  lazy: true
+  exclude-filter: *info_nodes
+  <<: *probe
   interval: 600
 - name: 流媒体
   type: select
@@ -178,6 +167,12 @@ proxy-groups:
   - 新加坡节点
   - 台湾节点
   - DIRECT
+- name: YouTube
+  type: select
+  proxies: &video_choices [流媒体, 美国节点, 新加坡节点, 台湾节点, 手动选择, DIRECT]
+- name: Netflix
+  type: select
+  proxies: *video_choices
 - name: 社交通讯
   type: select
   proxies: &service_proxies
@@ -188,6 +183,9 @@ proxy-groups:
 - name: 游戏服务
   type: select
   proxies: *service_proxies
+- name: 游戏下载
+  type: select
+  proxies: [DIRECT, 游戏服务, 手动选择]
 - name: 开发服务
   type: select
   proxies:
@@ -212,20 +210,15 @@ proxy-groups:
   - 台湾节点
 - name: Microsoft
   type: select
-  # DIRECT 优先，与 Apple 一致：世纪互联 .cn 端点经海外节点会被慢速或拒绝，
-  # Copilot 等已单独分流到 AI 服务。
-  proxies:
+  # 世纪互联优先直连，Copilot 单独分流。
+  proxies: &direct_first
   - DIRECT
   - 默认代理
   - 自动选择
   - 手动选择
 - name: Apple
   type: select
-  proxies:
-  - DIRECT
-  - 默认代理
-  - 自动选择
-  - 手动选择
+  proxies: *direct_first
 rule-providers:
   # 固定可信提交，每周刷新；Surge 原生映射，Mihomo 加载 AI 裸列表。
   ai-4:
@@ -237,61 +230,41 @@ rule-providers:
     interval: 604800
   # Claude provider 是 Claude 策略子系统的产品契约依赖，不参与合并。
   Claude:
-    type: http
-    behavior: classical
-    format: yaml
+    <<: &classical_weekly
+      type: http
+      behavior: classical
+      format: yaml
+      interval: 604800
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Claude/Claude_No_Resolve.yaml
     path: ./rule_provider/leo/020.yaml
-    interval: 604800
   GitHub-5:
-    type: http
-    behavior: classical
-    format: yaml
+    <<: *classical_weekly
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/GitHub/GitHub_No_Resolve.yaml
     path: ./rule_provider/leo/158.yaml
-    interval: 604800
   Apple-4:
-    type: http
-    behavior: classical
-    format: yaml
+    <<: *classical_weekly
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Apple/Apple_Classical_No_Resolve.yaml
     path: ./rule_provider/leo/101.yaml
-    interval: 604800
   Google-2:
-    type: http
-    behavior: classical
-    format: yaml
+    <<: *classical_weekly
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Google/Google_No_Resolve.yaml
     path: ./rule_provider/leo/169.yaml
-    interval: 604800
   Microsoft-6:
-    type: http
-    behavior: classical
-    format: yaml
+    <<: *classical_weekly
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Microsoft/Microsoft_No_Resolve.yaml
     path: ./rule_provider/leo/211.yaml
-    interval: 604800
   YouTube-6:
-    type: http
-    behavior: classical
-    format: yaml
+    <<: *classical_weekly
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/YouTube/YouTube_No_Resolve.yaml
     path: ./rule_provider/leo/512.yaml
-    interval: 604800
   Telegram:
-    type: http
-    behavior: classical
-    format: yaml
+    <<: *classical_weekly
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/Telegram/Telegram_No_Resolve.yaml
     path: ./rule_provider/leo/515.yaml
-    interval: 604800
   China:
-    type: http
-    behavior: classical
-    format: yaml
+    <<: *classical_weekly
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/8818705adee20571a856daf11c9fc69c4929109a/rule/Clash/China/China_Classical_No_Resolve.yaml
     path: ./rule_provider/leo/050.yaml
-    interval: 604800
 rules:
 # Managed service rules: services.json
 - DOMAIN-SUFFIX,anthropic.com,AI 服务
@@ -324,6 +297,24 @@ rules:
 - DOMAIN,rum.browser-intake-datadoghq.com,AI 服务
 - DOMAIN-SUFFIX,ct.sendgrid.net,AI 服务
 - DOMAIN,origin-tracker.githubusercontent.com,AI 服务
+- DOMAIN-SUFFIX,primevideo.com,流媒体
+- DOMAIN-SUFFIX,amazonvideo.com,流媒体
+- DOMAIN-SUFFIX,aiv-cdn.net,流媒体
+- DOMAIN-SUFFIX,aiv-delivery.net,流媒体
+- DOMAIN-SUFFIX,hulu.com,流媒体
+- DOMAIN-SUFFIX,huluim.com,流媒体
+- DOMAIN-SUFFIX,hulustream.com,流媒体
+- DOMAIN-SUFFIX,bilibili.tv,流媒体
+- DOMAIN-SUFFIX,discord.com,社交通讯
+- DOMAIN-SUFFIX,discord.gg,社交通讯
+- DOMAIN-SUFFIX,discordapp.com,社交通讯
+- DOMAIN-SUFFIX,discordapp.net,社交通讯
+- DOMAIN-SUFFIX,discord.media,社交通讯
+- DOMAIN-SUFFIX,steamcontent.com,游戏下载
+- DOMAIN,download.epicgames.com,游戏下载
+- DOMAIN,download2.epicgames.com,游戏下载
+- DOMAIN,epicgames-download1.akamaized.net,游戏下载
+- DOMAIN,packagespc.xboxlive.com,游戏下载
 # End managed service rules
 - DOMAIN-SUFFIX,tokfinity.com,DIRECT
 - DOMAIN-SUFFIX,hcaptcha.com,AI 服务
@@ -376,7 +367,7 @@ rules:
 - RULE-SET,GitHub-5,开发服务
 - DOMAIN-SUFFIX,crashlytics.com,Google
 - RULE-SET,Apple-4,Apple
-- RULE-SET,YouTube-6,流媒体,no-resolve
+- RULE-SET,YouTube-6,YouTube,no-resolve
 - RULE-SET,Google-2,Google,no-resolve
 - GEOSITE,google,Google
 - GEOSITE,google-cn,Google
@@ -403,8 +394,8 @@ rules:
 - GEOSITE,paypal,金融服务
 - GEOSITE,steam@cn,DIRECT
 - GEOSITE,steam,游戏服务
-- GEOSITE,youtube,流媒体
-- GEOSITE,netflix,流媒体
+- GEOSITE,youtube,YouTube
+- GEOSITE,netflix,Netflix
 - GEOSITE,disney,流媒体
 - GEOSITE,hbo,流媒体
 - GEOSITE,spotify,流媒体
@@ -430,9 +421,7 @@ rules:
 - GEOSITE,category-httpdns-cn,REJECT
 # 联网探测直连，代理异常时不误报断网。
 - GEOSITE,connectivity-check,DIRECT
-# 国内字节系域名必须在 TikTok/海外服务之后直连。此处从固定提交的
-# ByteDance/DouYin 规则中只保留抖音、红果/番茄及其专属 CDN；显式排除
-# USER-AGENT,TikTok* 与 TikTok 进程规则，避免把国际版按应用身份直连。
+# 抖音、红果和番茄仅按专属域名直连，国际版 TikTok 优先单独分流。
 - DOMAIN,lf3-static.bytednsdoc.com,DIRECT
 - DOMAIN-SUFFIX,amemv.com,DIRECT
 - DOMAIN-SUFFIX,douyin.com,DIRECT

@@ -67,6 +67,12 @@ def transform_service_routes(
         defaults: list[str] = []
         protected_matches: set[str] = set()
         for service in service_catalog():
+            # A promoted vendor provider can also cover a catalogued download
+            # or media host. Keep existing inline rules on their chosen target.
+            protected_matches.update(
+                rule["match"] for rule in service["rules"]
+                if rule.get("template_inline") and rule["match"] in existing_matches
+            )
             if service.get("category") != "ai" or service["id"] in active_services:
                 continue
             default_target = service.get("default_target")

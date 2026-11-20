@@ -454,7 +454,7 @@
       "group": "Netflix",
       "label": "Netflix",
       "category": "streaming",
-      "default_target": "流媒体",
+      "default_target": "Netflix",
       "rules": [
         {
           "match": "DOMAIN-SUFFIX,netflix.com",
@@ -480,7 +480,7 @@
       "group": "YouTube",
       "label": "YouTube",
       "category": "streaming",
-      "default_target": "流媒体",
+      "default_target": "YouTube",
       "rules": [
         {
           "match": "DOMAIN-SUFFIX,youtube.com",
@@ -634,10 +634,92 @@
       ]
     },
     {
+      "id": "prime-video",
+      "group": "Prime Video",
+      "label": "Prime Video",
+      "category": "streaming",
+      "default_target": "流媒体",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,primevideo.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN-SUFFIX,amazonvideo.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN-SUFFIX,aiv-cdn.net",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN-SUFFIX,aiv-delivery.net",
+          "template_inline": true
+        }
+      ],
+      "probe_urls": [],
+      "destinations": [
+        "primevideo.com",
+        "amazonvideo.com",
+        "aiv-cdn.net",
+        "aiv-delivery.net"
+      ],
+      "rule_providers": [],
+      "geosite_tags": []
+    },
+    {
+      "id": "hulu",
+      "group": "Hulu",
+      "label": "Hulu",
+      "category": "streaming",
+      "default_target": "流媒体",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,hulu.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN-SUFFIX,huluim.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN-SUFFIX,hulustream.com",
+          "template_inline": true
+        }
+      ],
+      "probe_urls": [],
+      "destinations": [
+        "hulu.com",
+        "huluim.com",
+        "hulustream.com"
+      ],
+      "rule_providers": [],
+      "geosite_tags": []
+    },
+    {
+      "id": "bilibili-intl",
+      "group": "Bilibili 国际版",
+      "label": "Bilibili 国际版",
+      "category": "streaming",
+      "default_target": "流媒体",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,bilibili.tv",
+          "template_inline": true
+        }
+      ],
+      "probe_urls": [],
+      "destinations": [
+        "bilibili.tv"
+      ],
+      "rule_providers": [],
+      "geosite_tags": []
+    },
+    {
       "id": "telegram",
       "group": "Telegram",
       "label": "Telegram",
-      "category": "streaming",
+      "category": "social",
       "default_target": "社交通讯",
       "rules": [
         {
@@ -657,6 +739,84 @@
       "rule_providers": [
         "Telegram"
       ],
+      "geosite_tags": []
+    },
+    {
+      "id": "discord",
+      "group": "Discord",
+      "label": "Discord",
+      "category": "social",
+      "default_target": "社交通讯",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,discord.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN-SUFFIX,discord.gg",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN-SUFFIX,discordapp.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN-SUFFIX,discordapp.net",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN-SUFFIX,discord.media",
+          "template_inline": true
+        }
+      ],
+      "probe_urls": [],
+      "destinations": [
+        "discord.com",
+        "discord.gg",
+        "discordapp.com",
+        "discordapp.net",
+        "discord.media"
+      ],
+      "rule_providers": [],
+      "geosite_tags": []
+    },
+    {
+      "id": "game-downloads",
+      "group": "游戏下载",
+      "label": "游戏下载",
+      "category": "gaming",
+      "default_target": "游戏下载",
+      "rules": [
+        {
+          "match": "DOMAIN-SUFFIX,steamcontent.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN,download.epicgames.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN,download2.epicgames.com",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN,epicgames-download1.akamaized.net",
+          "template_inline": true
+        },
+        {
+          "match": "DOMAIN,packagespc.xboxlive.com",
+          "template_inline": true
+        }
+      ],
+      "probe_urls": [],
+      "destinations": [
+        "steamcontent.com",
+        "download.epicgames.com",
+        "download2.epicgames.com",
+        "epicgames-download1.akamaized.net",
+        "packagespc.xboxlive.com"
+      ],
+      "rule_providers": [],
       "geosite_tags": []
     }
   ],

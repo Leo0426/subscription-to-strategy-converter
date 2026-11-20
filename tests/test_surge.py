@@ -849,7 +849,7 @@ def test_leo_surge_keeps_core_services_when_mihomo_only_rules_are_skipped() -> N
         "Claude": ("Claude", "AI 服务"),
         "GitHub": ("GitHub", "开发服务"),
         "Apple": ("Apple_All_No_Resolve", "Apple"),
-        "YouTube": ("YouTube", "流媒体"),
+        "YouTube": ("YouTube", "YouTube"),
         "Google": ("Google", "Google"),
         "Microsoft": ("Microsoft", "Microsoft"),
         "Telegram": ("Telegram", "社交通讯"),

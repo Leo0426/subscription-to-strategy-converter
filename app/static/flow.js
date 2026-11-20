@@ -2,7 +2,10 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const LEO_TEMPLATE = "local:community_templates/leo/leo.yaml";
 const state = {
   leoGroups: [], leoSummary: null, leoAudit: null, publicData: [],
-  serviceCategories: [{id:"ai",label:"AI 工具"},{id:"developer",label:"开发与系统"},{id:"streaming",label:"影音与通讯"}],
+  serviceCategories: [
+    {id:"ai",label:"AI 工具"}, {id:"developer",label:"开发与系统"},
+    {id:"streaming",label:"影音"}, {id:"social",label:"社交通讯"}, {id:"gaming",label:"游戏"},
+  ],
   servicePacks: [], serviceChoices: {}, nodes: [], sourceFamily: null, profile: null, legacy: null,
   upgrade: null, check: null, checkedInput: null, savedInput: null, epoch: 0, busy: false,
   showAll: false, showCustomized: false,
@@ -227,9 +230,8 @@ function renderLeoReference() {
   }
 
   const groupByName = Object.fromEntries(state.leoGroups.map((group) => [group.name, group]));
-  const coreNames = ["默认代理", "自动选择", "香港自动", "手动选择"];
-  const regionNames = ["香港自动", "美国节点"]
-    .filter((name) => groupByName[name]);
+  const coreNames = ["默认代理", "香港优先", "自动选择", "手动选择"];
+  const regionNames = state.leoGroups.filter(group => group["include-all"] && group.filter).map(group => group.name);
   const coreRows = coreNames.filter((name) => groupByName[name]).map((name) => {
     const group = groupByName[name];
     const members = Array.isArray(group.proxies) && group.proxies.length
@@ -240,16 +242,20 @@ function renderLeoReference() {
   const serviceRows = state.serviceCategories.map((category) => {
     const packs = state.servicePacks.filter((pack) => pack.category === category.id);
     if (!packs.length) return "";
-    return `<p class="reference-note">${escapeHtml(category.label)}</p>${packs.map((pack) => `
-      <button class="reference-service" type="button" data-reference-service="${escapeHtml(pack.id)}">
-        <span>${escapeHtml(pack.label)}</span><small>${escapeHtml(defaultServiceTarget(pack.id))}</small>
-      </button>`).join("")}`;
+    const buttons = packs.map(pack => {
+      const target = defaultServiceTarget(pack.id);
+      const firstChoice = target === pack.group && groupByName[target]?.proxies?.[0];
+      return `<button class="reference-service" type="button" data-reference-service="${escapeHtml(pack.id)}">
+        <span>${escapeHtml(pack.label)}</span><small>${escapeHtml(firstChoice ? `${target} → ${firstChoice}` : target)}</small>
+      </button>`;
+    });
+    return `<p class="reference-note">${escapeHtml(category.label)}</p>${buttons.join("")}`;
   }).join("");
 
   root.innerHTML = `
     <details class="reference-module" open>
       <summary>核心出口骨架</summary>
-      <div class="reference-module-body"><p class="reference-note">默认代理首选香港池；其他成员是手动候选，不代表自动故障切换。</p><div class="reference-flow">${coreRows}</div></div>
+      <div class="reference-module-body"><p class="reference-note">默认使用「香港优先」。香港自动组不可用时，切换到全局自动组。</p><div class="reference-flow">${coreRows}</div></div>
     </details>
     <details class="reference-module" open>
       <summary>地区节点选择</summary>

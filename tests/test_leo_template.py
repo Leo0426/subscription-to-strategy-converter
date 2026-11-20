@@ -83,11 +83,12 @@ def test_leo_lightweight_shape_and_generated_footprint() -> None:
 
     assert _LEO_TEMPLATE_PATH.stat().st_size <= 16 * 1024
     assert len(template["rule-providers"]) == 9
-    assert len(template["proxy-groups"]) == 17
-    assert len(template["rules"]) <= 185
-    assert len(groups) == 17
+    assert len(template["proxy-groups"]) == 20
+    assert len(template["rules"]) <= 200
+    assert len(groups) == 20
     assert sum(group["type"] == "url-test" for group in groups) == 2
-    assert sum(len(group.get("proxies", [])) for group in groups) <= 425
+    assert sum(bool(group.get("url")) for group in groups) == 6
+    assert sum(len(group.get("proxies", [])) for group in groups) <= 440
     assert sum(
         len(group.get("proxies", []))
         for group in groups
@@ -97,7 +98,7 @@ def test_leo_lightweight_shape_and_generated_footprint() -> None:
     # 1.5 KiB, but would trade away useful cross-region recovery for a cosmetic
     # size target.  The previous 144-node artifact was over 84 KiB.
     assert len(render_yaml(compiled).encode("utf-8")) <= 37 * 1024
-    assert len(rules) <= 185
+    assert len(rules) <= 200
 
     provider_rules = [
         rule
@@ -217,7 +218,7 @@ def test_leo_routes_core_providers_and_builtin_services_to_expected_targets() ->
         "Apple-4": "Apple",
         "Google-2": "Google",
         "Microsoft-6": "Microsoft",
-        "YouTube-6": "流媒体",
+        "YouTube-6": "YouTube",
         "Telegram": "社交通讯",
         "China": "DIRECT",
     }
@@ -232,7 +233,7 @@ def test_leo_routes_core_providers_and_builtin_services_to_expected_targets() ->
         "GEOSITE,microsoft,Microsoft",
         "GEOSITE,apple,Apple",
         "GEOSITE,github,开发服务",
-        "GEOSITE,youtube,流媒体",
+        "GEOSITE,youtube,YouTube",
         "GEOSITE,category-ads-all,REJECT",
     } <= set(rules)
     assert "RULE-SET,Telegram,社交通讯,no-resolve" in rules
@@ -257,6 +258,8 @@ def test_leo_exposes_singapore_nodes_as_a_manual_ai_egress() -> None:
             _node("新加坡 01"),
             _node("Singapore 02"),
             _node("SG-03"),
+            _node("演示·狮城甲"),
+            _node("演示·獅城乙"),
             _node("RUSSIA 01"),
         ],
     )
@@ -265,6 +268,8 @@ def test_leo_exposes_singapore_nodes_as_a_manual_ai_egress() -> None:
         "新加坡 01",
         "Singapore 02",
         "SG-03",
+        "演示·狮城甲",
+        "演示·獅城乙",
     ]
     assert _group(config, "AI 服务")["proxies"] == [
         "美国节点",
@@ -435,7 +440,7 @@ def test_leo_has_no_explicit_ip_provider_or_inline_route_for_shared_services() -
 
     assert "AIIP" not in providers
 
-    shared_targets = {"AI 服务", "Google", "流媒体"}
+    shared_targets = {"AI 服务", "Google", "流媒体", "YouTube", "Netflix", "游戏下载"}
     ipcidr = {name for name, p in providers.items() if str(p.get("behavior")) == "ipcidr"}
     for rule in template["rules"]:
         if not isinstance(rule, str):
@@ -460,7 +465,7 @@ def test_leo_audit_exposes_and_contains_shared_service_ip_exceptions() -> None:
     report = json.loads(_LEO_AUDIT_PATH.read_text(encoding="utf-8"))
 
     assert audit_snapshot_matches_template(report, _LEO_TEMPLATE_PATH)
-    shared_targets = {"AI 服务", "Google", "流媒体"}
+    shared_targets = {"AI 服务", "Google", "流媒体", "YouTube", "Netflix", "游戏下载"}
     shared_providers = {
         parts[1]
         for rule in template["rules"]
@@ -686,13 +691,13 @@ def test_leo_specific_services_precede_overlapping_vendor_sources() -> None:
 
     claude = rules.index("RULE-SET,Claude,AI 服务")
     generic_ai = rules.index("RULE-SET,ai-4,AI 服务")
-    youtube = rules.index("RULE-SET,YouTube-6,流媒体,no-resolve")
+    youtube = rules.index("RULE-SET,YouTube-6,YouTube,no-resolve")
     google = rules.index("RULE-SET,Google-2,Google,no-resolve")
     apple = rules.index("RULE-SET,Apple-4,Apple")
 
     assert claude < generic_ai
     assert youtube < google
-    assert rules.index("GEOSITE,youtube,流媒体") > youtube
+    assert rules.index("GEOSITE,youtube,YouTube") > youtube
     assert rules.index("DOMAIN-SUFFIX,crashlytics.com,Google") < apple
     # Apple stays before the broader Google/Microsoft lists so Apple-specific
     # Akamai CNAMEs keep the template's DIRECT-first Apple policy.
@@ -709,6 +714,9 @@ _NAMED_SERVICE_TARGETS = {
     "社交通讯",
     "游戏服务",
     "流媒体",
+    "Netflix",
+    "YouTube",
+    "游戏下载",
 }
 
 
@@ -802,7 +810,7 @@ def test_leo_generic_port_and_inbound_routes_do_not_bypass_direct_catchalls(targ
         )
         rules = [line.strip() for line in rendered.split("[Rule]\n", 1)[1].splitlines()]
         catchalls = ("GEOIP,cn,DIRECT", "DOMAIN-SUFFIX,cn,DIRECT")
-        service_rules = ("/Netflix/Netflix.list,流媒体", "/TikTok/TikTok.list,美国节点")
+        service_rules = ("/Netflix/Netflix.list,Netflix", "/TikTok/TikTok.list,美国节点")
         final = "FINAL,默认代理,dns-failed"
     else:
         rules = compile_mihomo_config(config, nodes)["rules"]
@@ -814,7 +822,7 @@ def test_leo_generic_port_and_inbound_routes_do_not_bypass_direct_catchalls(targ
             "GEOSITE,cn,DIRECT",
             "GEOIP,cn,DIRECT,no-resolve",
         )
-        service_rules = ("GEOSITE,netflix,流媒体", "GEOSITE,tiktok,美国节点")
+        service_rules = ("GEOSITE,netflix,Netflix", "GEOSITE,tiktok,美国节点")
         final = "MATCH,默认代理"
     # A NAS on :50001, a .cn site on :10443, or a named mixed listener must
     # reach private/China matching before generic port or listener fallbacks.
@@ -893,11 +901,15 @@ def test_leo_taiwan_rules_fall_back_when_no_taiwan_nodes() -> None:
     assert "GEOSITE,bahamut,默认代理" in config["rules"]
 
 
-def test_leo_excludes_subscription_info_entries_from_global_pools() -> None:
+def test_leo_excludes_subscription_info_entries_from_global_and_regional_pools() -> None:
     nodes = [
         _node("剩余流量：120 GB"),
         _node("套餐到期：2026-12-31"),
         _node("官网 example.com"),
+        _node("香港 官 网 example.com"),
+        _node("美国 剩余流量"),
+        _node("狮城 官 網 example.org"),
+        _node("台湾 套餐到期"),
         _node("香港 01"),
         _node("美国 01"),
     ]
@@ -905,6 +917,9 @@ def test_leo_excludes_subscription_info_entries_from_global_pools() -> None:
 
     assert _group(config, "自动选择")["proxies"] == ["香港 01", "美国 01"]
     assert _group(config, "手动选择")["proxies"] == ["香港 01", "美国 01"]
+    assert _group(config, "香港自动")["proxies"] == ["香港 01"]
+    assert _group(config, "美国节点")["proxies"] == ["美国 01"]
+    assert {"新加坡节点", "台湾节点"}.isdisjoint(group["name"] for group in config["proxy-groups"])
 
 
 def test_leo_proxies_only_overseas_dns_and_dot() -> None:
@@ -962,6 +977,19 @@ def test_leo_service_groups_offer_region_egress() -> None:
     config = apply_template(template, [_node("香港 01"), _node("美国 01")])
     assert "台湾节点" not in _group(config, "流媒体")["proxies"]
     assert "美国节点" in _group(config, "流媒体")["proxies"]
+
+
+def test_leo_video_and_game_downloads_have_independent_manual_choices() -> None:
+    config = apply_template(load_template(LEO_TEMPLATE_ID), [_node("演示 SG-01")])
+    for name in ("Netflix", "YouTube"):
+        group = _group(config, name)
+        assert group["type"] == "select"
+        assert group["proxies"] == ["流媒体", "新加坡节点", "手动选择", "DIRECT"]
+        assert "url" not in group
+    downloads = _group(config, "游戏下载")
+    assert downloads["type"] == "select"
+    assert downloads["proxies"] == ["DIRECT", "游戏服务", "手动选择"]
+    assert "url" not in downloads
 
 
 def test_leo_pinned_providers_refresh_weekly() -> None:
